@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6]
+        python-version: [3.7]
 
     steps:
     - uses: actions/checkout@v2
@@ -33,13 +33,13 @@ jobs:
     - name: Check imports with isort
       run: |
         python -m isort --check-only client_code
-        python -m isort --check-only server_code
-    - name: Run test suite
-      run: |
-        python -m pytest
-    - name: Check docs build
-      run: |
-        sphinx-build docs build
+        # python -m isort --check-only server_code
+    # - name: Run test suite
+    #   run: |
+    #     python -m pytest
+    # - name: Check docs build
+    #   run: |
+    #     sphinx-build docs build
     - name: Check version numbering
       run: |
         python -m bumpversion --dry-run patch
