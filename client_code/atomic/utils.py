@@ -11,9 +11,11 @@ def get_atom_prop_repr(atom, prop):
     return f"{tp_name}.{prop}"
 
 
-class _A:
-    def foo(self):
+# create a fake class to get a method
+# we could import types.MethodType but too much overhead
+class _C:
+    def _m(self):
         pass
 
 
-MethodType = type(_A().foo)
+MethodType = type(_C()._m)
