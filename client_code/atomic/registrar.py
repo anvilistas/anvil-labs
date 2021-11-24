@@ -3,6 +3,8 @@
 
 from .constants import REGISTRAR, RENDER, SELECTOR
 
+__version__ = "0.0.1"
+
 
 class AtomRegistrar:
     """the registrar is responsible for registering and unregistering atom props to renderers/selectors

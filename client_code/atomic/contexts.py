@@ -6,6 +6,8 @@ from functools import partial
 from .constants import ACTION, IGNORE, RENDER, SELECTOR
 from .rendering import active, call_queued, log, queued
 
+__version__ = "0.0.1"
+
 
 # ADDERS
 def add_active(to_add, mode, conflicts=(), msg=""):

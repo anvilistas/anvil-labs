@@ -11,6 +11,8 @@ from .registrar import add_registrar
 from .rendering import register, request
 from .utils import MethodType, get_atom_prop_repr
 
+__version__ = "0.0.1"
+
 
 class BaseAction(
     namedtuple("_BaseAction", ["action", "atom", "prop", "value"], defaults=[None])

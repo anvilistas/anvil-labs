@@ -9,6 +9,8 @@ from .registrar import get_registrar
 from .rendering import active, call_queued, queued
 from .subscribers import Render, Selector
 
+__version__ = "0.0.1"
+
 
 def _get_selector(fn, atom, prop):
     atom_registrar = get_registrar(atom)

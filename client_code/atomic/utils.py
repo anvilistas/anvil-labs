@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
+__version__ = "0.0.1"
+
 
 def get_atom_prop_repr(atom, prop):
     tp_name = type(atom).__name__

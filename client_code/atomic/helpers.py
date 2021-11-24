@@ -6,6 +6,8 @@ from functools import lru_cache, partial
 from .decorators import render_call
 from .rendering import log
 
+__version__ = "0.0.1"
+
 
 def set_debug(is_debug=True):
     """if set to true - logging messages will be output to the console"""

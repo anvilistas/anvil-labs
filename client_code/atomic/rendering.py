@@ -5,6 +5,8 @@ from .constants import ACTION, IGNORE, RENDER, SELECTOR, SUBSCRIBE
 from .registrar import get_registrar
 from .utils import get_atom_prop_repr
 
+__version__ = "0.0.1"
+
 # STATE
 active = {ACTION: (), SELECTOR: (), RENDER: (), SUBSCRIBE: (), IGNORE: ()}
 queued = {SELECTOR: frozenset(), RENDER: frozenset(), ACTION: ()}

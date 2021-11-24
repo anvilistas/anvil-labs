@@ -6,6 +6,8 @@ from .contexts import ignore_updates
 from .decorators import action, render, render_call, selector, subscribe
 from .helpers import bind, set_debug, writeback
 
+__version__ = "0.0.1"
+
 
 @atom
 class Atom:
