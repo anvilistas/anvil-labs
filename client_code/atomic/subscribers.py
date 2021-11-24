@@ -5,8 +5,8 @@ import anvil
 from anvil.js import get_dom_node
 
 from .constants import RENDER, SELECTOR
-from .contexts import RenderContext, SelectorContext, make_dependent
-from .rendering import active, log, register, request
+from .contexts import RenderContext, SelectorContext
+from .rendering import register, request
 from .utils import get_atom_prop_repr
 
 __version__ = "0.0.1"

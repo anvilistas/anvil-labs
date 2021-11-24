@@ -3,7 +3,7 @@
 
 from functools import wraps
 
-from .constants import ACTION, SUBSCRIBE
+from .constants import SUBSCRIBE
 from .contexts import ActionContext
 from .registrar import get_registrar
 from .rendering import active, call_queued, queued

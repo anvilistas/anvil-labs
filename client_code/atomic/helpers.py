@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
-from functools import lru_cache, partial
+from functools import partial
 
 from .decorators import render_call
 from .rendering import log
