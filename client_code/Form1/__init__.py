@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2021 anvilistas
+
 from ._anvil_designer import Form1Template
 
 __version__ = "0.0.1"
