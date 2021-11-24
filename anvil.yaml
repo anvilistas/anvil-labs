@@ -1,0 +1,9 @@
+allow_embedding: false
+package_name: Anvil_Labs
+name: Anvil Labs
+startup_form: Form1
+runtime_options: {version: 2, client_version: '3', server_version: python3-full}
+services:
+- source: /runtime/services/tables.yml
+  client_config: {}
+  server_config: {}
