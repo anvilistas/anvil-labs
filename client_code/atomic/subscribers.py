@@ -67,7 +67,7 @@ class Render(Subscriber):
         if self.maybe_delay():
             return
         with RenderContext(self):
-            self.f(*self.args, **self.kws)
+            return self.f(*self.args, **self.kws)
 
     def __repr__(self):
         return self.f.__qualname__
@@ -76,7 +76,7 @@ class Render(Subscriber):
 MISSING = object()
 INITIAL = "initializing"
 CACHE = "using cached"
-RESELECTOR = "recomputing"
+RECOMPUTE = "recomputing"
 
 
 class Selector(Subscriber):
@@ -110,7 +110,7 @@ class Selector(Subscriber):
         self.status = CACHE
 
     def compute(self):
-        self.status = RESELECTOR
+        self.status = RECOMPUTE
         with SelectorContext(self):
             self.update_cache()
         request(self.atom, self.prop)

@@ -146,6 +146,16 @@ class DictAtom(dict):
         # by calling [dict(atom) for dict_atom in list_atom]
         return dict.__iter__(self)
 
+    def values(self):
+        # maybe silly but if a render method wants to depend on the values
+        # then create a dependency on all the values now
+        [self[k] for k in self]
+        return dict.values(self)
+
+    def items(self):
+        [self[k] for k in self]
+        return dict.items(self)
+
     def __repr__(self):
         return f"DictAtom({dict.__repr__(self)})"
 
