@@ -49,22 +49,25 @@ class Render(Subscriber):
         # I depend on my parent
         parent.dependents.add(self)
 
-    def maybe_delay(self):
+    def maybe_delay(self, immediate=False):
         bound = self.bound
         if bound is None:
             return False
         try:
             bound.remove_event_handler("show", self.render)
+            bound.remove_event_handler("x-force-render", self.render)
         except LookupError:
             pass
 
-        delay = not get_dom_node(bound).isConnected
+        delay = not get_dom_node(bound).isConnected and not immediate
         if delay:
             bound.add_event_handler("show", self.render)
+            bound.add_event_handler("x-force-render", self.render)
         return delay
 
-    def render(self, **event_args):
-        if self.maybe_delay():
+    def render(self, event_name=None, **event_args):
+        immediate = event_name == "x-force-render"
+        if self.maybe_delay(immediate=immediate):
             return
         with RenderContext(self):
             return self.f(*self.args, **self.kws)
