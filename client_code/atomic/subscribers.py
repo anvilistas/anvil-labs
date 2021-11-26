@@ -6,7 +6,7 @@ from anvil.js import get_dom_node
 
 from .constants import RENDER, SELECTOR
 from .contexts import RenderContext, SelectorContext
-from .rendering import register, request
+from .rendering import active, register, request
 from .utils import get_atom_prop_repr
 
 __version__ = "0.0.1"
@@ -59,7 +59,9 @@ class Render(Subscriber):
         except LookupError:
             pass
 
-        delay = not get_dom_node(bound).isConnected and not immediate
+        delay = (
+            not get_dom_node(bound).isConnected and not immediate and not active[RENDER]
+        )
         if delay:
             bound.add_event_handler("show", self.render)
             bound.add_event_handler("x-force-render", self.render)
