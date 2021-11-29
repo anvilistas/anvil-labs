@@ -72,7 +72,8 @@ class Render(Subscriber):
         if self.maybe_delay(immediate=immediate):
             return
         with RenderContext(self):
-            return self.f(*self.args, **self.kws)
+            res = self.f(*self.args, **self.kws)
+        return res
 
     def __repr__(self):
         return self.f.__qualname__
@@ -108,7 +109,7 @@ class Selector(Subscriber):
         with SelectorContext(self):
             if self.cached is MISSING:
                 self.update_cache()
-            return self.cached
+        return self.cached
 
     def update_cache(self):
         self.cached = self.f()
