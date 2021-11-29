@@ -52,7 +52,8 @@ def action(_fn=None, **kws):
     @wraps(_fn)
     def action_wrapper(*args, **kws):
         with ActionContext(_fn):
-            return _fn(*args, **kws)
+            res = _fn(*args, **kws)
+        return res
 
     return action_wrapper
 

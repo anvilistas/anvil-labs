@@ -132,7 +132,7 @@ class DictAtom(dict):
                 return default
         with ActionContext(BaseAction(DELETE, self, key)):
             request(self, key)
-            return res
+        return res
 
     def get(self, key, default=None):
         try:
