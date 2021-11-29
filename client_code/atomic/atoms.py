@@ -45,9 +45,10 @@ def atom(base):
 
         __slots__ = REGISTRAR  # slots don't actually work yet
 
-        def __init__(self, *args, **kws):
+        def __new__(cls, *args, **kws):
+            self = base.__new__(cls, *args, **kws)
             add_registrar(self)
-            base.__init__(self, *args, **kws)
+            return self
 
         def __getattribute__(self, name: str):
             ret = base.__getattribute__(self, name)
