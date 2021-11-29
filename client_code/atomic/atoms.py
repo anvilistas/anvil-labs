@@ -120,6 +120,7 @@ class DictAtom(dict):
     def __delitem__(self, key):
         self.pop(key)
 
+    @action
     def update(self, *args, **kws):
         for k, v in dict(*args, **kws).items():
             self[k] = v
