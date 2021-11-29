@@ -79,7 +79,8 @@ class AsyncCall:
 
 def call_async(fn, *args, **kws):
     "call a function in a non-blocking way"
-    assert callable(fn), "the first argument must be a callable that takes no args"
+    if not callable(fn):
+        raise TypeError("the first argument must be a callable")
     return AsyncCall(fn, *args, **kws)
 
 
@@ -100,20 +101,20 @@ def wait_for(async_call_object):
 
 
 class Interval:
-    """create an interval - T
-    he first argument must a function that takes no arguments
-    The second argument is the delay in seconds.
-    The funciton will be called every delay seconds.
+    """create an interval
+    The first argument must a function that takes no arguments
+    The second argument is the interval in seconds.
+    The funciton will be called every interval seconds.
     To stop the interval either set its interval to None or 0 or call the clear_interval() method
     """
 
-    def __init__(self, fn, delay=None):
+    def __init__(self, fn, interval=None):
         assert callable(
             fn
         ), "the first argument to interval must be a callable that takes no arguments"
         self._id = None
         self._fn = fn
-        self.interval = delay
+        self.interval = interval
 
     @property
     def interval(self):
