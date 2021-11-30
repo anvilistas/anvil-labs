@@ -97,9 +97,9 @@ class render:
         return render(method, bound=bound)
 
 
-def render_call(f, bound=None):
-    """create a lamba render function and call it straight away
-    optionally provide a component to bind this method to"""
+def autorun(f, bound=None):
+    """create render function that is called immediately.
+    Optionally provide a component to bind this method to"""
     if bound is None:
         try:
             bound = f.__self__

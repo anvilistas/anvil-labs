@@ -3,7 +3,7 @@
 
 from .atoms import DictAtom, ListAtom, atom
 from .contexts import ignore_updates
-from .decorators import action, render, render_call, selector, subscribe
+from .decorators import action, autorun, render, selector, subscribe
 from .helpers import bind, set_debug, writeback
 
 __version__ = "0.0.1"
