@@ -2,7 +2,6 @@
 # Copyright (c) 2021 anvilistas
 
 import anvil
-from anvil.js import get_dom_node
 
 from .constants import RENDER, SELECTOR
 from .contexts import RenderContext, SelectorContext
@@ -60,7 +59,9 @@ class Render(Subscriber):
             pass
 
         delay = (
-            not get_dom_node(bound).isConnected and not immediate and not active[RENDER]
+            not anvil.js.get_dom_node(bound).isConnected
+            and not immediate
+            and not active[RENDER]
         )
         if delay:
             bound.add_event_handler("show", self.render)
