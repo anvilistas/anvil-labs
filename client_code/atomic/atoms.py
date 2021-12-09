@@ -34,6 +34,9 @@ def as_atom(atom, prop, val):
         return val
 
 
+_object_new = object.__new__
+
+
 def atom(base):
     """decorator for an atom class"""
 
@@ -46,7 +49,12 @@ def atom(base):
         __slots__ = REGISTRAR  # slots don't actually work yet
 
         def __new__(cls, *args, **kws):
-            self = base.__new__(cls, *args, **kws)
+            base_new = base.__new__
+            self = (
+                _object_new(cls)
+                if base_new is _object_new
+                else base_new(cls, *args, **kws)
+            )
             add_registrar(self)
             return self
 
