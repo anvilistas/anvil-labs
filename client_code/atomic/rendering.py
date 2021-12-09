@@ -97,6 +97,8 @@ def request(atom, prop):
     if active[IGNORE]:
         return
     atom_registrar = get_registrar(atom)
+    if atom_registrar is None:
+        return
     queued_renders = queue_subscribers(atom_registrar, prop, RENDER)
     queued_selectors = queue_subscribers(atom_registrar, prop, SELECTOR)
     queued[RENDER], queued[SELECTOR] = queued_renders, queued_selectors
