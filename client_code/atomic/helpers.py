@@ -3,7 +3,7 @@
 
 from functools import partial
 
-from .decorators import render_call
+from .decorators import autorun
 from .rendering import log
 
 __version__ = "0.0.1"
@@ -48,7 +48,7 @@ def writeback(component, prop, atom_or_selector, attr_or_action=None, events=())
     for event in events:
         component.add_event_handler(event, do_action)
 
-    render_call(render_component, bound=component)
+    autorun(render_component, bound=component)
 
 
 def bind(component, prop, atom_or_selector, attr=None):
