@@ -37,8 +37,12 @@ _setattr = object.__setattr__
 
 
 def add_registrar(atom):
-    _setattr(atom, REGISTRAR, AtomRegistrar(atom))
+    if get_registrar(atom) is None:
+        _setattr(atom, REGISTRAR, AtomRegistrar(atom))
 
 
 def get_registrar(atom):
-    return _getattr(atom, REGISTRAR)
+    try:
+        return _getattr(atom, REGISTRAR)
+    except AttributeError:
+        return None

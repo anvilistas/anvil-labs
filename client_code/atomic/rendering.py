@@ -40,6 +40,8 @@ def register(atom, prop):
         return
     current = active[mode][-1]
     registrar = get_registrar(atom)
+    if registrar is None:
+        return
     registered = registrar.register(prop, current, mode)
     if registered:
         log(lambda: f"depends on: {get_atom_prop_repr(atom, prop)}")
