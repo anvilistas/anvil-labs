@@ -143,6 +143,7 @@ class Projector:
     The player and rewinder functions must accept a list of observation records as
     their first parameter.
     """
+
     def __init__(self, name, uid=None, resetter=None, player=None, rewinder=None):
         self.name = name
         self.uid = uid or uuid4().hex
