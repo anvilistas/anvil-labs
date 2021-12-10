@@ -140,10 +140,11 @@ def _record_observation(obj, event, prevent_duplication):
         state_diff=diff,
     )
     sequence["value"] += 1
+    return obj.uid
 
 
 @in_transaction
-def _save_payload(payload, prevent_duplication):
+def _save_payload(payload, prevent_duplication, return_identifiers):
     """Save observation records for a batch of objects
 
     Parameters
@@ -154,7 +155,15 @@ def _save_payload(payload, prevent_duplication):
         the 'operation' value is one of 'create', 'update' or 'delete'
     prevent_duplication : bool
         Whether to disallow records where the state is unchanged from previously
+    return_identifiers : bool
+
+    Returns
+    -------
+    list
+        either empty or with the uids of the saved objects depending on
+        return_identifiers
     """
+    result = []
     events = {
         "create": Event.creation,
         "update": Event.change,
@@ -171,10 +180,13 @@ def _save_payload(payload, prevent_duplication):
             LOGGER.info(
                 f"Attempting to {operation} {obj.__class__.__name__} object (id: {obj.uid})"
             )
-            _record_observation(
+            uid = _record_observation(
                 obj, event=events[operation], prevent_duplication=prevent_duplication
             )
+            if return_identifiers:
+                result.append(uid)
         LOGGER.info("Payload saved")
+        return result
     except Exception as e:
         LOGGER.error(
             "An error occurred whilst attempting to save this payload. No changes were committed to the db."
@@ -183,7 +195,9 @@ def _save_payload(payload, prevent_duplication):
 
 
 @anvil.server.callable
-def save(payload, prevent_duplication=True, play_projections=True):
+def save(
+    payload, prevent_duplication=True, play_projections=True, return_identifiers=False
+):
     """Save observation records and optionally play all projections
 
 
@@ -195,7 +209,17 @@ def save(payload, prevent_duplication=True, play_projections=True):
         Whether to disallow records where the state is unchanged from previously
     play_projections : bool
         Whether to play all projections within this server call
+    return_identifiers : bool
+
+    Returns
+    -------
+    None or list
+        Depending on the value of return_identifiers
     """
-    _save_payload(payload, prevent_duplication)
+    result = None
+    identifiers = _save_payload(payload, prevent_duplication, return_identifiers)
     if play_projections:
         play_all()
+    if return_identifiers:
+        result = identifiers
+    return result
