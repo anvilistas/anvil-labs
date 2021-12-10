@@ -75,7 +75,7 @@ def _previous_observation(object_id):
         pass
     if result is not None and result["event"] == Event.termination.value:
         raise ResurrectionError(
-            f"Object {object_id} was terminated at {result['recorded_at']} ",
+            f"Object {object_id} was terminated at {result['recorded_at']} "
             f"(observation {result['observation_id']})",
         )
     return result
