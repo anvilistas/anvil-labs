@@ -14,10 +14,23 @@ from anvil.tables import app_tables, in_transaction, order_by
 
 from anvil_extras.server_utils import LOGGER
 
-from ..exceptions import DuplicationError, NonExistentError, ResurrectionError
+from ..exceptions import DuplicationError, NonExistentError, ResurrectionError, AuthorizationError
 from .projection import play_all
 
 __version__ = "0.0.1"
+
+
+class Authorization:
+    def __init__(self, checker=None):
+        self.checker = checker
+
+    def check(self, obj, operation):
+        if self.checker is None:
+            return True
+        return self.checker(obj, operation)
+
+
+authorization = Authorization()
 
 
 class Event(Enum):
@@ -177,6 +190,8 @@ def _save_payload(payload, prevent_duplication, return_identifiers):
         for item in payload:
             operation = item["operation"]
             obj = item["object"]
+            if not authorization.check(obj, operation):
+                raise AuthorizationError(f"You do not have permission to {operation} object {obj.uid}")
             LOGGER.info(
                 f"Attempting to {operation} {obj.__class__.__name__} object (id: {obj.uid})"
             )

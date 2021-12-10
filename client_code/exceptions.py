@@ -42,3 +42,8 @@ class DuplicationError(NamedError):
 @portable_exception
 class NonExistentError(NamedError):
     pass
+
+
+@portable_exception
+class AuthorizationError(NamedError):
+    pass
