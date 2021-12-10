@@ -7,6 +7,7 @@ from anvil.tables import app_tables
 
 from ..projection import Projector, register
 
+__version__ = "0.0.1"
 projection_name = "current"
 table = getattr(app_tables, projection_name)
 

@@ -3,6 +3,7 @@
 
 from anvil.server import AnvilWrappedError, _register_exception_type
 
+__version__ = "0.0.1"
 
 class NamedError(AnvilWrappedError):
     """A base class for custom error classes

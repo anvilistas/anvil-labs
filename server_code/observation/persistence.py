@@ -13,6 +13,7 @@ from anvil_extras.server_utils import LOGGER
 from ..exceptions import DuplicationError, NonExistentError, ResurrectionError
 from .projection import play_all
 
+__version__ = "0.0.1"
 
 class Event(Enum):
     creation = "creation"

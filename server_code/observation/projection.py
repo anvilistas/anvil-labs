@@ -10,6 +10,7 @@ from anvil.tables import app_tables, in_transaction
 
 from anvil_extras.server_utils import LOGGER
 
+__version__ = "0.0.1"
 _projectors = {}
 
 
