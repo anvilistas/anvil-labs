@@ -216,10 +216,7 @@ def save(
     None or list
         Depending on the value of return_identifiers
     """
-    result = None
     identifiers = _save_payload(payload, prevent_duplication, return_identifiers)
     if play_projections:
         play_all()
-    if return_identifiers:
-        result = identifiers
-    return result
+    return identifiers if return_identifiers else None
