@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
+"""A module to persist CRUD operations on portable class instances as observations.
 
+Observation records are immutable. As the state of an object changes over time, new
+observation records are added to the 'observation' data table.
+"""
 import datetime as dt
 from enum import Enum
 from uuid import uuid4
@@ -17,12 +21,24 @@ __version__ = "0.0.1"
 
 
 class Event(Enum):
+    """A class to define the permitted events for an observation record"""
+
     creation = "creation"
     change = "change"
     termination = "termination"
 
 
 def _previous_observation(object_id):
+    """Find the most recent observation record for a given object_id
+
+    Parameters
+    ----------
+    object_id : str
+
+    Returns
+    -------
+    app_tables.observation row
+    """
     result = None
     try:
         result = app_tables.observations.search(
@@ -32,12 +48,25 @@ def _previous_observation(object_id):
         pass
     if result is not None and result["event"] == Event.termination.value:
         raise ResurrectionError(
-            f"Object {object_id} was terminated at {result['recorded_at']} (observation {result['observation_id']})"
+            f"Object {object_id} was terminated at {result['recorded_at']} ",
+            f"(observation {result['observation_id']})",
         )
     return result
 
 
 def _state_diff(state, previous_state):
+    """A dict to show the new, changed and removed attributes between two states
+
+    Parameters
+    ----------
+    state : dict
+    previous_state : dict
+
+    Returns
+    -------
+    dict
+        with keys 'new', 'changed' and 'removed' for each of those with content
+    """
     new = {k: v for k, v in state.items() if k not in previous_state}
     changed = {
         k: {"from": previous_state[k], "to": v}
@@ -51,6 +80,15 @@ def _state_diff(state, previous_state):
 
 
 def _record_observation(obj, event, prevent_duplication):
+    """Write a single observation record to the data table
+
+    Parameters
+    ----------
+    obj : anvil.server.portable_class instance
+    event : Event
+    prevent_duplication : bool
+        Whether to disallow records where the state is unchanged from previously
+    """
     if obj.uid is None:
         obj.uid = uuid4().hex
     state = None
@@ -106,6 +144,17 @@ def _record_observation(obj, event, prevent_duplication):
 
 @in_transaction
 def _save_payload(payload, prevent_duplication):
+    """Save observation records for a batch of objects
+
+    Parameters
+    ----------
+    payload : list
+        of dicts each with keys 'object' and 'operation'
+        the 'object' value is a portable class instance
+        the 'operation' value is one of 'create', 'update' or 'delete'
+    prevent_duplication : bool
+        Whether to disallow records where the state is unchanged from previously
+    """
     events = {
         "create": Event.creation,
         "update": Event.change,
@@ -135,6 +184,18 @@ def _save_payload(payload, prevent_duplication):
 
 @anvil.server.callable
 def save(payload, prevent_duplication=True, play_projections=True):
+    """Save observation records and optionally play all projections
+
+
+    payload : list
+        of dicts each with keys 'object' and 'operation'
+        the 'object' value is a portable class instance
+        the 'operation' value is one of 'create', 'update' or 'delete'
+    prevent_duplication : bool
+        Whether to disallow records where the state is unchanged from previously
+    play_projections : bool
+        Whether to play all projections within this server call
+    """
     _save_payload(payload, prevent_duplication)
     if play_projections:
         play_all()
