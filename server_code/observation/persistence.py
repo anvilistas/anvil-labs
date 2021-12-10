@@ -14,13 +14,27 @@ from anvil.tables import app_tables, in_transaction, order_by
 
 from anvil_extras.server_utils import LOGGER
 
-from ..exceptions import DuplicationError, NonExistentError, ResurrectionError, AuthorizationError
+from ..exceptions import (
+    AuthorizationError,
+    DuplicationError,
+    NonExistentError,
+    ResurrectionError,
+)
 from .projection import play_all
 
 __version__ = "0.0.1"
 
 
 class Authorization:
+    """A class to check whether authorization exists for an operation on an object
+
+    Attributes
+    ----------
+    checker : callable
+        which must take a portable class instance and an operation ('create', 'update'
+        or 'delete') as its arguments and return a bool.
+    """
+
     def __init__(self, checker=None):
         self.checker = checker
 
@@ -191,7 +205,9 @@ def _save_payload(payload, prevent_duplication, return_identifiers):
             operation = item["operation"]
             obj = item["object"]
             if not authorization.check(obj, operation):
-                raise AuthorizationError(f"You do not have permission to {operation} object {obj.uid}")
+                raise AuthorizationError(
+                    f"You do not have permission to {operation} object {obj.uid}"
+                )
             LOGGER.info(
                 f"Attempting to {operation} {obj.__class__.__name__} object (id: {obj.uid})"
             )
