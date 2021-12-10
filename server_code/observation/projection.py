@@ -193,7 +193,8 @@ class Projector:
             else self.row["played_to"]
         )
         observations = app_tables.observations.search(
-            tables.order_by("observation_id"), observation_id=q.greater_than(_play_from)
+            tables.order_by("observation_id"),
+            observation_id=q.greater_than_or_equal_to(_play_from),
         )
         if len(observations) == 0:
             LOGGER.info(
