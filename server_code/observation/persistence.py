@@ -245,6 +245,7 @@ def save(
         Depending on the value of return_identifiers
     """
     identifiers = _save_payload(payload, prevent_duplication, return_identifiers)
+    projectors = [] if projectors is None else projectors
     for projector in projectors:
         play(projector)
     return identifiers if return_identifiers else None
