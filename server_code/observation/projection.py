@@ -33,57 +33,6 @@ from anvil.tables import app_tables, in_transaction
 from anvil_extras.server_utils import LOGGER
 
 __version__ = "0.0.1"
-_projectors = {}
-
-
-class register:
-    """A decorator to register a Projector class within this module"""
-
-    def __init__(self, name):
-        self.name = name
-
-    def __call__(self, cls):
-        _projectors[self.name] = cls
-        return cls
-
-
-def play(name, play_from=None, play_to=None):
-    """Play an instance of a registered projector"""
-    projector = _projectors[name]
-    with projector() as p:
-        p.play(play_from, play_to)
-
-
-def play_all(play_from=None, play_to=None):
-    """Play an instance of each of the registered projectors"""
-    for name in _projectors:
-        play(name, play_from, play_to)
-
-
-def rewind(name, rewind_to=None):
-    """Rewind an instance of a registered projector"""
-    projector = _projectors[name]
-    with projector() as p:
-        p.rewind(rewind_to=rewind_to)
-
-
-def rewind_all(rewind_to=None):
-    """Rewind an instance of each of the registered projectors"""
-    for name in _projectors:
-        rewind(name, rewind_to=rewind_to)
-
-
-def reset(name):
-    """Reset an instance of a registered projector"""
-    projector = _projectors[name]
-    with projector() as p:
-        p.reset()
-
-
-def reset_all(rewind_to=None):
-    """Reset an instance of each of the registered projectors"""
-    for name in _projectors:
-        reset(name)
 
 
 def _null_player(observations):
