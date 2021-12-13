@@ -217,7 +217,9 @@ def _save_payload(payload, prevent_duplication, return_identifiers):
                 f"Attempting to {operation} {obj.__class__.__name__} object (id: {obj.uid})"
             )
             uid = _record_observation(
-                obj, event_type=events[operation], prevent_duplication=prevent_duplication
+                obj,
+                event_type=events[operation],
+                prevent_duplication=prevent_duplication,
             )
             if return_identifiers:
                 result.append(uid)
