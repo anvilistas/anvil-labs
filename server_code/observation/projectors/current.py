@@ -54,7 +54,10 @@ def _rewind(observation):
     if observation["event"] == "creation":
         row.delete()
     else:
-        row.update(state=observation["previous_state"])
+        previous = app_tables.observations.get(
+            observation_id=observation["previous_observation"]
+        )
+        row.update(state=previous["state"])
 
 
 def _spool(observations, action):
