@@ -37,7 +37,7 @@ def _play(observation):
     row = table.get(object_id=observation["object_id"]) or table.add_row(
         object_id=observation["object_id"], object_type=observation["object_type"]
     )
-    if observation["event"] == "termination":
+    if observation["event_type"] == "termination":
         row.delete()
     else:
         row.update(state=observation["state"])
@@ -51,7 +51,7 @@ def _rewind(observation):
     row = table.get(object_id=observation["object_id"]) or table.add_row(
         object_id=observation["object_id"], object_type=observation["object_type"]
     )
-    if observation["event"] == "creation":
+    if observation["event_type"] == "creation":
         row.delete()
     else:
         previous = app_tables.observations.get(
