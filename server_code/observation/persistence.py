@@ -129,15 +129,13 @@ def _record_observation(obj, event, prevent_duplication):
     previous_observation = _previous_observation(obj.uid)
 
     try:
-        previous_state = previous_observation["state"]
         previous_observation_id = previous_observation["observation_id"]
     except TypeError:
-        previous_state = None
         previous_observation_id = None
 
     if event == Event.creation and previous_observation is not None:
         raise DuplicationError(
-            f"Object {obj.uid} already exists (observation {previous_observation['observation_id']})"
+            f"Object {obj.uid} already exists (observation {previous_observation_id})"
         )
 
     if event == Event.change and previous_observation is None:
@@ -149,7 +147,7 @@ def _record_observation(obj, event, prevent_duplication):
         diff = _state_diff(state, previous_observation["state"])
         if prevent_duplication and diff is None:
             raise DuplicationError(
-                f"Object {obj.uid} already exists in this state (observation {previous_observation['observation_id']})"
+                f"Object {obj.uid} already exists in this state (observation {previous_observation_id})"
             )
 
     sequence = app_tables.sequences.get(
@@ -163,7 +161,6 @@ def _record_observation(obj, event, prevent_duplication):
         event=event.value,
         state=state,
         previous_observation=previous_observation_id,
-        previous_state=previous_state,
         state_diff=diff,
     )
     sequence["value"] += 1
