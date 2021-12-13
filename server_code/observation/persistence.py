@@ -47,7 +47,7 @@ class Authorization:
 authorization = Authorization()
 
 
-class Event(Enum):
+class EventType(Enum):
     """A class to define the permitted events for an observation record"""
 
     creation = "creation"
@@ -73,7 +73,7 @@ def _previous_observation(object_id):
         )[0]
     except IndexError:
         pass
-    if result is not None and result["event"] == Event.termination.value:
+    if result is not None and result["event"] == EventType.termination.value:
         raise ResurrectionError(
             f"Object {object_id} was terminated at {result['recorded_at']} "
             f"(observation {result['observation_id']})",
@@ -106,7 +106,9 @@ def _state_diff(state, previous_state):
     return result if len(result) > 0 else None
 
 
-def _record_observation(obj, event, prevent_duplication):
+def _record_observation(
+    obj, event_type, prevent_duplication, observed_at=None, event_occurred_at=None
+):
     """Write a single observation record to the data table
 
     Parameters
@@ -121,6 +123,11 @@ def _record_observation(obj, event, prevent_duplication):
     state = None
     diff = None
 
+    observed_at = dt.datetime.now() if observed_at is None else observed_at
+    event_occurred_at = (
+        dt.datetime.now() if event_occurred_at is None else event_occurred_at
+    )
+
     try:
         state = obj.__serialize__()
     except AttributeError:
@@ -133,17 +140,17 @@ def _record_observation(obj, event, prevent_duplication):
     except TypeError:
         previous_observation_id = None
 
-    if event == Event.creation and previous_observation is not None:
+    if event_type == EventType.creation and previous_observation is not None:
         raise DuplicationError(
             f"Object {obj.uid} already exists (observation {previous_observation_id})"
         )
 
-    if event == Event.change and previous_observation is None:
+    if event_type == EventType.change and previous_observation is None:
         raise NonExistentError(
             f"Object {obj.uid} does not exist and so cannot be updated"
         )
 
-    if event == Event.change:
+    if event_type == EventType.change:
         diff = _state_diff(state, previous_observation["state"])
         if prevent_duplication and diff is None:
             raise DuplicationError(
@@ -155,10 +162,11 @@ def _record_observation(obj, event, prevent_duplication):
     ) or app_tables.sequences.add_row(name="observation", value=0)
     app_tables.observations.add_row(
         observation_id=sequence["value"],
-        recorded_at=dt.datetime.now(),
+        observed_at=observed_at,
         object_id=obj.uid,
         object_type=obj.__class__.__name__,
-        event=event.value,
+        event_type=event_type.value,
+        event_occurred_at=event_occurred_at,
         state=state,
         previous_observation=previous_observation_id,
         state_diff=diff,
@@ -189,9 +197,9 @@ def _save_payload(payload, prevent_duplication, return_identifiers):
     """
     result = []
     events = {
-        "create": Event.creation,
-        "update": Event.change,
-        "delete": Event.termination,
+        "create": EventType.creation,
+        "update": EventType.change,
+        "delete": EventType.termination,
     }
     if not isinstance(payload, list):
         payload = [payload]
