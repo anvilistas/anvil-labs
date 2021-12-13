@@ -20,7 +20,7 @@ from ..exceptions import (
     NonExistentError,
     ResurrectionError,
 )
-from .projection import play_all
+from .projection import play
 
 __version__ = "0.0.1"
 
@@ -224,7 +224,7 @@ def _save_payload(payload, prevent_duplication, return_identifiers):
 
 @anvil.server.callable
 def save(
-    payload, prevent_duplication=True, play_projections=True, return_identifiers=False
+    payload, prevent_duplication=True, return_identifiers=False, projectors=None
 ):
     """Save observation records and optionally play all projections
 
@@ -235,9 +235,9 @@ def save(
         the 'operation' value is one of 'create', 'update' or 'delete'
     prevent_duplication : bool
         Whether to disallow records where the state is unchanged from previously
-    play_projections : bool
-        Whether to play all projections within this server call
     return_identifiers : bool
+    projectors : list
+        of projector names to play
 
     Returns
     -------
@@ -245,6 +245,6 @@ def save(
         Depending on the value of return_identifiers
     """
     identifiers = _save_payload(payload, prevent_duplication, return_identifiers)
-    if play_projections:
-        play_all()
+    for projector in projectors:
+        play(projector)
     return identifiers if return_identifiers else None
