@@ -85,6 +85,7 @@ def reset_all(rewind_to=None):
     for name in _projectors:
         reset(name)
 
+
 def _null_player(observations):
     """A player function which only logs the observations being played"""
     LOGGER.info("Playing this projector has no effect")

@@ -223,9 +223,7 @@ def _save_payload(payload, prevent_duplication, return_identifiers):
 
 
 @anvil.server.callable
-def save(
-    payload, prevent_duplication=True, return_identifiers=False, projectors=None
-):
+def save(payload, prevent_duplication=True, return_identifiers=False, projectors=None):
     """Save observation records and optionally play all projections
 
 
