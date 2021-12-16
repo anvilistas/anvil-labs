@@ -5,17 +5,19 @@ __version__ = "0.0.1"
 
 
 class BaseValidator:
+    value = None
 
     def is_valid(self):
         raise NotImplementedError
 
-    def __get__(self, obj, owner):
-        return self.value
+    def __get__(self, obj, objtype=None):
+        return getattr(obj, self.private_name)
 
     def __set__(self, obj, value):
         self.value = value
         if not self.is_valid():
             raise ValueError(f"{value} is not a valid value")
+        setattr(obj, self.private_name, value)
 
 
 def _is_valid(obj):
@@ -37,6 +39,11 @@ def validate(**kwargs):
         for attr, validator in kwargs.items():
             if getattr(cls, attr, None) is not None:
                 raise ValueError(f"{attr} is already defined")
+
+            # This shouldn't be necessary, but skulpt doesn't seem to call __set_name__
+            # on a descriptor.
+            validator.private_name = f"_{attr}"
+
             setattr(cls, attr, validator)
             cls.validators.append(validator.is_valid)
         return cls
