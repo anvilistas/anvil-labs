@@ -10,7 +10,7 @@ class BaseValidator:
     def is_valid(self):
         raise NotImplementedError
 
-    def __get__(self, obj):
+    def __get__(self, obj, owner):
         return self.value
 
     def __set__(self, obj, value):
