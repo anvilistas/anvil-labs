@@ -4,14 +4,13 @@ import datetime as dt
 
 import anvil.server
 
-from ..pedantic import in_list, validated
+from ..pedantic import InList, validate
 
 __version__ = "0.0.1"
 
 
 @anvil.server.portable_class
-@in_list("event_type", ["creation", "change", "termination"])
-@validated
+@validate(event_type=InList(["creation", "change", "termination"]))
 class Event:
     def __init__(self, event_type, affected, recorded_at=None, occurred_at=None):
         self.event_type = event_type
