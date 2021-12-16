@@ -185,7 +185,7 @@ def save_event_records(events, prevent_duplication, return_identifiers):
                 f"Attempting {event.event_type} of {event.affected.__class__.__name__} "
                 f"object (id: {event.affected.uid})"
             )
-            uid = _record_event(event.affected, prevent_duplication)
+            uid = _record_event(event, prevent_duplication)
             if return_identifiers:
                 result.append(uid)
         LOGGER.info(f"{len(events)} Events saved")
