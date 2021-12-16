@@ -2,7 +2,7 @@
 # Copyright (c) 2021 anvilistas
 import pytest
 
-from client_code.historic import Event
+from client_code.historic.model import Event
 
 __version__ = "0.0.1"
 

@@ -4,7 +4,7 @@ import datetime as dt
 
 import anvil.server
 
-from .pedantic import in_list, validated
+from ..pedantic import in_list, validated
 
 __version__ = "0.0.1"
 
