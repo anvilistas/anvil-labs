@@ -98,6 +98,9 @@ def _record_event(event, prevent_duplication):
     prevent_duplication : bool
         Whether to disallow records where the state is unchanged from previously
     """
+    if event.event_type == "creation" and event.affected.uid is not None:
+        raise AttributeError("Object uid cannot be assigned on creation")
+
     object_id = uuid4().hex if event.event_type == "creation" else event.affected.uid
     state = None
     diff = None
