@@ -237,17 +237,13 @@ class Projector:
             event_id=q.greater_than(rewind_to),
         )
         if len(events) == 0:
-            LOGGER.info(
-                f"The {self.name} projection is already at event {rewind_to}."
-            )
+            LOGGER.info(f"The {self.name} projection is already at event {rewind_to}.")
             return
 
         LOGGER.info(f"Rewinding the {self.name} projection to event {rewind_to}")
         self.rewinder(events, *args, **kwargs)
         self.played_to = rewind_to
-        LOGGER.info(
-            f"The {self.name} projection has been rewound to event {rewind_to}"
-        )
+        LOGGER.info(f"The {self.name} projection has been rewound to event {rewind_to}")
 
     def reset(self, *args, **kwargs):
         """Call the projector's reset function"""
