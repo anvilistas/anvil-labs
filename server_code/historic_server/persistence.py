@@ -143,7 +143,7 @@ def _record_event(event, prevent_duplication):
         event_type=event.event_type,
         occurred_at=event.occurred_at,
         state=state,
-        previous_observation=previous_event_id,
+        predecessor=previous_event_id,
         state_diff=diff,
     )
     sequence["value"] += 1
