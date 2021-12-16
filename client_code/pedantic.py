@@ -5,7 +5,6 @@ __version__ = "0.0.1"
 
 
 class BaseValidator:
-    value = None
 
     def is_valid(self):
         raise NotImplementedError
