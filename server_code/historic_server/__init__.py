@@ -4,7 +4,7 @@ import anvil.server
 from anvil.tables import app_tables
 
 from .projection import play
-from .persistence import save_event_records, fetch_object
+from .persistence import save_event_records
 from . import model
 
 __version__ = "0.0.1"
