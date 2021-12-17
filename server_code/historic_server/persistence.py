@@ -135,7 +135,7 @@ def _record_event(event, prevent_duplication):
         if prevent_duplication and diff is None:
             raise DuplicationError(
                 f"Object {object_id} already exists in this state "
-                "(event {previous_event_id})"
+                f"(event {previous_event_id})"
             )
 
     sequence = app_tables.sequences.get(name="events") or app_tables.sequences.add_row(
