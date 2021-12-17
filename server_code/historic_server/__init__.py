@@ -5,7 +5,6 @@ from anvil.tables import app_tables
 
 from .projection import play
 from .persistence import save_event_records
-from . import model
 
 __version__ = "0.0.1"
 
@@ -49,5 +48,5 @@ def fetch(object_id, as_at=None):
     else:
         raise NotImplementedError
 
-    cls = getattr(model, record["object_type"])
-    return cls(record["state"])
+    return record["state"]
+
