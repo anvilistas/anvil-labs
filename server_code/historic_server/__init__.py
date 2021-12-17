@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 import anvil.server
+from anvil.tables import app_tables
 
 from .projection import play
 from .persistence import save_event_records, fetch_object
+from . import model
 
 __version__ = "0.0.1"
 
@@ -33,7 +35,7 @@ def save(events, prevent_duplication=True, return_identifiers=False, projectors=
 
 
 @anvil.server.callable
-def fetch(object_id, portable_class, as_at=None):
+def fetch(object_id, as_at=None):
     """Fetch an object with state at a given point in time
 
     Parameters
@@ -42,8 +44,10 @@ def fetch(object_id, portable_class, as_at=None):
         The object identifier
     as_at : datetime.datetime
     """
-    if as_at is not None:
+    if as_at is None:
+        record = app_tables.current.get(object_id=object_id)
+    else:
         raise NotImplementedError
 
-    state = fetch_object(object_id, as_at)
-    return portable_class(state)
+    cls = getattr(model, record["object_type"])
+    return cls(record["state"])
