@@ -53,7 +53,7 @@ def _rewind(event):
     if event["event_type"] == "creation":
         row.delete()
     else:
-        previous = app_tables.events.get(observation_id=event["predecessor"])
+        previous = app_tables.events.get(event_id=event["predecessor"])
         row.update(state=previous["state"])
 
 
