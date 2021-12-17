@@ -101,7 +101,10 @@ def _record_event(event, prevent_duplication):
     if event.event_type == "creation" and event.affected.uid is not None:
         raise AttributeError("Object uid cannot be assigned on creation")
 
-    object_id = uuid4().hex if event.event_type == "creation" else event.affected.uid
+    if event.event_type == "creation":
+        event.affected.uid = uuid4().hex
+
+    object_id = event.affected.uid
     state = None
     diff = None
 
