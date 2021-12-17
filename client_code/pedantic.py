@@ -26,15 +26,7 @@ def _is_valid(obj):
 
 def validate(**kwargs):
     def decorator(cls):
-        try:
-            _ = cls.validators
-        except AttributeError:
-            cls.validators = []
-
-        try:
-            _ = cls.is_valid
-        except AttributeError:
-            cls.is_valid = _is_valid
+        cls.is_valid = _is_valid
 
         for attr, validator in kwargs.items():
             if getattr(cls, attr, None) is not None:
@@ -45,7 +37,10 @@ def validate(**kwargs):
             validator.private_name = f"_{attr}"
 
             setattr(cls, attr, validator)
-            cls.validators.append(validator.is_valid)
+            try:
+                cls.validators.append(validator.is_valid)
+            except AttributeError:
+                cls.validators = [validator.is_valid]
         return cls
 
     return decorator
