@@ -3,7 +3,7 @@
 import anvil.server
 
 from .projection import play
-from .persistence import save_event_records
+from .persistence import save_event_records, fetch_object
 
 __version__ = "0.0.1"
 
@@ -33,7 +33,7 @@ def save(events, prevent_duplication=True, return_identifiers=False, projectors=
 
 
 @anvil.server.callable
-def fetch(object_id, as_at=None):
+def fetch(object_id, portable_class, as_at=None):
     """Fetch an object with state at a given point in time
 
     Parameters
@@ -42,4 +42,8 @@ def fetch(object_id, as_at=None):
         The object identifier
     as_at : datetime.datetime
     """
-    raise NotImplementedError
+    if as_at is not None:
+        raise NotImplementedError
+
+    state = fetch_object(object_id, as_at)
+    return portable_class(state)

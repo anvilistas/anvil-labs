@@ -202,3 +202,12 @@ def save_event_records(events, prevent_duplication, return_identifiers):
             "No changes were committed to the db."
         )
         raise e
+
+
+def fetch_object(object_id, as_at):
+    if as_at is None:
+        record = app_tables.current.get(object_id=object_id)
+    else:
+        raise NotImplementedError
+
+    return record["state"]
