@@ -29,6 +29,9 @@ def test_invalid_item():
 
 
 def test_invalid_validator():
+    class TestClass:
+        pass
+
     decorator = validate(item=None)
     with pytest.raises(AssertionError):
-        decorator(Thing)
+        decorator(TestClass)
