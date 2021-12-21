@@ -31,6 +31,7 @@ def validate(**kwargs):
         for attr, validator in kwargs.items():
             if getattr(cls, attr, None) is not None:
                 raise ValueError(f"{attr} is already defined")
+            assert(isinstance(validator, BaseValidator))
 
             # This shouldn't be necessary, but skulpt doesn't seem to call __set_name__
             # on a descriptor.
