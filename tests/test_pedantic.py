@@ -26,3 +26,12 @@ def test_valid_items():
 def test_invalid_item():
     with pytest.raises(ValueError):
         Thing("three", "three")
+
+
+def test_invalid_validator():
+    class TestClass:
+        pass
+
+    decorator = validate(item=None)
+    with pytest.raises(AssertionError):
+        decorator(TestClass)
