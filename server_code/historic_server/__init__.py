@@ -49,4 +49,3 @@ def fetch(object_id, as_at=None):
         raise NotImplementedError
 
     return record["state"]
-
