@@ -34,9 +34,9 @@ jobs:
       run: |
         python -m isort --check-only client_code
         # python -m isort --check-only server_code
-    # - name: Run test suite
-    #   run: |
-    #     python -m pytest
+    - name: Run test suite
+      run: |
+        python -m pytest
     # - name: Check docs build
     #   run: |
     #     sphinx-build docs build
