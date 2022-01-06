@@ -23,3 +23,8 @@ class NonExistentError(NamedError):
 @portable_exception
 class AuthorizationError(NamedError):
     pass
+
+
+@portable_exception
+class UnregisteredClassError(NamedError):
+    pass

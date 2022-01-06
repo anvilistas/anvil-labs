@@ -3,14 +3,30 @@
 import anvil.server
 from anvil.tables import app_tables
 
-from .projection import play
+from ..historic.exceptions import UnregisteredClassError
+from ..historic.model import Event
 from .persistence import save_event_records
+from .projection import play
 
 __version__ = "0.0.1"
+_classes = {}
+
+
+def register(cls, name):
+    _classes[name] = cls
+
+
+def play_projectors(projectors):
+    if projectors is None:
+        return
+    for projector in projectors:
+        play(projector)
 
 
 @anvil.server.callable
-def save(events, prevent_duplication=True, return_identifiers=False, projectors=None):
+def save_events(
+    events, prevent_duplication=True, return_identifiers=False, projectors=None
+):
     """Save event records and optionally play all projections
 
     events : list
@@ -27,10 +43,25 @@ def save(events, prevent_duplication=True, return_identifiers=False, projectors=
         Depending on the value of return_identifiers
     """
     identifiers = save_event_records(events, prevent_duplication, return_identifiers)
-    projectors = [] if projectors is None else projectors
-    for projector in projectors:
-        play(projector)
+    play_projectors(projectors)
     return identifiers if return_identifiers else None
+
+
+@anvil.server.callable
+def save(obj, projectors=None):
+    event_type = "creation" if obj.uid is None else "change"
+    return_identifiers = True if event_type == "change" else False
+    event = Event(event_type, obj)
+    identifier = save_event_records(event, return_identifiers=return_identifiers)[0]
+    play_projectors(projectors)
+    return identifier
+
+
+@anvil.server.callable
+def delete(obj, projectors=None):
+    event = Event("termination", obj)
+    save_event_records(event, return_identifiers=return_identifiers)[0]
+    play_projectors(projectors)
 
 
 @anvil.server.callable
@@ -48,4 +79,14 @@ def fetch(object_id, as_at=None):
     else:
         raise NotImplementedError
 
-    return record["state"]
+    try:
+        cls = _classes[record["object_type"]]
+    except KeyError:
+        raise UnregisteredClassError(
+            f"No {record['object_type']} portable class has been registered."
+        )
+
+    try:
+        return cls.__restore__(record["state"])
+    except AttributeError:
+        return cls(**record["state"])

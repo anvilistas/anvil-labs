@@ -21,18 +21,18 @@ class Authorization:
 
     Attributes
     ----------
-    checker : callable
+    policy: callable
         which must take a portable class instance and an operation ('create', 'change'
         or 'delete') as its arguments and return a bool.
     """
 
-    def __init__(self, checker=None):
-        self.checker = checker
+    def __init__(self, policy=None):
+        self.policy = policy
 
     def check(self, obj, operation):
-        if self.checker is None:
+        if self.policy is None:
             return True
-        return self.checker(obj, operation)
+        return self.policy(obj, operation)
 
 
 authorization = Authorization()
@@ -109,7 +109,7 @@ def _record_event(event, prevent_duplication):
     diff = None
 
     try:
-        state = event.affected.__serialize__()
+        state = event.affected.__persist__()
     except AttributeError:
         state = event.affected.__dict__
 
