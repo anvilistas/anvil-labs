@@ -60,7 +60,7 @@ def save(obj, projectors=None):
 @anvil.server.callable
 def delete(obj, projectors=None):
     event = Event("termination", obj)
-    save_event_records(event, return_identifiers=return_identifiers)[0]
+    save_event_records(event, return_identifiers=False)[0]
     play_projectors(projectors)
 
 
