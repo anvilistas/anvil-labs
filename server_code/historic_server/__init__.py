@@ -48,17 +48,41 @@ def save_events(
 
 
 @anvil.server.callable
-def save(obj, projectors=None):
-    event_type = "creation" if obj.uid is None else "change"
-    return_identifiers = True if event_type == "change" else False
+def save(obj, is_initial=True, projectors=None):
+    """Save an object and optionally play all projections
+
+    Parameters
+    ----------
+    obj : portable class instance
+    is_initial : bool
+        Whether this is the initial save of the object
+    projectors : list
+        of projector names to play
+
+    Returns
+    -------
+    str
+        The uid of the object
+    """
+    event_type = "creation" if is_initial else "change"
     event = Event(event_type, obj)
-    identifier = save_event_records(event, return_identifiers=return_identifiers)[0]
+    identifier = save_event_records(
+        event, prevent_duplication=True, return_identifiers=True
+    )[0]
     play_projectors(projectors)
     return identifier
 
 
 @anvil.server.callable
 def delete(obj, projectors=None):
+    """Delete an object and optionally play all projections
+
+    Parameters
+    ----------
+    obj : portable class instance
+    projectors : list
+        of projector names to play
+    """
     event = Event("termination", obj)
     save_event_records(event, return_identifiers=False)[0]
     play_projectors(projectors)
