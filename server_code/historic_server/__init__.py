@@ -29,6 +29,10 @@ def save_events(
 ):
     """Save event records and optionally play all projections
 
+    This is intended for saving batches of events which could be of different
+    event_types. e.g. where an app goes offline and later has to send all the
+    changes that may have occurred.
+
     events : list
         of Event instances
     prevent_duplication : bool
@@ -50,6 +54,11 @@ def save_events(
 @anvil.server.callable
 def save(obj, is_initial=True, projectors=None):
     """Save an object and optionally play all projections
+
+    This will handle the creation or update of a single object. If the object has no
+    uid, it will be created (and a uid assigned at that point).
+
+    If the object has uid, it will be updated unless 'is_initial' is True.
 
     Parameters
     ----------
@@ -77,6 +86,9 @@ def save(obj, is_initial=True, projectors=None):
 def delete(obj, projectors=None):
     """Delete an object and optionally play all projections
 
+    This handles the deletion of an individual object. It will cause a 'termination'
+    event to be recorded in the events table.
+
     Parameters
     ----------
     obj : portable class instance
@@ -91,6 +103,9 @@ def delete(obj, projectors=None):
 @anvil.server.callable
 def fetch(object_id, as_at=None):
     """Fetch an object with state at a given point in time
+
+    This will fetch a record from the 'current' projection table and
+    deserialize that into a portable class instance.
 
     Parameters
     ----------
