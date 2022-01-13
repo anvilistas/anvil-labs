@@ -97,7 +97,7 @@ def delete(obj, projectors=None):
         of projector names to play
     """
     event = Event("termination", obj)
-    save_event_records(event, return_identifiers=False)[0]
+    save_event_records(event, prevent_duplication=True, return_identifiers=False)[0]
     play_projectors(projectors)
 
 
