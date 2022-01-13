@@ -58,7 +58,8 @@ def save(obj, is_initial=True, projectors=None):
     This will handle the creation or update of a single object. If the object has no
     uid, it will be created (and a uid assigned at that point).
 
-    If the object has uid, it will be updated unless 'is_initial' is True.
+    If the object has a uid, the behaviour depends on the value of is_initial. If that
+    is True, the object will be created. If False, the object will be updated.
 
     Parameters
     ----------
