@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
+import functools
+
 import anvil
 
 from .constants import RENDER, SELECTOR
@@ -80,7 +82,6 @@ class Render(Subscriber):
         return self.f.__qualname__
 
 
-MISSING = object()
 INITIAL = "initializing"
 CACHE = "using cached"
 RECOMPUTE = "recomputing"
@@ -96,8 +97,9 @@ class Selector(Subscriber):
         self.f = f.__get__(atom)
         self.atom = atom
         self.prop = prop
-        self.cached = MISSING
         self.status = INITIAL
+        self.args = ()
+        self.kws = {}
 
     def add_dependent(self, parent):
         # my parent depends on me
@@ -108,18 +110,24 @@ class Selector(Subscriber):
         # anytime our value is requested make renders/selectors depend on our property
         register(self.atom, self.prop)
         with SelectorContext(self):
-            if self.cached is MISSING:
-                self.update_cache()
-        return self.cached
+            cached = self.compute_cached(*self.args, **self.kws)
+        return cached
 
-    def update_cache(self):
-        self.cached = self.f()
+    @functools.lru_cache(maxsize=10)
+    def compute_cached(self, *args, **kws):
         self.status = CACHE
+        return self.f(*args, **kws)
+
+    def set_args_kws(self, args, kws):
+        self.args = args
+        self.kws = kws
 
     def compute(self):
         self.status = RECOMPUTE
+        self.compute_cached.cache_clear()
         with SelectorContext(self):
-            self.update_cache()
+            # recompute the last used value
+            self.compute_cached(*self.args, **self.kws)
         request(self.atom, self.prop)
         # the compute happens within an update cycle
         # i.e. not part of the getattribute mechanism

@@ -29,8 +29,9 @@ def selector(fn):
     prop = fn.__name__
 
     @wraps(fn)
-    def selector_wrapper(atom):
+    def selector_wrapper(atom, *args, **kws):
         selector = _get_selector(fn, atom, prop)
+        selector.set_args_kws(args, kws)
         return selector.value
 
     return selector_wrapper
