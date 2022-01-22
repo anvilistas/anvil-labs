@@ -31,8 +31,7 @@ def selector(fn):
     @wraps(fn)
     def selector_wrapper(atom, *args, **kws):
         selector = _get_selector(fn, atom, prop)
-        selector.set_args_kws(args, kws)
-        return selector.value
+        return selector(*args, **kws)
 
     return selector_wrapper
 

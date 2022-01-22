@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
-import functools
+from functools import lru_cache
 
 import anvil
 
@@ -94,7 +94,7 @@ class Selector(Subscriber):
 
     def __init__(self, f, atom, prop):
         super().__init__()
-        self.f = f.__get__(atom)
+        self.f = lru_cache(maxsize=16)(f.__get__(atom))
         self.atom = atom
         self.prop = prop
         self.status = INITIAL
@@ -105,29 +105,23 @@ class Selector(Subscriber):
         # my parent depends on me
         self.dependents.add(parent)
 
-    @property
-    def value(self):
-        # anytime our value is requested make renders/selectors depend on our property
-        register(self.atom, self.prop)
+    def compute_cached(self):
         with SelectorContext(self):
-            cached = self.compute_cached(*self.args, **self.kws)
+            cached = self.f(*self.args, **self.kws)
+        self.status = CACHE
         return cached
 
-    @functools.lru_cache(maxsize=10)
-    def compute_cached(self, *args, **kws):
-        self.status = CACHE
-        return self.f(*args, **kws)
-
-    def set_args_kws(self, args, kws):
+    def __call__(self, *args, **kws):
+        # anytime our value is requested make renders/selectors depend on our property
+        register(self.atom, self.prop)
         self.args = args
         self.kws = kws
+        return self.compute_cached()
 
     def compute(self):
         self.status = RECOMPUTE
-        self.compute_cached.cache_clear()
-        with SelectorContext(self):
-            # recompute the last used value
-            self.compute_cached(*self.args, **self.kws)
+        self.f.cache_clear()
+        self.compute_cached()
         request(self.atom, self.prop)
         # the compute happens within an update cycle
         # i.e. not part of the getattribute mechanism
