@@ -112,8 +112,8 @@ class DictAtom(dict):
     __hash__ = object.__hash__
 
     def __getitem__(self, key):
-        res = dict.__getitem__(self, key)
         register(self, key)
+        res = dict.__getitem__(self, key)
         return res
 
     def __setitem__(self, key, val):
