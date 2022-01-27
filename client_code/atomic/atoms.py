@@ -93,6 +93,7 @@ def atom(base):
 
     AtomProxy.__name__ = base.__name__
     AtomProxy.__qualname__ = base.__qualname__
+    AtomProxy.__module__ = base.__module__
     return AtomProxy
 
 
