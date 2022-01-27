@@ -23,6 +23,15 @@ def play_projectors(projectors):
         play(projector)
 
 
+def save_object(obj, event_type, projectors):
+    event = Event(event_type, obj)
+    identifier = save_event_records(
+        event, prevent_duplication=True, return_identifiers=True
+    )[0]
+    play_projectors(projectors)
+    return identifier
+
+
 @anvil.server.callable
 def save_events(
     events, prevent_duplication=True, return_identifiers=False, projectors=None
@@ -52,20 +61,12 @@ def save_events(
 
 
 @anvil.server.callable
-def save(obj, is_initial=True, projectors=None):
-    """Save an object and optionally play all projections
-
-    This will handle the creation or update of a single object. If the object has no
-    uid, it will be created (and a uid assigned at that point).
-
-    If the object has a uid, the behaviour depends on the value of is_initial. If that
-    is True, the object will be created. If False, the object will be updated.
+def create(obj, projectors=None):
+    """Save a new object and optionally play all projections
 
     Parameters
     ----------
     obj : portable class instance
-    is_initial : bool
-        Whether this is the initial save of the object
     projectors : list
         of projector names to play
 
@@ -74,21 +75,30 @@ def save(obj, is_initial=True, projectors=None):
     str
         The uid of the object
     """
-    event_type = "creation" if is_initial else "change"
-    event = Event(event_type, obj)
-    identifier = save_event_records(
-        event, prevent_duplication=True, return_identifiers=True
-    )[0]
-    play_projectors(projectors)
-    return identifier
+    return save_object(obj, "creation", projectors)
+
+
+@anvil.server.callable
+def update(obj, projectors=None):
+    """Save changes to an object and optionally play all projections
+
+    Parameters
+    ----------
+    obj : portable class instance
+    projectors : list
+        of projector names to play
+
+    Returns
+    -------
+    str
+        The uid of the object
+    """
+    return save_object(obj, "change", projectors)
 
 
 @anvil.server.callable
 def delete(obj, projectors=None):
     """Delete an object and optionally play all projections
-
-    This handles the deletion of an individual object. It will cause a 'termination'
-    event to be recorded in the events table.
 
     Parameters
     ----------
