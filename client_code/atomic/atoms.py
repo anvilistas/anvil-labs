@@ -4,7 +4,7 @@
 from collections import namedtuple
 from functools import partial
 
-from .constants import CHANGE, DELETE, REGISTRAR, SENTINEL
+from .constants import CHANGE, DELETE, IS_SERVER_SIDE, REGISTRAR, SENTINEL
 from .contexts import ActionContext
 from .decorators import action
 from .registrar import add_registrar
@@ -39,6 +39,8 @@ _object_new = object.__new__
 
 def atom(base):
     """decorator for an atom class"""
+    if IS_SERVER_SIDE:
+        return base
 
     class AtomProxy(base):
         """an AtomProxy requests an update whenever the __setattr__ is called
@@ -93,6 +95,7 @@ def atom(base):
 
     AtomProxy.__name__ = base.__name__
     AtomProxy.__qualname__ = base.__qualname__
+    AtomProxy.__module__ = base.__module__
     return AtomProxy
 
 
