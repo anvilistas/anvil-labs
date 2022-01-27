@@ -109,7 +109,7 @@ def _record_event(event, prevent_duplication):
     """
     if event.event_type == "creation":
         if event.affected.uid is None:
-            event.affected.uid = uuid4().hex
+            event.affected.uid = str(uuid4())
         elif not _is_valid_uid(event.affected.uid):
             raise InvalidUIDError(f"Invalid UID {event.affected.uid}")
 
