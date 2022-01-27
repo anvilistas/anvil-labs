@@ -96,6 +96,11 @@ def atom(base):
     return AtomProxy
 
 
+KEYS = "dict.KEYS"
+ITEMS = "dict.ITEMS"
+VALUES = "dict.VALUES"
+
+
 class DictAtom(dict):
     """
     a DictAtom requests an update whenever the __setitem__ is called
@@ -124,6 +129,10 @@ class DictAtom(dict):
         with ActionContext(BaseAction(CHANGE, self, key, val)):
             dict.__setitem__(self, key, val)
             request(self, key)
+            request(self, VALUES)
+            request(self, ITEMS)
+            if val is SENTINEL:
+                request(self, KEYS)
 
     def __delitem__(self, key):
         self.pop(key)
@@ -132,6 +141,11 @@ class DictAtom(dict):
     def update(self, *args, **kws):
         for k, v in dict(*args, **kws).items():
             self[k] = v
+
+    @action
+    def clear(self):
+        for k in dict.keys(self):
+            self.pop(k)
 
     def pop(self, key, default=SENTINEL):
         if default is SENTINEL:
@@ -142,6 +156,9 @@ class DictAtom(dict):
                 return default
         with ActionContext(BaseAction(DELETE, self, key)):
             request(self, key)
+            request(self, VALUES)
+            request(self, ITEMS)
+            request(self, KEYS)
         return res
 
     def get(self, key, default=None):
@@ -150,20 +167,27 @@ class DictAtom(dict):
         except KeyError:
             return default
 
+    def setdefault(self, key, default=None):
+        if key not in self:
+            self[key] = default
+        return self[key]
+
     def __iter__(self):
         # prevents dict(self) using the fast internal dict path
         # which makes it easier to depend on each atom in a list of DictAtoms
         # by calling [dict(atom) for dict_atom in list_atom]
         return dict.__iter__(self)
 
+    def keys(self):
+        register(self, KEYS)
+        return dict.keys(self)
+
     def values(self):
-        # maybe silly but if a render method wants to depend on the values
-        # then create a dependency on all the values now
-        [self[k] for k in self]
+        register(self, VALUES)
         return dict.values(self)
 
     def items(self):
-        [self[k] for k in self]
+        register(self, ITEMS)
         return dict.items(self)
 
     def __repr__(self):
