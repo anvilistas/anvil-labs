@@ -23,11 +23,24 @@ def play_projectors(projectors):
         play(projector)
 
 
-@anvil.server.callable
+def save_object(obj, event_type, projectors):
+    event = Event(event_type, obj)
+    identifier = save_event_records(
+        event, prevent_duplication=True, return_identifiers=True
+    )[0]
+    play_projectors(projectors)
+    return identifier
+
+
+@anvil.server.callable("anvil_labs.historic.save_events")
 def save_events(
     events, prevent_duplication=True, return_identifiers=False, projectors=None
 ):
     """Save event records and optionally play all projections
+
+    This is intended for saving batches of events which could be of different
+    event_types. e.g. where an app goes offline and later has to send all the
+    changes that may have occurred.
 
     events : list
         of Event instances
@@ -47,26 +60,63 @@ def save_events(
     return identifiers if return_identifiers else None
 
 
-@anvil.server.callable
-def save(obj, projectors=None):
-    event_type = "creation" if obj.uid is None else "change"
-    return_identifiers = True if event_type == "change" else False
-    event = Event(event_type, obj)
-    identifier = save_event_records(event, return_identifiers=return_identifiers)[0]
-    play_projectors(projectors)
-    return identifier
+@anvil.server.callable("anvil_labs.historic.create")
+def create(obj, projectors=None):
+    """Save a new object and optionally play all projections
+
+    Parameters
+    ----------
+    obj : portable class instance
+    projectors : list
+        of projector names to play
+
+    Returns
+    -------
+    str
+        The uid of the object
+    """
+    return save_object(obj, "creation", projectors)
 
 
-@anvil.server.callable
+@anvil.server.callable("anvil_labs.historic.update")
+def update(obj, projectors=None):
+    """Save changes to an object and optionally play all projections
+
+    Parameters
+    ----------
+    obj : portable class instance
+    projectors : list
+        of projector names to play
+
+    Returns
+    -------
+    str
+        The uid of the object
+    """
+    return save_object(obj, "change", projectors)
+
+
+@anvil.server.callable("anvil_labs.historic.delete")
 def delete(obj, projectors=None):
+    """Delete an object and optionally play all projections
+
+    Parameters
+    ----------
+    obj : portable class instance
+    projectors : list
+        of projector names to play
+    """
     event = Event("termination", obj)
-    save_event_records(event, return_identifiers=False)[0]
+    save_event_records(event, prevent_duplication=True, return_identifiers=False)[0]
     play_projectors(projectors)
 
 
-@anvil.server.callable
+@anvil.server.callable("anvil_labs.historic.fetch")
 def fetch(object_id, as_at=None):
     """Fetch an object with state at a given point in time
+
+    This will fetch a record from the 'current' projection table and
+    deserialize that into a portable class instance.
 
     Parameters
     ----------

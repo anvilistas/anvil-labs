@@ -28,3 +28,8 @@ class AuthorizationError(NamedError):
 @portable_exception
 class UnregisteredClassError(NamedError):
     pass
+
+
+@portable_exception
+class InvalidUIDError(NamedError):
+    pass

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from anvil.tables import app_tables, in_transaction, order_by
 
@@ -9,6 +9,7 @@ from anvil_extras.server_utils import LOGGER
 from ..historic.exceptions import (
     AuthorizationError,
     DuplicationError,
+    InvalidUIDError,
     NonExistentError,
     ResurrectionError,
 )
@@ -36,6 +37,14 @@ class Authorization:
 
 
 authorization = Authorization()
+
+
+def _is_valid_uid(uid):
+    try:
+        UUID(uid, version=4)
+        return True
+    except ValueError:
+        return False
 
 
 def _previous_event(object_id):
@@ -98,11 +107,11 @@ def _record_event(event, prevent_duplication):
     prevent_duplication : bool
         Whether to disallow records where the state is unchanged from previously
     """
-    if event.event_type == "creation" and event.affected.uid is not None:
-        raise AttributeError("Object uid cannot be assigned on creation")
-
     if event.event_type == "creation":
-        event.affected.uid = uuid4().hex
+        if event.affected.uid is None:
+            event.affected.uid = str(uuid4())
+        elif not _is_valid_uid(event.affected.uid):
+            raise InvalidUIDError(f"Invalid UID {event.affected.uid}")
 
     object_id = event.affected.uid
     state = None
@@ -139,7 +148,7 @@ def _record_event(event, prevent_duplication):
             )
 
     sequence = app_tables.sequences.get(name="events") or app_tables.sequences.add_row(
-        name="events", value=0
+        name="events", value=1
     )
     app_tables.events.add_row(
         event_id=sequence["value"],
