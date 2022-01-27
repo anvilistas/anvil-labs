@@ -32,7 +32,7 @@ def save_object(obj, event_type, projectors):
     return identifier
 
 
-@anvil.server.callable
+@anvil.server.callable("anvil_labs.historic.save_events")
 def save_events(
     events, prevent_duplication=True, return_identifiers=False, projectors=None
 ):
@@ -60,7 +60,7 @@ def save_events(
     return identifiers if return_identifiers else None
 
 
-@anvil.server.callable
+@anvil.server.callable("anvil_labs.historic.create")
 def create(obj, projectors=None):
     """Save a new object and optionally play all projections
 
@@ -78,7 +78,7 @@ def create(obj, projectors=None):
     return save_object(obj, "creation", projectors)
 
 
-@anvil.server.callable
+@anvil.server.callable("anvil_labs.historic.update")
 def update(obj, projectors=None):
     """Save changes to an object and optionally play all projections
 
@@ -96,7 +96,7 @@ def update(obj, projectors=None):
     return save_object(obj, "change", projectors)
 
 
-@anvil.server.callable
+@anvil.server.callable("anvil_labs.historic.delete")
 def delete(obj, projectors=None):
     """Delete an object and optionally play all projections
 
@@ -111,7 +111,7 @@ def delete(obj, projectors=None):
     play_projectors(projectors)
 
 
-@anvil.server.callable
+@anvil.server.callable("anvil_labs.historic.fetch")
 def fetch(object_id, as_at=None):
     """Fetch an object with state at a given point in time
 
