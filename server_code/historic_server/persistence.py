@@ -148,7 +148,7 @@ def _record_event(event, prevent_duplication):
             )
 
     sequence = app_tables.sequences.get(name="events") or app_tables.sequences.add_row(
-        name="events", value=0
+        name="events", value=1
     )
     app_tables.events.add_row(
         event_id=sequence["value"],
