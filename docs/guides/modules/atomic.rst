@@ -295,6 +295,11 @@ API
     Create an atom class. An atom class knows how to register subscribers and
     request re-renders when its state changes.
 
+.. decorator:: portable_atom
+
+    Create an atom class which is also a portable class. It is recommended to use the
+    ``@portable_atom`` decorator over a combination of ``@atom`` and ``@portable_class``.
+
 .. decorator:: render
                render(bound=None)
 
@@ -340,8 +345,10 @@ API
 
 .. class:: Atom(**kws)
 
-    A simple class that can be called with kwargs. Each kwarg will become an attribute of the atom.
+    A portable atom class that can be called with kwargs. Each kwarg will become an attribute of the atom.
     Useful if you prefer to access attributes rather than keys of a ``DictAtom``.
+
+    e.g. ``todo_atom = Atom(done=False, description='walk the dog')``
 
 
 .. attribute:: ignore_updates

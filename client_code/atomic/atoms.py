@@ -4,6 +4,8 @@
 from collections import namedtuple
 from functools import partial
 
+from anvil.server import portable_class
+
 from .constants import CHANGE, DELETE, IS_SERVER_SIDE, REGISTRAR, SENTINEL
 from .contexts import ActionContext
 from .decorators import action
@@ -97,6 +99,22 @@ def atom(base):
     AtomProxy.__qualname__ = base.__qualname__
     AtomProxy.__module__ = base.__module__
     return AtomProxy
+
+
+def portable_atom(_cls, name=None):
+    """decorator to for atoms that you also want to be portable classes"""
+    if IS_SERVER_SIDE:
+        return portable_class(_cls, name)
+    elif name is None and type(_cls) is str:
+        name = _cls
+        return lambda _cls: portable_atom(_cls, name)
+
+    if not hasattr(_cls, "__serialize__"):
+        # TODO remove this when skulpt has __slots__
+        _cls.__serialize__ = lambda self, _: {
+            k: v for k, v in self.__dict__.items() if k != REGISTRAR
+        }
+    return portable_class(_cls, name)
 
 
 KEYS = "dict.KEYS"

@@ -3,7 +3,7 @@
 
 from functools import wraps
 
-from .constants import SUBSCRIBE
+from .constants import IS_SERVER_SIDE, SUBSCRIBE
 from .contexts import ActionContext
 from .registrar import get_registrar
 from .rendering import active, call_queued, queued
@@ -33,7 +33,7 @@ def selector(fn):
         selector = _get_selector(fn, atom, prop)
         return selector(*args, **kws)
 
-    return selector_wrapper
+    return fn if IS_SERVER_SIDE else selector_wrapper
 
 
 def action(_fn=None, **kws):
@@ -55,7 +55,7 @@ def action(_fn=None, **kws):
             res = _fn(*args, **kws)
         return res
 
-    return action_wrapper
+    return _fn if IS_SERVER_SIDE else action_wrapper
 
 
 def subscribe(f):
@@ -79,7 +79,7 @@ class render:
     def __new__(cls, _fn=None, **kws):
         if _fn is None:
             return lambda _fn: render(_fn, **kws)
-        return object.__new__(cls)
+        return _fn if IS_SERVER_SIDE else object.__new__(cls)
 
     def __init__(self, _fn, bound=None):
         self.f = _fn
