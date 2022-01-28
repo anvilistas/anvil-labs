@@ -114,7 +114,7 @@ def portable_atom(_cls, name=None):
         _cls.__serialize__ = lambda self, _: {
             k: v for k, v in self.__dict__.items() if k != REGISTRAR
         }
-    return portable_class(_cls, name)
+    return portable_class(atom(_cls), name)
 
 
 KEYS = "dict.KEYS"
