@@ -116,7 +116,7 @@ def portable_atom(_cls, name=None):
         }
 
     if not any(
-        [hasattr(_cls, attr) for attr in ("__deserialize__", "__new_deserialized__")]
+        hasattr(_cls, attr) for attr in ("__deserialize__", "__new_deserialized__")
     ):
 
         def _deserialize(obj, data, global_data):
