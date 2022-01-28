@@ -4,6 +4,8 @@
 from collections import namedtuple
 from functools import partial
 
+from anvil.server import portable_class
+
 from .constants import CHANGE, DELETE, IS_SERVER_SIDE, REGISTRAR, SENTINEL
 from .contexts import ActionContext
 from .decorators import action
@@ -96,6 +98,16 @@ def atom(base):
     AtomProxy.__name__ = base.__name__
     AtomProxy.__qualname__ = base.__qualname__
     AtomProxy.__module__ = base.__module__
+
+    # TODO do we need to think about the name argument here?
+    portable_class(AtomProxy)
+
+    if not hasattr(AtomProxy, "__serialize__"):
+        # TODO remove this when skulpt has __slots__
+        AtomProxy.__serialize__ = lambda self, _: {
+            k: v for k, v in self.__dict__.items() if k != REGISTRAR
+        }
+
     return AtomProxy
 
 
