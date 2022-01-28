@@ -114,6 +114,16 @@ def portable_atom(_cls, name=None):
         _cls.__serialize__ = lambda self, _: {
             k: v for k, v in self.__dict__.items() if k != REGISTRAR
         }
+
+    if not any(
+        hasattr(_cls, attr) for attr in ("__deserialize__", "__new_deserialized__")
+    ):
+
+        def _deserialize(obj, data, global_data):
+            for attr, val in data.items():
+                setattr(obj, attr, val)
+
+        _cls.__deserialize__ = action(_deserialize)
     return portable_class(atom(_cls), name)
 
 
