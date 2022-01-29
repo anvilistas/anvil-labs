@@ -89,6 +89,13 @@ def subscribe(f):
     return f
 
 
+def unsubscribe(f):
+    """remove a subscriber"""
+    subscribers = active[SUBSCRIBE]
+    i = subscribers.index(f)  # will raise ValueError
+    active[SUBSCRIBE] = subscribers[:i] + subscribers[i + 1 :]
+
+
 class render:
     """a decorator typically used above a method in a form
     if used on a form render methods will only execute on the show event
@@ -121,10 +128,13 @@ class render:
 
 def autorun(f, bound=None):
     """create render function that is called immediately.
-    Optionally provide a component to bind this method to"""
+    Optionally provide a component to bind this method to
+    Similar to: render(fn)()"""
     if bound is None:
         try:
             bound = f.__self__
         except AttributeError:
             pass
-    return render(f, bound=bound)()
+    r = render(f, bound=bound)
+    r()
+    return r

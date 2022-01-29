@@ -148,7 +148,7 @@ To depend on the state of an atom, the
             self.display_count(count_atom.value)
 
         @render
-        def display_count(self):
+        def display_count(self, count):
             self.count_lbl.text = count
 
 In the above example, the ``display_count`` method does not explicitly access the ``count_atom.value`` attribute.
@@ -346,7 +346,18 @@ API
 .. function:: autorun(fn)
               autorun(fn, bound=None)
 
-    equivalent to ``render(fn)()``.
+    can also be used as a decorator
+    similar to ``render(fn)()``.
+
+.. decorator:: subscribe
+
+    A subscriber is called after all re-renders resulting from a series of actions
+    a subscriber takes a single argument - the tuple of actions that caused the re-render.
+    See examples for use cases.
+
+.. function:: unsubscribe(f)
+
+    Stop a subscriber from running.
 
 .. class:: DictAtom
 
