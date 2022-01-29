@@ -51,6 +51,7 @@ def atom(base):
         """
 
         __slots__ = REGISTRAR  # slots don't actually work yet
+        __is_atom__ = True
 
         def __new__(cls, *args, **kws):
             base_new = base.__new__
@@ -139,6 +140,7 @@ class DictAtom(dict):
     """
 
     __slots__ = REGISTRAR
+    __is_atom__ = True
 
     def __init__(self, *args, **kws):
         target = dict(*args, **kws)
@@ -243,7 +245,8 @@ class ListAtom(list):
     Any time the list is mutated we request a render from the parent atom at the property this list belongs to
     """
 
-    slots = ["_as_atom", "_request_render", "_register"]
+    __slots__ = ["_as_atom", "_request_render", "_register"]
+    __is_atom__ = True
 
     def __init__(self, parent_atom, prop, target) -> None:
         list.__init__(self, (as_atom(parent_atom, prop, t) for t in target))

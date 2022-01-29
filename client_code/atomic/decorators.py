@@ -54,28 +54,30 @@ class action:
     def __init__(self, _fn, **kws):
         for k, v in kws.items():
             setattr(_fn, k, v)
-        self._set_atom_prop(_fn)
-        self.f = _fn
+        self._f = _fn
 
-    def _set_atom_prop(self, _fn):
-        if type(_fn) is not MethodType:
-            _fn.atom = None
-            return
-        atom = _fn.__self__
-        if is_atom(atom):
-            _fn.atom = atom
-        else:
-            _fn.atom = None
+    def __getattr__(self, attr):
+        return getattr(self._f, attr)
 
-    def __call__(self, args, kws):
-        with ActionContext(self.f):
-            res = self.f(*args, **kws)
+    @property
+    def atom(self):
+        if type(self._f) is not MethodType:
+            return None
+        atom = self._f.__self__
+        return atom if is_atom(atom) else None
+
+    def __call__(self, *args, **kws):
+        with ActionContext(self):
+            res = self._f(*args, **kws)
         return res
 
     def __get__(self, obj, cls=None):
         if obj is None:
             return self
-        return action(self.f.__get__(obj, cls))
+        return action(self._f.__get__(obj, cls))
+
+    def __repr__(self):
+        return repr(self._f)
 
 
 def subscribe(f):

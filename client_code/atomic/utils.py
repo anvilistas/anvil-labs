@@ -25,4 +25,4 @@ MethodType = type(_C()._m)
 
 
 def is_atom(atom):
-    return type(atom) is not type and hasattr(atom, REGISTRAR)
+    return hasattr(type(atom), "__is_atom__")
