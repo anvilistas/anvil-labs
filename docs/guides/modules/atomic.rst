@@ -221,7 +221,23 @@ Here's an example.
             indexed_db["todos"] = todos_atom.todos
 
 
+The ``@action`` decorator can be used on any function or method.
+If the decorator is used above a method then the ``atom`` used as the ``self`` argument
+can be caught within a ``subscribe`` function
 
+.. code-block:: python
+
+    @subscribe
+    def update_db_subscriber(actions):
+        for action in actions:
+            if hasattr(action, "update_db"):
+                atom = action.atom
+                break
+        else:
+            return
+
+        # now use the atom do do something specific
+        ...
 
 
 Bindings and Writeback

@@ -6,8 +6,9 @@ from functools import wraps
 from .constants import IS_SERVER_SIDE, SUBSCRIBE
 from .contexts import ActionContext
 from .registrar import get_registrar
-from .rendering import active, call_queued, queued
+from .rendering import active
 from .subscribers import Render, Selector
+from .utils import MethodType, is_atom
 
 __version__ = "0.0.1"
 
@@ -36,7 +37,7 @@ def selector(fn):
     return fn if IS_SERVER_SIDE else selector_wrapper
 
 
-def action(_fn=None, **kws):
+class action:
     """Whenever a method does multiple updates use the @action decorator
     only when the method has finished will renders methods be re-rendered
     and selector methods be re-computed
@@ -44,18 +45,39 @@ def action(_fn=None, **kws):
     any kws will be added to the action as attributes
     useful when an action is passed to a function decorated with @susbcribe
     """
-    if _fn is None:
-        return lambda _fn: action(_fn, **kws)
-    for k, v in kws.items():
-        setattr(_fn, k, v)
 
-    @wraps(_fn)
-    def action_wrapper(*args, **kws):
-        with ActionContext(_fn):
-            res = _fn(*args, **kws)
+    def __new__(cls, _fn=None, **kws):
+        if _fn is None:
+            return lambda _fn: action(_fn, **kws)
+        return _fn if IS_SERVER_SIDE else object.__new__(cls)
+
+    def __init__(self, _fn, **kws):
+        for k, v in kws.items():
+            setattr(_fn, k, v)
+        self._f = _fn
+
+    def __getattr__(self, attr):
+        return getattr(self._f, attr)
+
+    @property
+    def atom(self):
+        if type(self._f) is not MethodType:
+            return None
+        atom = self._f.__self__
+        return atom if is_atom(atom) else None
+
+    def __call__(self, *args, **kws):
+        with ActionContext(self):
+            res = self._f(*args, **kws)
         return res
 
-    return _fn if IS_SERVER_SIDE else action_wrapper
+    def __get__(self, obj, cls=None):
+        if obj is None:
+            return self
+        return action(self._f.__get__(obj, cls))
+
+    def __repr__(self):
+        return repr(self._f)
 
 
 def subscribe(f):

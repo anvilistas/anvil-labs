@@ -4,6 +4,9 @@
 __version__ = "0.0.1"
 
 
+from .constants import REGISTRAR
+
+
 def get_atom_prop_repr(atom, prop):
     tp_name = type(atom).__name__
     if isinstance(atom, dict):
@@ -19,3 +22,7 @@ class _C:
 
 
 MethodType = type(_C()._m)
+
+
+def is_atom(atom):
+    return hasattr(type(atom), "__is_atom__")
