@@ -4,9 +4,6 @@
 __version__ = "0.0.1"
 
 
-from .constants import REGISTRAR
-
-
 def get_atom_prop_repr(atom, prop):
     tp_name = type(atom).__name__
     if isinstance(atom, dict):
