@@ -7,7 +7,7 @@ from .constants import IS_SERVER_SIDE, SUBSCRIBE
 from .contexts import ActionContext
 from .registrar import get_registrar
 from .rendering import active
-from .subscribers import Render, Selector
+from .subscribers import Reaction, Render, Selector
 from .utils import MethodType, is_atom
 
 __version__ = "0.0.1"
@@ -138,3 +138,19 @@ def autorun(f, bound=None):
     r = render(f, bound=bound)
     r()
     return r
+
+
+def reaction(depends_on_fn, then_react_fn, fire_immediately=False, **options):
+    """a reaction takes two arguments: depends_on_fn and then_react_fn
+    the depends_on_fn is used to determine the dependcies that the then_react_fn depends on
+    when ever an atom attribute accessed in the depends_on_fn changes the then_react_fn is called.
+
+    If the depends_on_fn returns a value other than None the return value will be passed to the then_react_fn.
+
+    depends_on_fn fires immediately, but then_react_fn will only be called the next time a dependency changes.
+    To call the then_react_fn function immediately set fire_immediately to True.
+    """
+    r = Reaction(
+        depends_on_fn, then_react_fn, fire_immediately=fire_immediately, **options
+    )
+    return r.dispose

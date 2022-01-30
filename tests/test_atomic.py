@@ -14,6 +14,7 @@ from client_code.atomic import (
     bind,
     ignore_updates,
     portable_atom,
+    reaction,
     render,
     selector,
     subscribe,
@@ -258,3 +259,49 @@ def test_bad_contexts():
     assert count_atom.value is None
 
     del CountAtom.ok_selector
+
+
+def test_reaction():
+    count_atom = CountAtom()
+
+    num_reactions = 0
+    num_subscription = 0
+
+    def react_to_count(count):
+        nonlocal num_reactions
+        num_reactions += 1
+        if count:
+            count_atom.value -= 1
+
+    count_atom.value = 42
+
+    num_actions = 0
+
+    def count_subscriber(actions):
+        nonlocal num_subscription, num_actions
+        num_subscription += 1
+        num_actions = len(actions)
+
+    subscribe(count_subscriber)
+
+    dispose = reaction(count_atom.get_count, react_to_count)
+    assert num_reactions == 0
+    assert num_subscription == 0
+
+    count_atom.value = 42
+    assert num_reactions == 0
+    assert num_subscription == 0
+
+    count_atom.value = 10
+    assert num_reactions == 11
+    assert num_actions == 11
+    assert count_atom.value == 0
+    assert num_subscription == 1
+
+    dispose()
+    count_atom.value = 10
+    assert num_reactions == 11
+    assert count_atom.value == 10
+    assert num_subscription == 2
+
+    unsubscribe(count_subscriber)

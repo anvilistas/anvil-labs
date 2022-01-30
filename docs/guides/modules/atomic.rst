@@ -221,6 +221,7 @@ Here's an example.
             indexed_db["todos"] = todos_atom.todos
 
 
+
 The ``@action`` decorator can be used on any function or method.
 If the decorator is used above a method then the ``atom`` used as the ``self`` argument
 can be caught within a ``subscribe`` function
@@ -238,6 +239,48 @@ can be caught within a ``subscribe`` function
 
         # now use the atom do do something specific
         ...
+
+
+Alternave Approaches to the subscriber
+
+.. code-block:: python
+    # ALTERNATIVE APPROACH 1 - use a render
+
+    is_first_run = True
+    @render
+    def update_db_with_render():
+        global is_first_run
+
+        todos = [dict(todo) for todo in todos_atom.todos]
+        # accessing the todos and each converting each todo to a dict
+        # creates a depenency on the todos and each key of each todo
+        # whenever these change this method is called
+
+        if is_first_run:
+            is_first_run = False
+            return
+        indexed_db["todos"] = todos
+
+    update_db_with_render()
+
+    # ALTERNATIVE APPROACH 2 - use autorun
+
+    def update_db_with_render():
+        # same code as above
+        ...
+    autorun(update_db_with_render)
+
+
+    # ALTERNATIVE APPROACH 3 - use a reaction
+
+    def update_db_with_reaction(todos):
+        indexed_db["todos"] = todos
+
+    reaction(lambda: [dict(todo) for todo in todos_atom.todos], update_db_with_reaction)
+    # the first function sets up the dependencies
+    # the return value of this function is passed to the reaction function
+    # the reaction function is called only after the first change to any dependency
+
 
 
 Bindings and Writeback
@@ -348,6 +391,29 @@ API
 
     can also be used as a decorator
     similar to ``render(fn)()``.
+
+
+.. function:: reaction(depends_on_fn, then_react_fn)
+              reaction(depends_on_fn, then_react_fn, fire_immediately=False)
+
+    reactions are similar to renders.
+    Changes in the ``depends_on_fn`` will force the ``then_react_fn`` to be called.
+    The ``depends_on_fn`` is a function that takes no args.
+    It should access any attributes that, when changed, should result in the call to the ``then_react_fn``.
+    If ``depends_on_fn`` returns a value that is not ``None``, this value will be passed to the ``then_react_fn``.
+
+    ``depends_on_fn`` will fire immediately. But the ``then_react_fn`` is only called the next time a dependency changes.
+    To call the ``then_react_fn`` immediately set ``fire_immediately=True``.
+
+    It would be rare to need to use this function.
+    However in cases where you want to react to a change in an atom's state
+    that may result in subsquent change in another atom's state a reaction may be useful.
+    It can also be used as an alternative to ``autorun`` or ``render``.
+
+    See the example above for alternative approaches to upating ``indexed_db``
+
+    The reaction method returns a dispose function that can be called when you want to stop reactions.
+
 
 .. decorator:: subscribe
 

@@ -13,6 +13,7 @@ ACTION = "action"
 RENDER = "render"
 SUBSCRIBE = "subscriber"
 IGNORE = "ignore"
+REACTION = "reaction"
 
 
 SENTINEL = object()

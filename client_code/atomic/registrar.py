@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
-from .constants import REGISTRAR, RENDER, SELECTOR
+from .constants import REACTION, REGISTRAR, RENDER, SELECTOR
 
 __version__ = "0.0.1"
 
@@ -12,7 +12,7 @@ class AtomRegistrar:
 
     def __init__(self, atom):
         self.atom = atom
-        self.to_update = {RENDER: {}, SELECTOR: {}}
+        self.to_update = {RENDER: {}, SELECTOR: {}, REACTION: {}}
         self.selectors = {}
 
     def register(self, prop, subscriber, mode):
