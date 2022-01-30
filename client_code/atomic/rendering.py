@@ -16,13 +16,8 @@ queued = {ACTION: (), REACTION: frozenset(), SELECTOR: frozenset(), RENDER: froz
 def log(fn):
     if not log.is_debug:
         return
-    indent = "    " * (
-        len(active[SELECTOR])
-        + len(active[RENDER])
-        + len(active[IGNORE])
-        + len(active[REACTION])
-    )
-    print(f"{indent}{fn()}")
+    indent = sum(len(active(v)) for v in (SELECTOR, RENDER, REACTION, IGNORE))
+    print(f"{'    ' * indent}{fn()}")
 
 
 log.is_debug = False
@@ -105,13 +100,12 @@ def request(atom, prop):
     atom_registrar = get_registrar(atom)
     if atom_registrar is None:
         return
-    queued_reactions = queue_subscribers(atom_registrar, prop, REACTION)
-    queued_renders = queue_subscribers(atom_registrar, prop, RENDER)
-    queued_selectors = queue_subscribers(atom_registrar, prop, SELECTOR)
-    queued[REACTION], queued[RENDER], queued[SELECTOR] = (
-        queued_reactions,
-        queued_renders,
-        queued_selectors,
+    queued.update(
+        {
+            REACTION: queue_subscribers(atom_registrar, prop, REACTION),
+            RENDER: queue_subscribers(atom_registrar, prop, RENDER),
+            SELECTOR: queue_subscribers(atom_registrar, prop, SELECTOR),
+        }
     )
 
 
@@ -160,13 +154,13 @@ def call_queued():
         raise RuntimeError(
             "Queued 1000 update cycles without completing - suspected infinte loop"
         )
-    selector_queue = queued[SELECTOR]
+    has_queued = log.is_debug and (
+        queued[SELECTOR] or queued[REACTION] or queued[RENDER]
+    )
     call_queue_repeatedly(SELECTOR, lambda s: s.compute())
-    reaction_queue = queued[REACTION]
     call_queue_repeatedly(REACTION, lambda r: r.react())
-    render_queue = queued[RENDER]
     call_render_queue()
     call_subscriber_queue()
-    if log.is_debug and (selector_queue or render_queue or reaction_queue):
+    if has_queued and num_calls:
         print()
     num_calls = 0
