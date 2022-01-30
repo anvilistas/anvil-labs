@@ -1,24 +1,28 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
-from .constants import ACTION, IGNORE, RENDER, SELECTOR, SUBSCRIBE
+from .constants import ACTION, IGNORE, REACTION, RENDER, SELECTOR, SUBSCRIBE
 from .registrar import get_registrar
 from .utils import get_atom_prop_repr
 
 __version__ = "0.0.1"
 
 # STATE
-active = {ACTION: (), SELECTOR: (), RENDER: (), SUBSCRIBE: (), IGNORE: ()}
-queued = {SELECTOR: frozenset(), RENDER: frozenset(), ACTION: ()}
+active = {ACTION: (), REACTION: (), SELECTOR: (), RENDER: (), SUBSCRIBE: (), IGNORE: ()}
+queued = {ACTION: (), REACTION: frozenset(), SELECTOR: frozenset(), RENDER: frozenset()}
 
 
 # LOGGING
 def log(fn):
+    if not log.is_debug:
+        return
     indent = "    " * (
-        len(active[SELECTOR]) + len(active[RENDER]) + len(active[IGNORE])
+        len(active[SELECTOR])
+        + len(active[RENDER])
+        + len(active[IGNORE])
+        + len(active[REACTION])
     )
-    if log.is_debug:
-        print(f"{indent}{fn()}")
+    print(f"{indent}{fn()}")
 
 
 log.is_debug = False
@@ -36,6 +40,8 @@ def register(atom, prop):
         mode = SELECTOR
     elif active[RENDER]:
         mode = RENDER
+    elif active[REACTION]:
+        mode = REACTION
     else:
         return
     current = active[mode][-1]
@@ -52,7 +58,7 @@ def remove_atom_prop_relationship(subscriber, mode):
     We ask the atom registrar to unregister a relationship between a render and an atom attribute.
     We only do this with render subscribers.
     """
-    assert mode is RENDER
+    assert mode in (RENDER, REACTION)
     registrars_props = subscriber.atom_registrar_prop
     for registrar, prop in registrars_props.copy():
         registrar.unregister(prop, subscriber, mode)
@@ -99,9 +105,14 @@ def request(atom, prop):
     atom_registrar = get_registrar(atom)
     if atom_registrar is None:
         return
+    queued_reactions = queue_subscribers(atom_registrar, prop, REACTION)
     queued_renders = queue_subscribers(atom_registrar, prop, RENDER)
     queued_selectors = queue_subscribers(atom_registrar, prop, SELECTOR)
-    queued[RENDER], queued[SELECTOR] = queued_renders, queued_selectors
+    queued[REACTION], queued[RENDER], queued[SELECTOR] = (
+        queued_reactions,
+        queued_renders,
+        queued_selectors,
+    )
 
 
 def call_render_queue():
@@ -112,21 +123,23 @@ def call_render_queue():
     assert not queued[RENDER]
 
 
-def call_selector_queue():
-    """this will call the most child selector
-    child selectors will then request calls to selectors that depend on them
+def call_queue_repeatedly(mode, update):
+    """
+    calling selectors and reactions may lead to more queued selectors and reactions
+    child selectors are called first which will then queue renders from parent/dependent selectors
+    the then_react method can cause an action which could then create another reaction
     """
     for _ in range(1000):
-        if not queued[SELECTOR]:
+        if not queued[mode]:
             return
-        queue, queued[SELECTOR] = queued[SELECTOR], frozenset()
-        for selector in queue:
-            selector.compute()
+        queue, queued[mode] = queued[mode], frozenset()
+        for item in queue:
+            update(item)
     else:
-        raise RuntimeError("Suspected infinite loop from selectors")
+        raise RuntimeError(f"Suspected infinite loop from {mode}s")
 
 
-def call_action_queue():
+def call_subscriber_queue():
     """any registered subscribers will be called after all renders have taken place
     they get passed a tuple of actions that were used in this render round"""
     actions, queued[ACTION] = queued[ACTION], ()
@@ -136,12 +149,24 @@ def call_action_queue():
         subscriber(actions)
 
 
+num_calls = 0
+
+
 def call_queued():
     """calls all the queued subscribers - called after all actions have finished"""
+    global num_calls
+    num_calls += 1
+    if num_calls > 1000:
+        raise RuntimeError(
+            "Queued 1000 update cycles without completing - suspected infinte loop"
+        )
     selector_queue = queued[SELECTOR]
-    call_selector_queue()
+    call_queue_repeatedly(SELECTOR, lambda s: s.compute())
+    reaction_queue = queued[REACTION]
+    call_queue_repeatedly(REACTION, lambda r: r.react())
     render_queue = queued[RENDER]
     call_render_queue()
-    call_action_queue()
-    if log.is_debug and (selector_queue or render_queue):
+    call_subscriber_queue()
+    if log.is_debug and (selector_queue or render_queue or reaction_queue):
         print()
+    num_calls = 0

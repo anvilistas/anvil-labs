@@ -5,9 +5,9 @@ from functools import lru_cache
 
 import anvil
 
-from .constants import RENDER, SELECTOR
-from .contexts import RenderContext, SelectorContext
-from .rendering import active, register, request
+from .constants import REACTION, RENDER, SELECTOR
+from .contexts import ReactionContext, RenderContext, SelectorContext
+from .rendering import active, register, remove_atom_prop_relationship, request
 from .utils import get_atom_prop_repr
 
 __version__ = "0.0.1"
@@ -24,6 +24,9 @@ class Subscriber:
 
     def add_dependent(self):
         raise NotImplementedError
+
+    def dispose(self):
+        remove_atom_prop_relationship(self, self.mode)
 
     def register(self, atom_registrar, prop):
         self.atom_registrar_prop.add((atom_registrar, prop))
@@ -129,3 +132,30 @@ class Selector(Subscriber):
 
     def __repr__(self):
         return f"{self.status}: {get_atom_prop_repr(self.atom, self.prop)}"
+
+
+class Reaction(Subscriber):
+    """a render subscriber is created for each call to a decorated render method"""
+
+    mode = REACTION
+
+    def __init__(self, depends_on, then_react, fire_immediatly=False, **options):
+        super().__init__()
+        self.depends_on = depends_on
+        self.then_react = then_react
+        self.options = options
+        if fire_immediatly:
+            return self.react()
+        with ReactionContext(self):
+            self.depends_on()
+
+    def react(self):
+        with ReactionContext(self):
+            res = self.depends_on()
+        if res is not None:
+            self.then_react(res)
+        else:
+            self.then_react()
+
+    def __repr__(self):
+        return self.depends_on.__qualname__

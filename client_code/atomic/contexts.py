@@ -3,7 +3,7 @@
 
 from functools import partial
 
-from .constants import ACTION, IGNORE, RENDER, SELECTOR
+from .constants import ACTION, IGNORE, REACTION, RENDER, SELECTOR
 from .rendering import active, call_queued, log, queued
 
 __version__ = "0.0.1"
@@ -80,7 +80,7 @@ class ActionContext(Context):
     def adder(self):
         msg = "Cannot update an Atom or call an action from inside a selector or render method \
             - use `with ignore_updates:` if you really need to update an Atom attribute"
-        self.add_active((SELECTOR, RENDER), msg)
+        self.add_active((SELECTOR, RENDER, REACTION), msg)
         queued[ACTION] += (self.context,)
 
     def popper(self):
@@ -106,5 +106,15 @@ class SelectorContext(Context):
     def adder(self):
         self.make_dependent()
         self.add_active()
+
+    popper = Context.pop_active
+
+
+class ReactionContext(Context):
+    mode = REACTION
+
+    def adder(self):
+        msg = "Cannot call a reaction from inside a selector or render"
+        self.add_active((SELECTOR, RENDER), msg)
 
     popper = Context.pop_active
