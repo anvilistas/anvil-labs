@@ -2,6 +2,9 @@
 
 A library for testing ideas for inclusion in [Anvil Extras](https://github.com/anvilistas/anvil-extras).
 
+See our **[Full documentation](https://anvil-labs.readthedocs.io/en/latest/)**
+
+
 ## Installation
 
 Add the library as a third party dependency to your app with the token `5YU7BBT6T5O7ZNOX`.
