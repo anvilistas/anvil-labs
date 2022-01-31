@@ -244,6 +244,7 @@ can be caught within a ``subscribe`` function
 Alternave Approaches to the subscriber
 
 .. code-block:: python
+
     # ALTERNATIVE APPROACH 1 - use a render
 
     is_first_run = True
@@ -551,6 +552,6 @@ When ``loading`` is ``True`` the UI can disable a button while we call the serve
 
 
 How do I work with anvil data tables?
-************************************
+*************************************
 
 We're working on it.
