@@ -175,13 +175,13 @@ def update_db_subscriber(actions):
         subscribe_db["todos"] = [dict(todo) for todo in todos_atom.todos]
 
 
-@autorun
 def update_db_renderer():
     autorun_db["todos"] = [{k: v for k, v in todo.items()} for todo in todos_atom.todos]
 
 
 def test_todos():
     subscribe(update_db_subscriber)
+    dispose = autorun(update_db_renderer)
     assert todos_atom.todos == subscribe_db["todos"] == autorun_db["todos"] == []
     todos_atom.add_todo({"completed": False, "description": "walk the dog"})
     todos_atom.add_todo({"completed": True, "description": "take out the bins"})
@@ -193,13 +193,17 @@ def test_todos():
     assert type(todos_atom.todos) is not list
     assert type(todos_atom.todos[0]) is not dict
 
-    # test dict view forces a render
+    # test dict view forces a render - but the action isn't caught by the subscriber
     todos_atom.todos[0]["completed"] = True
     assert todos_atom.todos != subscribe_db["todos"]
     assert todos_atom.todos == autorun_db["todos"]
-    todos_atom.todos[0]["completed"] = True
+    todos_atom.todos[0]["completed"] = False
+    assert todos_atom.todos == subscribe_db["todos"]
 
     unsubscribe(update_db_subscriber)
+    dispose()
+    todos_atom.add_todo({"completed": False, "description": "run the tests"})
+    assert todos_atom.todos != autorun_db["todos"]
 
     with pytest.raises(ValueError):
         unsubscribe(update_db_subscriber)
@@ -305,3 +309,6 @@ def test_reaction():
     assert num_subscription == 2
 
     unsubscribe(count_subscriber)
+
+    with pytest.raises(RuntimeError):
+        reaction(lambda: reaction(lambda: None, lambda: None), lambda: None)
