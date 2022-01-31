@@ -96,6 +96,13 @@ def atom(base):
             else:
                 return base.__repr__(self)
 
+        @property
+        def __dict__(self):
+            # TODO remove when skulpt has slots
+            d = base.__dict__["__dict__"].__get__(self).copy()
+            d.pop(REGISTRAR)
+            return d
+
     AtomProxy.__name__ = base.__name__
     AtomProxy.__qualname__ = base.__qualname__
     AtomProxy.__module__ = base.__module__
@@ -110,21 +117,15 @@ def portable_atom(_cls, name=None):
         name = _cls
         return lambda _cls: portable_atom(_cls, name)
 
-    if not hasattr(_cls, "__serialize__"):
-        # TODO remove this when skulpt has __slots__
-        _cls.__serialize__ = lambda self, _: {
-            k: v for k, v in self.__dict__.items() if k != REGISTRAR
-        }
-
     if not any(
         hasattr(_cls, attr) for attr in ("__deserialize__", "__new_deserialized__")
     ):
 
-        def _deserialize(obj, data, global_data):
+        def __deserialize__(obj, data, global_data):
             for attr, val in data.items():
                 setattr(obj, attr, val)
 
-        _cls.__deserialize__ = action(_deserialize)
+        _cls.__deserialize__ = action(__deserialize__)
     return portable_class(atom(_cls), name)
 
 
