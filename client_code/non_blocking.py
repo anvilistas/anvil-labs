@@ -3,13 +3,11 @@
 
 from functools import partial as _partial
 
-from anvil.js import await_promise as _await_promise
 from anvil.js import window as _W
 from anvil.server import call_s as _call_s
 
 __version__ = "0.0.1"
 
-_sentinel = object()
 try:
     # just for a nice repr by default
     _call_s.__name__ = "call_s"
@@ -19,61 +17,63 @@ except AttributeError:
 
 # python errors get wrapped when called from a js function in python
 # so instead reject the error from a js function in js
-_promise_handler = _W.Function(
+_deferred = _W.Function(
     "fn",
     """
-return (resolve, reject) => {
+const deferred = { };
+const result = new Promise((resolve, reject) => {
     try {
-        resolve(fn());
+        resolve(fn);
+        deferred.status = "FULFILLED";
     } catch (e) {
         reject(e);
+        deferred.status = "REJECTED";
     }
-}
+});
+let handledResult = result;
+
+return Object.assign(deferred, {
+    status: "PENDING",
+    result,
+    on_result(handleResult, handleError) => {
+        handledResult = handledResult.then(handleResult, handleError);
+    },
+    on_error(handleError) => {
+        handledResult = handledResult.catch(handleError);
+    },
+    await_result: async () => await result;
+});
 """,
 )
 
 
 class AsyncCall:
     def __init__(self, fn, *args, **kws):
-        fn = _partial(fn, *args, **kws)
-        self._orig = fn
-        self._update_promise(fn)
+        self._fn = _partial(fn, *args, **kws)
+        self._deferred = _deferred(self._fn)
+
+    @property
+    def result(self):
+        return self._deferred.result
+
+    def get_status(self):
+        return self._deferred.status
 
     def on_result(self, result_handler, error_handler=None):
-        self._update_promise(self._get_new_fn(result_handler, error_handler))
+        self._deferred.on_result(result_handler, error_handler)
         return self
 
     def on_error(self, error_handler):
-        self._update_promise(self._get_new_fn(None, error_handler))
+        self._deferred.on_error(error_handler)
         return self
 
-    def _update_promise(self, fn):
-        self._promise = _W.Promise(_promise_handler(fn))
+    def await_result(self):
+        return self._deferred.result
 
-    def _get_new_fn(self, result_handler=None, error_handler=None):
-        def new_fn():
-            res = err = _sentinel
-            try:
-                res = _await_promise(self._promise)
-            except Exception as e:
-                err = e
-            if res is not _sentinel:
-                if result_handler is None:
-                    return res
-                else:
-                    return result_handler(res)
-            elif error_handler:
-                return error_handler(err)
-            else:
-                raise err
-
-        return new_fn
-
-    def wait(self):
-        return _await_promise(self._promise)
+    wait = await_result
 
     def __repr__(self):
-        fn_repr = repr(self._orig).replace("functools.partial", "")
+        fn_repr = repr(self._fn).replace("functools.partial", "")
         return f"<non_blocking.AsyncCall{fn_repr}>"
 
 
@@ -86,7 +86,7 @@ def call_async(fn, *args, **kws):
 
 def call_server_async(fn_name, *args, **kws):
     "call a server function in a non_blocking way"
-    if not type(fn_name) is str:
+    if not isinstance(fn_name, str):
         raise TypeError("the first argument must be the server function name as a str")
     return AsyncCall(_call_s, fn_name, *args, **kws)
 
@@ -97,10 +97,44 @@ def wait_for(async_call_object):
         raise TypeError(
             f"expected an AsyncCall object, got {type(async_call_object).__name__}"
         )
-    return async_call_object.wait()
+    return async_call_object.await_result()
 
 
-class Interval:
+class AbstractTimer:
+    _clearer = None
+    _setter = None
+    _prop = None
+
+    def __init__(self, fn, delay=None):
+        assert callable(
+            fn
+        ), f"the first argument to {type(self).__name__} must be a callable that takes no arguments"
+        self._id = None
+        self._fn = fn
+        self.delay = delay
+
+    @property
+    def delay(self):
+        return self._delay
+
+    @delay.setter
+    def delay(self, value):
+        if value is not None and not isinstance(value, (int, float)):
+            raise TypeError(
+                f"cannot set {self._prop} to be of type {type(value).__name__}"
+            )
+        self._clearer(self._id)
+        self._delay = value
+        if value is None:
+            return
+        self._id = self._setter(self._fn, value * 1000)
+
+    def _clear(self):
+        """Stop the timer from running"""
+        self.delay = None
+
+
+class Interval(AbstractTimer):
     """create an interval
     The first argument must a function that takes no arguments
     The second argument is the interval in seconds.
@@ -108,27 +142,28 @@ class Interval:
     To stop the interval either set its interval to None or 0 or call the clear_interval() method
     """
 
+    _clearer = _W.clearInterval
+    _setter = _W.setInterval
+    _prop = "interval"
+
     def __init__(self, fn, interval=None):
-        assert callable(
-            fn
-        ), "the first argument to interval must be a callable that takes no arguments"
-        self._id = None
-        self._fn = fn
-        self.interval = interval
+        super().__init__(fn, interval)
 
-    @property
-    def interval(self):
-        return self._delay
+    interval = AbstractTimer.delay
+    clear_interval = AbstractTimer._clear
 
-    @interval.setter
-    def interval(self, value):
-        if value is not None and not isinstance(value, (int, float)):
-            raise TypeError(f"cannot set interval to be of type {type(value).__name__}")
-        self._delay = value
-        _W.clearInterval(self._id)
-        if not value:
-            return
-        self._id = _W.setInterval(self._fn, value * 1000)
 
-    def clear_interval(self):
-        self.interval = None
+class Timeout(AbstractTimer):
+    """create an timeout
+    The first argument must a function that takes no arguments
+    The second argument is the delay in seconds.
+    The funciton will be called after delay seconds.
+    To stop the function from being called either set the delay to None
+    or set the delay to a new value.
+    """
+
+    _clearer = _W.clearTimeout
+    _setter = _W.setTimeout
+    _prop = "delay"
+
+    clear_timeout = AbstractTimer._clear
