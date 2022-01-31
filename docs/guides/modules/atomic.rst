@@ -389,14 +389,19 @@ API
 .. function:: autorun(fn)
               autorun(fn, bound=None)
 
-    can also be used as a decorator
-    similar to ``render(fn)()``.
+    Similar to ``render(fn)()``. Any atom attributes accessed within the body of the function will
+    trigger a new call to the function when changed.
+
+    Calling ``autorun`` returns a dispose function.
+    When the dispose function is called it stops any future renders of this ``autorun`` function.
+
+    ``autorun`` can be used as a decorator - but note that the returned function is not the original function but the dipsose function.
 
 
 .. function:: reaction(depends_on_fn, then_react_fn)
               reaction(depends_on_fn, then_react_fn, fire_immediately=False)
 
-    reactions are similar to renders.
+    a ``reaction`` is similar to a ``render``.
     Changes in the ``depends_on_fn`` will force the ``then_react_fn`` to be called.
     The ``depends_on_fn`` is a function that takes no args.
     It should access any attributes that, when changed, should result in the call to the ``then_react_fn``.

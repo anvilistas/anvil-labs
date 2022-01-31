@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
-
 from .constants import ACTION, IGNORE, REACTION, RENDER, SELECTOR, SUBSCRIBE
 from .registrar import get_registrar
 from .utils import get_atom_prop_repr
@@ -54,9 +53,7 @@ def remove_atom_prop_relationship(subscriber, mode):
     We only do this with render subscribers.
     """
     assert mode in (RENDER, REACTION)
-    registrars_props = subscriber.atom_registrar_prop
-    for registrar, prop in registrars_props.copy():
-        registrar.unregister(prop, subscriber, mode)
+    subscriber.dispose()
 
 
 def remove_dependents(root, queue, mode, seen):
@@ -67,7 +64,7 @@ def remove_dependents(root, queue, mode, seen):
         return queue
     seen.add(root)
     dependents = root.dependents
-    if mode is RENDER:
+    if mode is not SELECTOR:
         root.dependents = set()
         remove_atom_prop_relationship(root, mode)
     if not dependents:

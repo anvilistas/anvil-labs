@@ -128,16 +128,16 @@ class render:
 
 def autorun(f, bound=None):
     """create render function that is called immediately.
-    Optionally provide a component to bind this method to
-    Similar to: render(fn)()"""
-    if bound is None:
-        try:
-            bound = f.__self__
-        except AttributeError:
-            pass
-    r = render(f, bound=bound)
-    r()
-    return r
+    The function will be re-called anytime an attribute accessed within the function changes.
+    Optionally provide a component to bind this method to.
+    Similar to: render(fn)()
+
+    Returns: a dispose function - when called to stop the autorun"""
+    if bound is None and type(f) is MethodType:
+        bound = f.__self__
+    r = Render(f, bound=bound)
+    r.render()
+    return r.dispose
 
 
 def reaction(depends_on_fn, then_react_fn, fire_immediately=False, **options):
@@ -149,6 +149,8 @@ def reaction(depends_on_fn, then_react_fn, fire_immediately=False, **options):
 
     depends_on_fn fires immediately, but then_react_fn will only be called the next time a dependency changes.
     To call the then_react_fn function immediately set fire_immediately to True.
+
+    Returns: a dispose function - when called stops any future reactions
     """
     r = Reaction(
         depends_on_fn, then_react_fn, fire_immediately=fire_immediately, **options

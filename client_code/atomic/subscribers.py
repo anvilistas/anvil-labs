@@ -7,7 +7,7 @@ import anvil
 
 from .constants import REACTION, RENDER, SELECTOR
 from .contexts import ReactionContext, RenderContext, SelectorContext
-from .rendering import active, register, remove_atom_prop_relationship, request
+from .rendering import active, register, request
 from .utils import get_atom_prop_repr
 
 __version__ = "0.0.1"
@@ -26,7 +26,9 @@ class Subscriber:
         raise NotImplementedError
 
     def dispose(self):
-        remove_atom_prop_relationship(self, self.mode)
+        for registrar, prop in self.atom_registrar_prop.copy():
+            # the registrar will call our unregister method
+            registrar.unregister(prop, self, self.mode)
 
     def register(self, atom_registrar, prop):
         self.atom_registrar_prop.add((atom_registrar, prop))
@@ -40,11 +42,11 @@ class Render(Subscriber):
 
     mode = RENDER
 
-    def __init__(self, f, args, kws, bound=None):
+    def __init__(self, f, args=None, kws=None, bound=None):
         super().__init__()
         self.f = f
-        self.args = args
-        self.kws = kws
+        self.args = args or ()
+        self.kws = kws or {}
         self.bound = (
             bound if bound is not None and isinstance(bound, anvil.Component) else None
         )
@@ -116,6 +118,9 @@ class Selector(Subscriber):
 
     def __call__(self, *args, **kws):
         # anytime our value is requested make renders/selectors depend on our property
+        # we don't use atom's __getattribute__ for registration since it doesn't register methods accessed
+        # and we only want the registration to occur when we call the selector
+        # this allows selectors to be used as the bind/writeback function
         register(self.atom, self.prop)
         self.args = args
         self.kws = kws

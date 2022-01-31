@@ -111,10 +111,13 @@ class SelectorContext(Context):
 
 
 class ReactionContext(Context):
+    # note the ReactionContext only applies to the depends_on_fn call
+    # There should only be attribute access and selector method calls within this context
     mode = REACTION
 
     def adder(self):
-        msg = "Cannot call a reaction from inside a selector or render"
-        self.add_active((SELECTOR, RENDER), msg)
+        msg = "The reaction depends_on_fn should only access atom attributes.\
+            Calling a depends_on_fn from inside a selector, render or other depends_on_fn is invalid"
+        self.add_active((SELECTOR, RENDER, REACTION), msg)
 
     popper = Context.pop_active
