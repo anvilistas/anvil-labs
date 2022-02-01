@@ -237,11 +237,11 @@ can be caught within a ``subscribe`` function
         else:
             return
 
-        # now use the atom do do something specific
+        # now use the atom to do something specific
         ...
 
 
-Alternave Approaches to the subscriber
+Alternative Approaches to the subscriber
 
 .. code-block:: python
 
@@ -254,7 +254,7 @@ Alternave Approaches to the subscriber
 
         todos = [dict(todo) for todo in todos_atom.todos]
         # accessing the todos and each converting each todo to a dict
-        # creates a depenency on the todos and each key of each todo
+        # creates a dependency on the todos and each key of each todo
         # whenever these change this method is called
 
         if is_first_run:
@@ -396,7 +396,7 @@ API
     Calling ``autorun`` returns a dispose function.
     When the dispose function is called it stops any future renders of this ``autorun`` function.
 
-    ``autorun`` can be used as a decorator - but note that the returned function is not the original function but the dipsose function.
+    ``autorun`` can be used as a decorator - but note that the returned function is not the original function but the dispose function.
 
 
 .. function:: reaction(depends_on_fn, then_react_fn)
@@ -412,11 +412,12 @@ API
     To call the ``then_react_fn`` immediately set ``fire_immediately=True``.
 
     It would be rare to need to use this function.
-    However in cases where you want to react to a change in an atom's state
-    that may result in subsquent change in another atom's state a reaction may be useful.
+
+    However, in cases where you want to react to a change in an atom's state
+    that may result in a subsequent change, in another atom's state a reaction may be useful.
     It can also be used as an alternative to ``autorun`` or ``render``.
 
-    See the example above for alternative approaches to upating ``indexed_db``
+    See the example above for alternative approaches to updating ``indexed_db``
 
     The reaction method returns a dispose function that can be called when you want to stop reactions.
 
