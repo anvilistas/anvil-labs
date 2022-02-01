@@ -399,17 +399,21 @@ API
     ``autorun`` can be used as a decorator - but note that the returned function is not the original function but the dispose function.
 
 
-.. function:: reaction(depends_on_fn, then_react_fn)
-              reaction(depends_on_fn, then_react_fn, fire_immediately=False)
+.. function:: reaction(depends_on_fn, then_react_fn, *, fire_immediately=False, include_previous=False)
 
     a ``reaction`` is similar to a ``render``.
     Changes in the ``depends_on_fn`` will force the ``then_react_fn`` to be called.
     The ``depends_on_fn`` is a function that takes no args.
     It should access any attributes that, when changed, should result in the call to the ``then_react_fn``.
+
     If ``depends_on_fn`` returns a value that is not ``None``, this value will be passed to the ``then_react_fn``.
+    If you need the previous result returned from ``depends_on_fn`` set ``include_previous=True``.
+    If ``incldue_previous`` is ``True`` then the call signature for ``then_react_fn`` should take 2 argments,
+    the current return value and the previous return value from the ``depnds_on_fn``.
 
     ``depends_on_fn`` will fire immediately. But the ``then_react_fn`` is only called the next time a dependency changes.
     To call the ``then_react_fn`` immediately set ``fire_immediately=True``.
+
 
     It would be rare to need to use this function.
 
