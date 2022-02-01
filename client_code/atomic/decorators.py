@@ -140,7 +140,14 @@ def autorun(f, bound=None):
     return r.dispose
 
 
-def reaction(depends_on_fn, then_react_fn, fire_immediately=False, **options):
+def reaction(
+    depends_on_fn,
+    then_react_fn,
+    *,
+    fire_immediately=False,
+    include_previous=False,
+    **options
+):
     """a reaction takes two arguments: depends_on_fn and then_react_fn
     the depends_on_fn is used to determine the dependcies that the then_react_fn depends on
     when ever an atom attribute accessed in the depends_on_fn changes the then_react_fn is called.
@@ -153,6 +160,10 @@ def reaction(depends_on_fn, then_react_fn, fire_immediately=False, **options):
     Returns: a dispose function - when called stops any future reactions
     """
     r = Reaction(
-        depends_on_fn, then_react_fn, fire_immediately=fire_immediately, **options
+        depends_on_fn,
+        then_react_fn,
+        fire_immediately=fire_immediately,
+        include_previous=include_previous,
+        **options
     )
     return r.dispose
