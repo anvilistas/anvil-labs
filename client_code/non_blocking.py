@@ -20,43 +20,64 @@ except AttributeError:
 _deferred = _W.Function(
     "fn",
     """
-const deferred = { };
-const result = new Promise((resolve, reject) => {
+const deferred = {status: "PENDING", error: null};
+const p = deferred.promise = new Promise(async (resolve, reject) => {
     try {
-        resolve(fn);
+        resolve(await fn());
         deferred.status = "FULFILLED";
     } catch (e) {
-        reject(e);
         deferred.status = "REJECTED";
+        deferred.error = e;
+        reject(e);
     }
 });
-let handledResult = result;
+
+let handledResult = p;
+let handledError = null;
 
 return Object.assign(deferred, {
-    status: "PENDING",
-    result,
-    on_result(handleResult, handleError) => {
-        handledResult = handledResult.then(handleResult, handleError);
+    on_result(resultHandler, errorHandler) {
+        if (!errorHandler && handledError) {
+            // the on_error was already called so provide a dummy handler;
+            errorHandler = () => {};
+        }
+        handledResult = p.then(resultHandler, errorHandler);
+        handledError = null;
     },
-    on_error(handleError) => {
-        handledResult = handledResult.catch(handleError);
+    on_error(errorHandler) {
+        handledError = handledResult.catch(errorHandler);
+        handledResult = p;
     },
-    await_result: async () => await result;
+    await_result: async () => await p,
 });
 """,
 )
 
 
-class AsyncCall:
+class _AsyncCall:
     def __init__(self, fn, *args, **kws):
         self._fn = _partial(fn, *args, **kws)
         self._deferred = _deferred(self._fn)
 
     @property
     def result(self):
-        return self._deferred.result
+        """If the function call is not complete, returns a Promise
+        If the function call is complete:
+        Returns: the return value from the function call
+        Raises: the error raised by the function call
+        """
+        if self._deferred.status == "PENDING":
+            return self._deferred.promise
+        return self.await_result()
 
-    def get_status(self):
+    @property
+    def error(self):
+        """Returns the error raised by the function call, else None"""
+        return self._deferred.error
+
+    @property
+    def status(self):
+        """Returns: 'PENDING', 'FULFILLED', 'REJECTED'"""
         return self._deferred.status
 
     def on_result(self, result_handler, error_handler=None):
@@ -68,42 +89,43 @@ class AsyncCall:
         return self
 
     def await_result(self):
-        return self._deferred.result
-
-    wait = await_result
+        return self._deferred.await_result()
 
     def __repr__(self):
         fn_repr = repr(self._fn).replace("functools.partial", "")
         return f"<non_blocking.AsyncCall{fn_repr}>"
 
 
+# deprecated
+_AsyncCall.wait = _AsyncCall.await_result
+
+
 def call_async(fn, *args, **kws):
     "call a function in a non-blocking way"
     if not callable(fn):
         raise TypeError("the first argument must be a callable")
-    return AsyncCall(fn, *args, **kws)
+    return _AsyncCall(fn, *args, **kws)
 
 
 def call_server_async(fn_name, *args, **kws):
     "call a server function in a non_blocking way"
     if not isinstance(fn_name, str):
         raise TypeError("the first argument must be the server function name as a str")
-    return AsyncCall(_call_s, fn_name, *args, **kws)
+    return _AsyncCall(_call_s, fn_name, *args, **kws)
 
 
 def wait_for(async_call_object):
     "wait for a non-blocking function to complete its execution"
-    if not isinstance(async_call_object, AsyncCall):
+    if not isinstance(async_call_object, _AsyncCall):
         raise TypeError(
             f"expected an AsyncCall object, got {type(async_call_object).__name__}"
         )
     return async_call_object.await_result()
 
 
-class AbstractTimer:
+class _AbstractTimer:
     _clearer = None
     _setter = None
-    _prop = None
 
     def __init__(self, fn, delay=None):
         assert callable(
@@ -120,50 +142,110 @@ class AbstractTimer:
     @delay.setter
     def delay(self, value):
         if value is not None and not isinstance(value, (int, float)):
-            raise TypeError(
-                f"cannot set {self._prop} to be of type {type(value).__name__}"
-            )
+            raise TypeError(f"cannot set delay to be of type {type(value).__name__}")
         self._clearer(self._id)
         self._delay = value
         if value is None:
             return
         self._id = self._setter(self._fn, value * 1000)
 
-    def _clear(self):
-        """Stop the timer from running"""
+    def clear(self):
+        """Stop the function from executing"""
         self.delay = None
 
 
-class Interval(AbstractTimer):
-    """create an interval
-    The first argument must a function that takes no arguments
-    The second argument is the interval in seconds.
-    The funciton will be called every interval seconds.
-    To stop the interval either set its interval to None or 0 or call the clear_interval() method
+class Interval(_AbstractTimer):
+    """Create an interval
+    The first argument must be a function that takes no arguments
+    The second argument is the delay in seconds.
+    The function will be called every delay seconds.
+    To stop the interval either set its delay to None or call the clear() method
     """
+
+    def __init__(self, fn, delay=None):
+        super().__init__(fn, delay)
 
     _clearer = _W.clearInterval
     _setter = _W.setInterval
-    _prop = "interval"
-
-    def __init__(self, fn, interval=None):
-        super().__init__(fn, interval)
-
-    interval = AbstractTimer.delay
-    clear_interval = AbstractTimer._clear
 
 
-class Timeout(AbstractTimer):
-    """create an timeout
-    The first argument must a function that takes no arguments
+class Timeout(_AbstractTimer):
+    """Create a timeout
+    The first argument must be a function that takes no arguments
     The second argument is the delay in seconds.
-    The funciton will be called after delay seconds.
-    To stop the function from being called either set the delay to None
-    or set the delay to a new value.
+    The function will be called after delay seconds.
+    To stop the function from being called either set the delay to None or call the clear() method
+    Setting a new delay value stops the pending function, which will now be called after the new delay seconds.
     """
+
+    def __init__(self, fn, delay=None):
+        super().__init__(fn, delay)
 
     _clearer = _W.clearTimeout
     _setter = _W.setTimeout
-    _prop = "delay"
 
-    clear_timeout = AbstractTimer._clear
+
+if __name__ == "__main__":
+    # TESTS
+    from time import sleep as _sleep
+
+    _v = 0
+
+    def _f():
+        global _x, _v
+        _v += 1
+        if _v >= 5:
+            _x.delay = None
+
+    print("Testing Interval")
+    _x = Interval(_f)
+    assert _v == 0
+    _x.delay = 0.01
+    _sleep(0.1)
+    assert _v == 5
+    _x.delay = 0.01
+    assert _v == 5
+    _sleep(0.1)
+    assert _v == 6
+
+    print("Testing Timeout")
+    _v = 0
+    _x = Timeout(_f, delay=0.05)
+    _sleep(0.01)
+    _x.delay = 0.05
+    _sleep(0.1)
+    assert _v == 1
+
+    print("Testing Async Call")
+    _x = call_async(lambda v: v + 1, 42)
+    assert _x.status == "PENDING"
+    assert _x.result != 43
+    _v = _x.await_result()
+    assert _v == _x.result == 43
+    assert _x.status == "FULFILLED"
+    assert _x.error is None
+    _v = None
+
+    def _f(v):
+        global _v
+        _v = v
+
+    _x.on_result(_f)
+    assert _v is None
+    _sleep(0)
+    assert _v == 43
+    _v = None
+    _x = call_async(lambda v: v + 1, "foo")
+    _x.on_result(_f)
+    _x.on_error(_f)
+    _sleep(0)
+    assert _x.status == "REJECTED"
+    assert isinstance(_v, TypeError)
+    assert _v is _x.error
+    try:
+        _x.result
+    except TypeError:
+        pass
+    else:
+        assert False
+    print("PASSED")
