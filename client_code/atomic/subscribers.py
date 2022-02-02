@@ -144,20 +144,31 @@ class Reaction(Subscriber):
 
     mode = REACTION
 
-    def __init__(self, depends_on, then_react, fire_immediatly=False, **options):
+    def __init__(
+        self,
+        depends_on,
+        then_react,
+        *,
+        fire_immediately=False,
+        include_previous=False,
+    ):
         super().__init__()
         self.depends_on = depends_on
         self.then_react = then_react
-        self.options = options
-        if fire_immediatly:
+        self.previous = None
+        self.include_previous = include_previous
+        if fire_immediately:
             return self.react()
         with ReactionContext(self):
-            self.depends_on()
+            self.previous = self.depends_on()
 
     def react(self):
         with ReactionContext(self):
             res = self.depends_on()
-        if res is not None:
+        prev, self.previous = self.previous, res
+        if self.include_previous:
+            self.then_react(res, prev)
+        elif res is not None:
             self.then_react(res)
         else:
             self.then_react()
