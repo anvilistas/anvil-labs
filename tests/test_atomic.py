@@ -303,8 +303,11 @@ def test_reaction():
     assert num_subscription == 1
 
     dispose()
+    num_reactions = 0
+    num_actions = 0
     count_atom.value = 10
-    assert num_reactions == 11
+    assert num_actions == 1
+    assert num_reactions == 0
     assert count_atom.value == 10
     assert num_subscription == 2
 
@@ -312,3 +315,29 @@ def test_reaction():
 
     with pytest.raises(RuntimeError):
         reaction(lambda: reaction(lambda: None, lambda: None), lambda: None)
+
+    # test kwargs
+    diff = 0
+
+    def react_prev(current, previous):
+        nonlocal diff
+        diff = current - previous
+
+    count_atom.value = 42
+    dispose = reaction(lambda: count_atom.value, react_prev, include_previous=True)
+    assert diff == 0
+    count_atom.value = 52
+    assert diff == 10
+    dispose()
+    count_atom.value = 0
+    assert diff == 10
+
+    fired = False
+
+    def react_immediately(current):
+        nonlocal fired
+        fired = True
+
+    dispose = reaction(count_atom.get_count, react_immediately, fire_immediately=True)
+    assert fired
+    dispose()

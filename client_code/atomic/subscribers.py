@@ -149,7 +149,7 @@ class Reaction(Subscriber):
         depends_on,
         then_react,
         *,
-        fire_immediatly=False,
+        fire_immediately=False,
         include_previous=False,
         **options,
     ):
@@ -159,7 +159,7 @@ class Reaction(Subscriber):
         self.options = options
         self.previous = None
         self.include_previous = include_previous
-        if fire_immediatly:
+        if fire_immediately:
             return self.react()
         with ReactionContext(self):
             self.previous = self.depends_on()
