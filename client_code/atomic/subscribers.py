@@ -151,12 +151,10 @@ class Reaction(Subscriber):
         *,
         fire_immediately=False,
         include_previous=False,
-        **options,
     ):
         super().__init__()
         self.depends_on = depends_on
         self.then_react = then_react
-        self.options = options
         self.previous = None
         self.include_previous = include_previous
         if fire_immediately:

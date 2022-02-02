@@ -146,7 +146,6 @@ def reaction(
     *,
     fire_immediately=False,
     include_previous=False,
-    **options
 ):
     """a reaction takes two arguments: depends_on_fn and then_react_fn
     the depends_on_fn is used to determine the dependcies that the then_react_fn depends on
@@ -164,6 +163,5 @@ def reaction(
         then_react_fn,
         fire_immediately=fire_immediately,
         include_previous=include_previous,
-        **options
     )
     return r.dispose
