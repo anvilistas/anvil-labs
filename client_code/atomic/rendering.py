@@ -15,7 +15,7 @@ queued = {ACTION: (), REACTION: frozenset(), SELECTOR: frozenset(), RENDER: froz
 def log(fn):
     if not log.is_debug:
         return
-    indent = sum(len(active(v)) for v in (SELECTOR, RENDER, REACTION, IGNORE))
+    indent = sum(len(active[v]) for v in (SELECTOR, RENDER, REACTION, IGNORE))
     print(f"{'    ' * indent}{fn()}")
 
 
