@@ -4,7 +4,7 @@ import anvil.server
 from anvil.tables import app_tables
 
 from ..historic.exceptions import UnregisteredClassError
-from ..historic.model import Event
+from ..historic.events import Creation, Change, Termination
 from .persistence import save_event_records
 from .projection import play
 
@@ -23,8 +23,7 @@ def play_projectors(projectors):
         play(projector)
 
 
-def save_object(obj, event_type, projectors):
-    event = Event(event_type, obj)
+def save_event(event, projectors):
     identifier = save_event_records(
         event, prevent_duplication=True, return_identifiers=True
     )[0]
@@ -75,7 +74,7 @@ def create(obj, projectors=None):
     str
         The uid of the object
     """
-    return save_object(obj, "creation", projectors)
+    return save_event(Creation(obj), projectors)
 
 
 @anvil.server.callable("anvil_labs.historic.update")
@@ -93,7 +92,7 @@ def update(obj, projectors=None):
     str
         The uid of the object
     """
-    return save_object(obj, "change", projectors)
+    return save_event(Change(obj), projectors)
 
 
 @anvil.server.callable("anvil_labs.historic.delete")
@@ -106,7 +105,7 @@ def delete(obj, projectors=None):
     projectors : list
         of projector names to play
     """
-    event = Event("termination", obj)
+    event = Termination(obj)
     save_event_records(event, prevent_duplication=True, return_identifiers=False)[0]
     play_projectors(projectors)
 

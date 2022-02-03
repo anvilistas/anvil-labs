@@ -6,6 +6,7 @@ from anvil.tables import app_tables, in_transaction, order_by
 
 from anvil_extras.server_utils import LOGGER
 
+from ..historic.events import Change, Creation
 from ..historic.exceptions import (
     AuthorizationError,
     DuplicationError,
@@ -23,17 +24,16 @@ class Authorization:
     Attributes
     ----------
     policy: callable
-        which must take a portable class instance and an operation ('create', 'change'
-        or 'delete') as its arguments and return a bool.
+        which must take an event instance as its argument and return a bool.
     """
 
     def __init__(self, policy=None):
         self.policy = policy
 
-    def check(self, obj, operation):
+    def check(self, event):
         if self.policy is None:
             return True
-        return self.policy(obj, operation)
+        return self.policy(event)
 
 
 authorization = Authorization()
@@ -107,7 +107,7 @@ def _record_event(event, prevent_duplication):
     prevent_duplication : bool
         Whether to disallow records where the state is unchanged from previously
     """
-    if event.event_type == "creation":
+    if isinstance(event, Creation):
         if event.affected.uid is None:
             event.affected.uid = str(uuid4())
         elif not _is_valid_uid(event.affected.uid):
@@ -129,17 +129,17 @@ def _record_event(event, prevent_duplication):
     except TypeError:
         previous_event_id = None
 
-    if event.event_type == "creation" and previous_event is not None:
+    if isinstance(event, Creation) and previous_event is not None:
         raise DuplicationError(
             f"Object {object_id} already exists (event {previous_event_id})"
         )
 
-    if event.event_type == "change" and previous_event is None:
+    if isinstance(event, Change) and previous_event is None:
         raise NonExistentError(
             f"Object {object_id} does not exist and so cannot be updated"
         )
 
-    if event.event_type == "change":
+    if isinstance(event, Change):
         diff = _state_diff(state, previous_event["state"])
         if prevent_duplication and diff is None:
             raise DuplicationError(
@@ -154,8 +154,8 @@ def _record_event(event, prevent_duplication):
         event_id=sequence["value"],
         recorded_at=event.recorded_at,
         object_id=object_id,
-        object_type=event.affected.__class__.__name__,
-        event_type=event.event_type,
+        object_type=type(event.affected).__name__,
+        event_type=type(event).__name__.lower(),
         occurred_at=event.occurred_at,
         state=state,
         predecessor=previous_event_id,
@@ -190,14 +190,14 @@ def save_event_records(events, prevent_duplication, return_identifiers):
     LOGGER.info(f"Saving payload of {len(events)} events")
     try:
         for event in events:
-            if not authorization.check(event.affected, event.event_type):
+            if not authorization.check(event):
                 raise AuthorizationError(
-                    f"You do not have {event.event_type} permission for this "
-                    f"{event.affected.__class__.__name__} "
+                    f"You do not have {type(event).__name__} permission for this "
+                    f"{type(event.affected).__name__} "
                     f"object (id: {event.affected.uid}])"
                 )
             LOGGER.info(
-                f"Attempting {event.event_type} of {event.affected.__class__.__name__} "
+                f"Attempting {type(event).__name__} of {type(event.affected).__name__} "
                 f"object (id: {event.affected.uid})"
             )
             uid = _record_event(event, prevent_duplication)
