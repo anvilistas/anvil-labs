@@ -143,7 +143,7 @@ API
 
         Returns ``self``.
 
-    .. method:: await_reslt(self)
+    .. method:: await_result(self)
 
         Waits for the non-blocking call to finish executing and returns the result.
         Or raises an exception if the non-blocking call raised an exception.
