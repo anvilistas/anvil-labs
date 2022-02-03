@@ -3,6 +3,7 @@
 
 from functools import partial as _partial
 
+from anvil.js import report_exceptions as _report
 from anvil.js import window as _W
 from anvil.server import call_s as _call_s
 
@@ -54,10 +55,35 @@ return Object.assign(deferred, {
 )
 
 
+class _Result:
+    # dicts may come back as javascript object literals
+    # so wrap the results in a more opaque python object
+    def __init__(self, value):
+        self.value = value
+
+    @staticmethod
+    def wrap(fn):
+        def wrapper():
+            return _Result(fn())
+
+        return wrapper
+
+    @staticmethod
+    def unwrap(fn):
+        def unwrapper(res):
+            return fn(res.value)
+
+        return unwrapper
+
+
 class _AsyncCall:
     def __init__(self, fn, *args, **kws):
         self._fn = _partial(fn, *args, **kws)
-        self._deferred = _deferred(self._fn)
+        self._deferred = _deferred(_Result.wrap(self._fn))
+
+    def _check_pending(self):
+        if self._deferred.status == "PENDING":
+            raise RuntimeError("the async call is still pending")
 
     @property
     def result(self):
@@ -66,13 +92,13 @@ class _AsyncCall:
         Returns: the return value from the function call
         Raises: the error raised by the function call
         """
-        if self._deferred.status == "PENDING":
-            return self._deferred.promise
+        self._check_pending()
         return self.await_result()
 
     @property
     def error(self):
         """Returns the error raised by the function call, else None"""
+        self._check_pending()
         return self._deferred.error
 
     @property
@@ -81,15 +107,17 @@ class _AsyncCall:
         return self._deferred.status
 
     def on_result(self, result_handler, error_handler=None):
+        error_handler = error_handler and _report(error_handler)
+        result_handler = _Result.unwrap(_report(result_handler))
         self._deferred.on_result(result_handler, error_handler)
         return self
 
     def on_error(self, error_handler):
-        self._deferred.on_error(error_handler)
+        self._deferred.on_error(_report(error_handler))
         return self
 
     def await_result(self):
-        return self._deferred.await_result()
+        return self._deferred.await_result().value
 
     def __repr__(self):
         fn_repr = repr(self._fn).replace("functools.partial", "")
@@ -219,10 +247,15 @@ if __name__ == "__main__":
     print("Testing Async Call")
     _x = call_async(lambda v: v + 1, 42)
     assert _x.status == "PENDING"
-    assert _x.result != 43
+    try:
+        _x.result
+    except RuntimeError:
+        pass
+    else:
+        assert False
     _v = _x.await_result()
-    assert _v == _x.result == 43
     assert _x.status == "FULFILLED"
+    assert _x.result == 43
     assert _x.error is None
     _v = None
 
@@ -248,4 +281,6 @@ if __name__ == "__main__":
         pass
     else:
         assert False
+    _v = call_async(lambda: {}).await_result()
+    assert type(_v) is dict
     print("PASSED")
