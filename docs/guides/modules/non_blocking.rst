@@ -150,15 +150,17 @@ API
 
     .. property:: result
 
-        If the non-blocking call has not yet completed, returns a Javascript Promise.
-        This can be awaited using ``anvil.js.await_promise``
+        If the non-blocking call has not yet completed, raise a ``RuntimeError``.
 
         If the non_blocking call has completed returns the result.
         Or raises an exception if the non-blocking call raised an exception.
 
     .. property:: error
 
-        If the non-blocking call raised an exception the exception raised can be accessed using the ``error`` property
+        If the non-blocking call has not yet completed, raise a ``RuntimeError``.
+
+        If the non-blocking call raised an exception the exception raised can be accessed using the ``error`` property.
+        The error will be ``None`` if the non-blocking call returned a result.
 
     .. property:: set_status
 
