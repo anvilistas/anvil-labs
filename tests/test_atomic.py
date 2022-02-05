@@ -29,7 +29,8 @@ __version__ = "0.0.1"
 
 @atom
 class CountAtom:
-    value = 0
+    def __init__(self, value=0):
+        self.value = 0
 
     @action
     def increment(self, n):
@@ -341,3 +342,19 @@ def test_reaction():
     dispose = reaction(count_atom.get_count, react_immediately, fire_immediately=True)
     assert fired
     dispose()
+
+
+class AbstractCount:
+    pass
+
+
+@atom
+class SubCount(AbstractCount):
+    def __init__(self, value=0):
+        self.value = value
+
+
+def test_bugs():
+    # bug #50
+    s = SubCount()
+    assert len(s.__dict__) == 1

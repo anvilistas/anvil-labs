@@ -99,8 +99,8 @@ def atom(base):
         @property
         def __dict__(self):
             # TODO remove when skulpt has slots
-            d = base.__dict__["__dict__"].__get__(self).copy()
-            d.pop(REGISTRAR)
+            d = super(AtomProxy, self).__dict__.copy()
+            d.pop(REGISTRAR, None)
             return d
 
     AtomProxy.__name__ = base.__name__
