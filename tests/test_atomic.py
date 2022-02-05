@@ -355,6 +355,6 @@ class SubCount(AbstractCount):
 
 
 def test_bugs():
-    # bug #
+    # bug #50
     s = SubCount()
     assert len(s.__dict__) == 1
