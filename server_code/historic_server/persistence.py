@@ -98,7 +98,7 @@ def _state_diff(state, previous_state):
     return result if len(result) > 0 else None
 
 
-def _record_event(event, prevent_duplication):
+def _record_event(event, record_duplicates):
     """Write a single event record to the data table
 
     Parameters
@@ -141,11 +141,8 @@ def _record_event(event, prevent_duplication):
 
     if isinstance(event, Change):
         diff = _state_diff(state, previous_event["state"])
-        if prevent_duplication and diff is None:
-            raise DuplicationError(
-                f"Object {object_id} already exists in this state "
-                f"(event {previous_event_id})"
-            )
+        if diff is None and not record_duplicates:
+            return object_id
 
     sequence = app_tables.sequences.get(name="events") or app_tables.sequences.add_row(
         name="events", value=1
@@ -166,7 +163,7 @@ def _record_event(event, prevent_duplication):
 
 
 @in_transaction
-def save_event_records(events, prevent_duplication, return_identifiers):
+def save_event_records(events, record_duplicates, return_identifiers):
     """Save event records for a batch of events
 
     Parameters
@@ -200,7 +197,7 @@ def save_event_records(events, prevent_duplication, return_identifiers):
                 f"Attempting {type(event).__name__} of {type(event.affected).__name__} "
                 f"object (id: {event.affected.uid})"
             )
-            uid = _record_event(event, prevent_duplication)
+            uid = _record_event(event, record_duplicates)
             if return_identifiers:
                 result.append(uid)
         LOGGER.info(f"{len(events)} Events saved")

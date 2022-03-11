@@ -25,7 +25,7 @@ def play_projectors(projectors):
 
 def save_event(event, projectors):
     identifier = save_event_records(
-        event, prevent_duplication=True, return_identifiers=True
+        event, record_duplicates=False, return_identifiers=True
     )[0]
     play_projectors(projectors)
     return identifier
@@ -33,7 +33,7 @@ def save_event(event, projectors):
 
 @anvil.server.callable("anvil_labs.historic.save_events")
 def save_events(
-    events, prevent_duplication=True, return_identifiers=False, projectors=None
+    events, record_duplicates=False, return_identifiers=False, projectors=None
 ):
     """Save event records and optionally play all projections
 
@@ -54,7 +54,7 @@ def save_events(
     None or list
         Depending on the value of return_identifiers
     """
-    identifiers = save_event_records(events, prevent_duplication, return_identifiers)
+    identifiers = save_event_records(events, record_duplicates, return_identifiers)
     play_projectors(projectors)
     return identifiers if return_identifiers else None
 
