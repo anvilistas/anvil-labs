@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 from anvil.tables import app_tables, in_transaction, order_by
 
-from anvil_extras.server_utils import LOGGER
+from anvil_extras import logging
 
 from ..historic.events import Change, Creation
 from ..historic.exceptions import (
@@ -16,6 +16,8 @@ from ..historic.exceptions import (
 )
 
 __version__ = "0.0.1"
+
+LOGGER = logging.Logger("historic-persistence", level=logging.INFO)
 
 
 class Authorization:
