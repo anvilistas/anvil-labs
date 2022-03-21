@@ -29,10 +29,12 @@ import anvil.tables as tables
 import anvil.tables.query as q
 from anvil.tables import app_tables, in_transaction
 
-from anvil_extras.server_utils import LOGGER
+from anvil_extras import logging
 
 __version__ = "0.0.1"
 _projectors = {}
+
+LOGGER = logging.Logger("historic-projection", level=logging.INFO)
 
 
 class register:
