@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
-
 import json as _json
 from functools import wraps as _wraps
 
@@ -13,28 +12,30 @@ from ._serialize import reconstruct, serialize
 __version__ = "0.0.1"
 
 
-def to_json(obj):
-    rv = serialize(obj)
-    unhandled = rv.pop(_U)
-    if unhandled:
-        raise _server.SerializationError(
-            f"Unable to serialize the following: {', '.join(repr(x) for x in unhandled)}"
-        )
-    return _json.dumps(rv)
+def _dumps(obj):
+    s = serialize(obj)
+    u = s.pop(_U)
+    # we use repr for performance
+    # anvil doesn't need to walk these objects
+    return _json.dumps(s), u
 
 
-def from_json(json_obj):
-    return reconstruct(_json.loads(json_obj))
+def _loads(s, u):
+    obj = _json.loads(s)
+    obj[_U] = u
+    return reconstruct(obj)
 
 
 def call(fn_name, *args, **kws):
-    return reconstruct(_server.call(fn_name, serialize([args, kws])))
+    rv = _server.call(fn_name, *_dumps([args, kws]))
+    return _loads(*rv)
 
 
 def callable(fn):
     @_wraps(fn)
-    def wrapped(obj):
-        args, kws = reconstruct(obj)
-        return serialize(fn(*args, **kws))
+    def wrapped(json_obj, unhandled):
+        args, kws = _loads(json_obj, unhandled)
+        rv = fn(*args, **kws)
+        return _dumps(rv)
 
     return _server.callable(wrapped)

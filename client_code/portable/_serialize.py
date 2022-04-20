@@ -7,39 +7,42 @@ from ._register import get_registered_cls, registered_types
 __version__ = "0.0.1"
 
 VALUE = "_"
-OBJECTS = "O"
+PATHS = "P"
+TYPES = "T"
 UNHANDLED = "X"
 
 
-def serialize_portable_class(obj, cls, path, non_json, unhandled):
+def serialize_portable_class(obj, cls, path, paths, types, unhandled):
     __serialize__ = getattr(obj, "__serialize__", None)
     if __serialize__ is not None:
         data = __serialize__(None)
-        rv = do_remap(data, path, non_json, unhandled)
+        rv = do_remap(data, path, paths, types, unhandled)
     else:
         # we don't need to sort this dict
         rv = {}
         for k, v in obj.__dict__.items():
             path.append(k)
-            rv[k] = do_remap(v, path, non_json, unhandled)
+            rv[k] = do_remap(v, path, paths, types, unhandled)
             path.pop()
 
-    non_json.append([registered_types[cls], path[:]])
+    paths.append(path[:])
+    types.append(registered_types[cls])
     return rv
 
 
-def serialize_builtin(obj, builtin, path, non_json, unhandled):
+def serialize_builtin(obj, builtin, path, paths, types, unhandled):
     cls = registered_builtins[builtin]
     obj = cls(obj)
     if type(obj) is builtin:
+        # floats and ints use this
         return obj
-    return serialize_portable_class(obj, cls, path, non_json, unhandled)
+    return serialize_portable_class(obj, cls, path, paths, types, unhandled)
 
 
 NoneType = type(None)
 
 
-def do_remap(obj, path, non_json, unhandled):
+def do_remap(obj, path, paths, types, unhandled):
     tp = type(obj)
 
     if tp in (NoneType, str, bool):
@@ -48,24 +51,26 @@ def do_remap(obj, path, non_json, unhandled):
         rv = []
         for i, o in enumerate(obj):
             path.append(i)
-            rv.append(do_remap(o, path, non_json, unhandled))
+            rv.append(do_remap(o, path, paths, types, unhandled))
             path.pop()
         return rv
     elif tp in registered_builtins:
-        return serialize_builtin(obj, tp, path, non_json, unhandled)
+        return serialize_builtin(obj, tp, path, paths, types, unhandled)
     elif tp in registered_types:
-        return serialize_portable_class(obj, tp, path, non_json, unhandled)
+        return serialize_portable_class(obj, tp, path, paths, types, unhandled)
 
-    non_json.append(None)
-    unhandled.append([obj, path[:]])
+    types.append(None)
+    paths.append(path[:])
+    unhandled.append(obj)
     return None
 
 
 def serialize(obj):
-    non_json = []
+    types = []
     unhandled = []
-    val = do_remap(obj, [VALUE], non_json, unhandled)
-    return {VALUE: val, OBJECTS: non_json, UNHANDLED: unhandled}
+    paths = []
+    val = do_remap(obj, [VALUE], paths, types, unhandled)
+    return {VALUE: val, PATHS: paths, TYPES: types, UNHANDLED: unhandled}
 
 
 def reconstruct_portable_class(tp_name: str, data):
@@ -85,22 +90,22 @@ def reconstruct_portable_class(tp_name: str, data):
 
 
 def reconstruct(json_obj):
-    objects = json_obj[OBJECTS]
+    paths, types = json_obj[PATHS], json_obj[TYPES]
     unhandled = iter(json_obj.get(UNHANDLED, []))
-    for obj in objects:
+
+    for path, obj in zip(paths, types):
         is_portable = obj is not None
 
         if not is_portable:
             obj = next(unhandled)
 
-        val, path = obj
         data = json_obj
         for key in path:
             prev, data = data, data[key]
 
         if is_portable:
-            prev[key] = reconstruct_portable_class(val, data)
+            prev[key] = reconstruct_portable_class(obj, data)
         else:
-            prev[key] = val
+            prev[key] = obj
 
     return json_obj[VALUE]
