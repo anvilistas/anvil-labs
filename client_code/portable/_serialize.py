@@ -15,9 +15,15 @@ def serialize_portable_class(obj, cls, path, non_json, unhandled):
     __serialize__ = getattr(obj, "__serialize__", None)
     if __serialize__ is not None:
         data = __serialize__(None)
+        rv = do_remap(data, path, non_json, unhandled)
     else:
-        data = obj.__dict__
-    rv = do_remap(data, path, non_json, unhandled)
+        # we don't need to sort this dict
+        rv = {}
+        for k, v in obj.__dict__.items():
+            path.append(k)
+            rv[k] = do_remap(v, path, non_json, unhandled)
+            path.pop()
+
     non_json.append([registered_types[cls], path[:]])
     return rv
 
@@ -27,7 +33,7 @@ def serialize_builtin(obj, builtin, path, non_json, unhandled):
     obj = cls(obj)
     if type(obj) is builtin:
         return obj
-    return serialize_portable_class(cls(obj), cls, path, non_json, unhandled)
+    return serialize_portable_class(obj, cls, path, non_json, unhandled)
 
 
 NoneType = type(None)
