@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
+from anvil.server import SerializationError
+
 from ._builtins import registered_builtins
 from ._register import get_registered_cls, registered_types
 
@@ -117,3 +119,14 @@ def reconstruct(json_obj):
             prev[key] = tp
 
     return json_obj[VALUE]
+
+
+def preserve(obj):
+    rv = serialize(obj)
+    unhandled = rv.pop(UNHANDLED)
+
+    if unhandled:
+        msg = f"Unable to serialize the following object(s): {', '.join(map(repr, unhandled))}"
+        raise SerializationError(msg)
+
+    return rv
