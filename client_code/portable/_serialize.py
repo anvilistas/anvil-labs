@@ -18,7 +18,10 @@ def serialize_portable_class(obj, cls, path, paths, types, unhandled):
         data = __serialize__(None)
         rv = do_remap(data, path, paths, types, unhandled)
     else:
-        # we don't need to sort this dict
+        # `do_remap(obj.__dict__, ....)` also works here
+        # which would give us a list of items - see Dict.__serialize__
+        # but since we don't care about this dict being ordered, and we know the keys are strings
+        # we can serialize it directly as a JSON object
         rv = {}
         for k, v in obj.__dict__.items():
             path.append(k)
@@ -47,16 +50,19 @@ def do_remap(obj, path, paths, types, unhandled):
 
     if tp in (NoneType, str, bool):
         return obj
-    elif tp is list:
+
+    if tp is list:
         rv = []
         for i, o in enumerate(obj):
             path.append(i)
             rv.append(do_remap(o, path, paths, types, unhandled))
             path.pop()
         return rv
-    elif tp in registered_builtins:
+
+    if tp in registered_builtins:
         return serialize_builtin(obj, tp, path, paths, types, unhandled)
-    elif tp in registered_types:
+
+    if tp in registered_types:
         return serialize_portable_class(obj, tp, path, paths, types, unhandled)
 
     # we don't know how to serialize - it could be a table row, media object, capability

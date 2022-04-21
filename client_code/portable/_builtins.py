@@ -33,7 +33,6 @@ class Mapping(Builtin):
         return [[k, v] for k, v in self.items()]
 
 
-@portable_class
 class Long(int, Immutable):
     def __new__(cls, x):
         if -2147483647 <= x <= 2147483647:
@@ -41,7 +40,6 @@ class Long(int, Immutable):
         return int.__new__(cls, x)
 
 
-@portable_class
 class Float(float, Immutable):
     def __new__(cls, x):
         if isfinite(x):
@@ -49,27 +47,22 @@ class Float(float, Immutable):
         return float.__new__(cls, x)
 
 
-@portable_class
 class Dict(dict, Mapping):
     pass
 
 
-@portable_class
 class Set(set, Iterable):
     pass
 
 
-@portable_class
 class FrozenSet(frozenset, Iterable):
     pass
 
 
-@portable_class
 class Tuple(tuple, Iterable):
     pass
 
 
-@portable_class
 class Date:
     def __init__(self, v: date):
         self.v = v
@@ -82,7 +75,6 @@ class Date:
         return date.fromisoformat(iso)
 
 
-@portable_class
 class DateTime:
     def __init__(self, v: datetime):
         self.v = v
@@ -111,7 +103,6 @@ class DateTime:
         return datetime.fromisoformat(iso).replace(tzinfo=tzinfo)
 
 
-@portable_class
 class Type:
     def __init__(self, tp: type):
         try:
@@ -141,4 +132,4 @@ registered_builtins = {
 
 
 for cls in registered_builtins.values():
-    register(cls, name=cls.__name__)
+    portable_class(register(cls, name=cls.__name__))

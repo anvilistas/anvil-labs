@@ -25,6 +25,9 @@ def get_registered_cls(tp_name):
     except KeyError:
         pass
 
+    # assume we've sent a portable_class across the wire
+    # if we're now on the server then the client module might need to be imported
+    # we do that now and try to get the registered cls after the import
     mod, _ = tp_name.rsplit(".", 1)
     import_module(mod)
     try:
