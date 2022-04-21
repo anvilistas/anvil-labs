@@ -59,6 +59,8 @@ def do_remap(obj, path, paths, types, unhandled):
     elif tp in registered_types:
         return serialize_portable_class(obj, tp, path, paths, types, unhandled)
 
+    # we don't know how to serialize - it could be a table row, media object, capability
+    # leave it alone and let anvil handle it
     types.append(None)
     paths.append(path[:])
     unhandled.append(obj)
@@ -93,19 +95,19 @@ def reconstruct(json_obj):
     paths, types = json_obj[PATHS], json_obj[TYPES]
     unhandled = iter(json_obj.get(UNHANDLED, []))
 
-    for path, obj in zip(paths, types):
-        is_portable = obj is not None
+    for path, tp in zip(paths, types):
+        is_portable = tp is not None
 
         if not is_portable:
-            obj = next(unhandled)
+            tp = next(unhandled)
 
         data = json_obj
         for key in path:
             prev, data = data, data[key]
 
         if is_portable:
-            prev[key] = reconstruct_portable_class(obj, data)
+            prev[key] = reconstruct_portable_class(tp, data)
         else:
-            prev[key] = obj
+            prev[key] = tp
 
     return json_obj[VALUE]

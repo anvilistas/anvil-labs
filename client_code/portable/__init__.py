@@ -15,8 +15,6 @@ __version__ = "0.0.1"
 def _dumps(obj):
     s = serialize(obj)
     u = s.pop(_U)
-    # we use repr for performance
-    # anvil doesn't need to walk these objects
     return _json.dumps(s), u
 
 

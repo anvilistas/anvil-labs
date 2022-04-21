@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
-import math
-import sys
 from datetime import date, datetime
+from math import isfinite
 
 import anvil.tz
 from anvil.server import portable_class
@@ -11,13 +10,6 @@ from anvil.server import portable_class
 from ._register import get_registered_cls, register, registered_types
 
 __version__ = "0.0.1"
-
-
-def walk(obj):
-    try:
-        return registered_builtins[type(obj)](obj)
-    except KeyError:
-        return obj
 
 
 class Builtin:
@@ -28,12 +20,17 @@ class Builtin:
 
 class Iterable(Builtin):
     def __serialize__(self, info):
-        return [walk(o) for o in self]
+        return list(self)
 
 
 class Immutable(Builtin):
     def __serialize__(self, info):
         return str(self)
+
+
+class Mapping(Builtin):
+    def __serialize__(self, info):
+        return [[k, v] for k, v in self.items()]
 
 
 @portable_class
@@ -47,20 +44,19 @@ class Long(int, Immutable):
 @portable_class
 class Float(float, Immutable):
     def __new__(cls, x):
-        if math.isfinite(x):
+        if isfinite(x):
             return x
         return float.__new__(cls, x)
 
 
 @portable_class
-class Set(set, Iterable):
+class Dict(dict, Mapping):
     pass
 
 
 @portable_class
-class Dict(dict, Iterable):
-    def __serialize__(self, info):
-        return [[walk(k), walk(v)] for k, v in self.items()]
+class Set(set, Iterable):
+    pass
 
 
 @portable_class
@@ -132,14 +128,14 @@ class Type:
 
 
 registered_builtins = {
-    set: Set,
-    tuple: Tuple,
-    dict: Dict,
-    frozenset: FrozenSet,
-    date: Date,
-    datetime: DateTime,
     int: Long,
     float: Float,
+    dict: Dict,
+    set: Set,
+    frozenset: FrozenSet,
+    tuple: Tuple,
+    date: Date,
+    datetime: DateTime,
     type: Type,
 }
 
