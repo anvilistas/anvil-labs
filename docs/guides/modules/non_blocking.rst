@@ -44,7 +44,7 @@ If you care about the return value, you can provide handlers.
         call_server_async("update", self.item).on_result(self.handle_result, self.handle_error)
         # Equivalent to
         async_call = call_server_async("update", self.item)
-        async_call.on_result(self.handle_result, self.handle_result)
+        async_call.on_result(self.handle_result, self.handle_error)
         # Equivalent to
         async_call = call_server_async("update", self.item)
         async_call.on_result(self.handle_result)
