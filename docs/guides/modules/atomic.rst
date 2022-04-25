@@ -162,7 +162,7 @@ This means it does **not** depend on this attribute. The code should look like t
             self.display_count()
 
         @render
-        def display_count(self, count):
+        def display_count(self):
             self.count_lbl.text = count_atom.value
 
 
