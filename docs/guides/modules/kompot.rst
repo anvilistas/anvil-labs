@@ -71,7 +71,7 @@ API
 
 .. function:: reconstruct(obj)
 
-    Reconstruct an object that was ``serialized`` or ``presreved``
+    Reconstruct an object from the output of ``serialize`` or ``preserve``
 
 .. function:: call(fn_name, *args, **kws)
               call_s(fn_name, *args, **kws)
