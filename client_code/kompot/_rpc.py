@@ -23,6 +23,16 @@ def _loads(serialized, unhandled):
     return reconstruct(obj)
 
 
+def _wrap_callable(fn):
+    @_wraps(fn)
+    def wrapped(json_obj, unhandled):
+        args, kws = _loads(json_obj, unhandled)
+        rv = fn(*args, **kws)
+        return _dumps(rv)
+
+    return wrapped
+
+
 def call(fn_name, *args, **kws):
     rv = _server.call(fn_name, *_dumps([args, kws]))
     return _loads(*rv)
@@ -33,14 +43,13 @@ def call_s(fn_name, *args, **kws):
     return _loads(*rv)
 
 
-def callable(fn):
-    @_wraps(fn)
-    def wrapped(json_obj, unhandled):
-        args, kws = _loads(json_obj, unhandled)
-        rv = fn(*args, **kws)
-        return _dumps(rv)
+def callable(fn_or_name=None, require_user=None):
 
-    return _server.callable(wrapped)
+    if fn_or_name is None or isinstance(fn_or_name, str):
+        _callable_decorator = _server.callable(fn_or_name, require_user=require_user)
+        return lambda fn: _callable_decorator(_wrap_callable(fn))
+
+    return _server.callable(_wrap_callable(fn_or_name))
 
 
 def call_async(fn_name, *args, **kws):
