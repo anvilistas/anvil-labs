@@ -35,7 +35,7 @@ if is_server_side():
 class batch_call:
     def __init__(self, *, silent=False):
         self.result = None
-        self.silent = silent
+        self._silent = silent
         self._call_sigs = []
         self._done = False
 
@@ -55,11 +55,6 @@ class batch_call:
             # an exception was raised inside the context
             return
 
-        if not call_sigs:
-            rv = None
-        elif self.silent:
-            rv = call_s(PRIVATE_NAME, call_sigs)
-        else:
-            rv = call(PRIVATE_NAME, call_sigs)
-
-        self.result = rv
+        call_method = call_s if self._silent else call
+        if call_sigs:
+            self.result = call_method(PRIVATE_NAME, call_sigs)
