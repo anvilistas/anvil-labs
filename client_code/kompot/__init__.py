@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
+from ._batcher import batch_call
 from ._register import register
 from ._rpc import call, call_async, call_s, callable
 from ._serialize import preserve, reconstruct, serialize
