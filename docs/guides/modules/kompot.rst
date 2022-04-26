@@ -92,3 +92,17 @@ API
     call the original function and then serialize the return value.
 
     Must be combined with ``kompot.call()``.
+
+.. function:: batch_call()
+
+    A context manager for batching calls
+
+    .. code-block:: python
+
+        from anvil_labs import kompot
+
+        with kompot.batch_call(silent=True) as c:
+            c.call("foo", x=1)
+            c.call("bar", 42)
+
+        foo_result, bar_result = c.result

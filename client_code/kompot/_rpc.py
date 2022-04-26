@@ -10,6 +10,48 @@ from ._serialize import UNHANDLED, reconstruct, serialize
 
 __version__ = "0.0.1"
 
+_registered = {}
+
+
+def _has_permission(require_user):
+    if require_user is None:
+        return True
+
+    import anvil.users
+
+    user = anvil.users.get_user()
+    if user is None:
+        raise anvil.users.AuthenticationFailed(
+            "You must be logged in to call this server function"
+        )
+
+    if require_user is True:
+        return True
+
+    return require_user(user)
+
+
+def _wrap_require(fn, name, require_user):
+    @_wraps(fn)
+    def require_wrapper(*args, **kws):
+        if not _has_permission(require_user):
+            from anvil._server import PermissionDenied
+
+            # TOOO this should be in the public namespace!
+            raise PermissionDenied(
+                f"You do not have permission to call server function '{name}'"
+            )
+        return fn(*args, **kws)
+
+    return require_wrapper
+
+
+def _register(fn, name=None, require_user=None):
+    if name is None:
+        name = fn.__name__
+    _registered[name] = _wrap_require(fn, name, require_user)
+    return fn
+
 
 def _dumps(obj):
     serialized = serialize(obj)
@@ -47,9 +89,11 @@ def callable(fn_or_name=None, require_user=None):
 
     if fn_or_name is None or isinstance(fn_or_name, str):
         _callable_decorator = _server.callable(fn_or_name, require_user=require_user)
-        return lambda fn: _callable_decorator(_wrap_callable(fn))
+        return lambda fn: _callable_decorator(
+            _wrap_callable(_register(fn, fn_or_name, require_user))
+        )
 
-    return _server.callable(_wrap_callable(fn_or_name))
+    return _server.callable(_wrap_callable(_register(fn_or_name)))
 
 
 def call_async(fn_name, *args, **kws):
