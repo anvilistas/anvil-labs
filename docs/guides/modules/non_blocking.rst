@@ -115,7 +115,7 @@ API
 .. function:: call_async(fn, *args, **kws)
               call_async(fn_name, *args, **kws)
 
-    Returns an ``AyncCall`` object. The *fn* will be called in a non-blocking way.
+    Returns an ``AsyncCall`` object. The *fn* will be called in a non-blocking way.
 
     If the first argument is a string then the server function with name *fn_name* will be called in a non-blocking way.
 
@@ -123,7 +123,7 @@ API
 
     Blocks until the ``AsyncCall`` object has finished executing.
 
-.. class:: AyncCall
+.. class:: AsyncCall
 
     Don't call this directly, instead use the above functions.
 
