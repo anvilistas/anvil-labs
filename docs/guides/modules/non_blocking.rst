@@ -51,44 +51,40 @@ If you care about the return value, you can provide handlers.
         async_call.on_error(self.handle_error)
 
 
-Interval
-********
+repeat
+******
 
-Create a Timer-like object in code without worrying about components.
-
-The function will run repeatedly after each delay.
-This means setting the delay to 0 will cause the function to run every 0 seconds 😬.
-To kill the Interval set the delay to None or call the ``clear()`` method.
+Call a function repeatedly using the ``repeat()`` function.
+After each interval seconds the function will be called.
+To end or cancel the repeated call use the ``cancel`` method.
 
 
 .. code-block:: python
 
-    from anvil_labs.non_blocking import Interval
+    from anvil_labs import non_blocking
 
     i = 0
     def do_heartbeat():
         global heartbeat, i
         if i >= 42:
-            heartbeat.delay = None
-            # equivalent to heartbeat.clear()
+            heartbeat.cancel()
+            # equivalent to non_blocking.cancel(heartbeat)
         print("da dum")
         i += 1
 
-    heartbeat = Interval(do_heartbeat, delay=1)
+    heartbeat = non_blocking.repeat(do_heartbeat, 1)
 
 
-Timeout
-********
+delay
+*****
 
-Create a Timer-like object in code without worrying about components.
-A timeout will only run once after the delay.
-To kill the Timeout set the delay to ``None`` or call the ``clear()`` method.
-
-A Timeout is particularly useful for pending saves
+Call a function after a timeout using the ``delay()`` function.
+After the timeout is reached the function will be called.
+To ``cancel`` the delayed call, use the ``cancel()`` method.
 
 .. code-block:: python
 
-    from anvil_labs.non_blocking import Timeout
+    from anvil_labs import non_blocking
 
     pending = []
 
@@ -99,14 +95,16 @@ A Timeout is particularly useful for pending saves
             return
         anvil.server.call_s("save", saves)
 
-    save_timeout = Timeout(do_save)
+    save_timeout = None
 
     def on_save(saves):
-        global pending
+        global pending, save_timeout
+        non_blocking.cancel(save_timeout)
+        # we could also use save_timeout.cancel() but we start with None
         pending.extend(saves)
-        save_timeout.delay = 1
+        save_timeout = non_blocking.delay(do_save, 1)
 
-    # calling on_save repeatedly will reset the delay to do_save
+    # calling on_save() repeatedly will cancel the current do_save delayed call and create a new one
 
 
 API
