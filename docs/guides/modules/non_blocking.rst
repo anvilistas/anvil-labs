@@ -180,7 +180,7 @@ API
     ``fn`` should be a callable that takes no args.
     ``interval`` should be an ``int`` or ``float`` representing the time in seconds between function calls.
 
-    The function is called in a non blocking way.
+    The function is called in a non-blocking way.
 
     A call to ``repeat`` returns a ``RepeatRef`` object that has a ``.cancel()`` method.
 
@@ -194,7 +194,7 @@ API
     ``fn`` should be a callable that takes no args.
     ``delay`` should be an ``int`` or ``float`` representing the time in seconds.
 
-    The function is called in a non blocking way.
+    The function is called in a non-blocking way.
     A call to ``defer`` returns a ``DeferRef`` object that has a ``.cancel()`` method.
 
     Calling the ``.cancel()`` method will stop the deferred function from executing.
