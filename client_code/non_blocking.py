@@ -233,18 +233,56 @@ class RepeatRef:
 
 
 def cancel(ref):
+    """Cancel an active call to delay or defer
+    Parameters
+    ----------
+    ref: should be None, or the return value from calling delay/defer
+
+    e.g.
+    >>> ref = defer(fn, 1)
+    >>> cancel(ref)
+    """
     if ref is None:
         return
     if not isinstance(ref, TimerRef):
-        raise TypeError("Invalid reference")
+        msg = "Invalid argumnet to cancel(), expected None or the return value from calling delay/defer"
+        raise TypeError(msg)
     return ref.cancel()
 
 
-def defer(fn, timeout):
-    return DeferRef(_W.setTimeout(fn, timeout))
+def defer(fn, delay):
+    """Defer a function call after a set period of time has elapsed (in seconds)
+
+    Parameters
+    ----------
+    fn : a callable that takes no args
+    delay : int | float
+        the time delay in seconds to wait before calling fn
+
+    Returns
+    -------
+    DeferRef
+        a reference to the deferred call that can be cancelled
+        either with ref.cancel() or non_blocking.cancel(ref)
+    """
+    return DeferRef(_W.setTimeout(fn, delay))
 
 
 def repeat(fn, interval):
+    """Repeatedly call a function with a set interval (in seconds)
+
+    Parameters
+    ----------
+    fn : a callable that takes no args
+    interval : int | float
+        the time between calls to fn
+
+    Returns
+    -------
+    RepeatRef
+        a reference to the repeated call that can be cancelled
+        either with ref.cancel() or non_blocking.cancel(ref)
+    """
     return RepeatRef(_W.setInterval(fn, interval))
 
 
