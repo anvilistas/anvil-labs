@@ -163,38 +163,38 @@ API
         One of ``"PENDING"``, ``"FULFILLED"``, ``"REJECTED"``
 
 
-.. class:: Interval(fn, delay=None)
+.. function:: cancel(ref)
 
-    Create an interval that will call a function every delay seconds.
-    If the delay is ``None`` the Interval will stop calling the function.
+    Cancel an active call to ``delay`` or ``defer``.
+    The first argument should be ``None`` or the the return value from a call to ``delay`` or ``defer``.
 
-    A delay of ``0`` means the function will be called every 0 seconds!
+    Calling ``cancel(ref)`` is equivalent to ``ref.cancel()``.
+    You may wish to use ``cancel(ref)`` if you start with a placeholder ``ref`` equal to ``None``.
+    See the ``defer`` example above.
 
-    Functions executed by an interval are non-blocking.
 
-    .. attribute:: delay
+.. function:: repeat(fn, interval)
 
-        change the interval to ``None`` or an ``int`` / ``float`` in seconds.
-        If the delay is ``None``, the function will no longer fire.
+    Repeatedly call a function with a set interval (in seconds)
 
-    .. method:: clear(self)
+    ``fn`` should be a callable that takes no args.
+    ``interval`` should be an ``int`` or ``float`` representing the time in seconds between function calls.
 
-        Equivalent to ``my_interval.delay = None``
+    The function is called in a non blocking way.
 
-.. class:: Timeout(fn, delay=None)
+    A call to ``repeat`` returns a ``RepeatRef`` object that has a ``.cancel()`` method.
 
-    Create a timeout that will call a function after delay seconds.
-    If the delay is ``None`` the timeout will stop calling the function.
+    Calling the ``.cancel()`` method will stop the next call repeated call from executing.
 
-    A delay of ``0`` means the function will be called immediately!
 
-    Functions executed by a timeout are non-blocking.
+.. function:: defer(fn, delay)
 
-    .. attribute:: delay
+    Defer a function call after a set period of time has elapsed (in seconds).
 
-        change the interval to ``None`` or an ``int`` / ``float`` in seconds.
-        If the delay is ``None``, the function will no longer fire.
+    ``fn`` should be a callable that takes no args.
+    ``delay`` should be an ``int`` or ``float`` representing the time in seconds.
 
-    .. method:: clear(self)
+    The function is called in a non blocking way.
+    A call to ``defer`` returns a ``DeferRef`` object that has a ``.cancel()`` method.
 
-        Equivalent to ``my_timeout.delay = None``
+    Calling the ``.cancel()`` method will stop the deferred function from executing.

@@ -151,11 +151,21 @@ def wait_for(async_call_object):
     return async_call_object.await_result()
 
 
+_warning = False
+
+
 class _AbstractTimer:
     _clearer = None
     _setter = None
 
     def __init__(self, fn, delay=None):
+        global _warning
+        if not _warning:
+            _warning = True
+            print(
+                "WARNING: Interval and Timeout have been deprecated in favour of repeat() and defer() and will soon be removed."
+                "\nSee latest documentation: https://anvil-labs.readthedocs.io/en/latest/guides/modules/non_blocking.html"
+            )
         assert callable(
             fn
         ), f"the first argument to {type(self).__name__} must be a callable that takes no arguments"
@@ -183,53 +193,32 @@ class _AbstractTimer:
 
 
 class Interval(_AbstractTimer):
-    """Create an interval
-    The first argument must be a function that takes no arguments
-    The second argument is the delay in seconds.
-    The function will be called every delay seconds.
-    To stop the interval either set its delay to None or call the clear() method
-    """
-
-    def __init__(self, fn, delay=None):
-        super().__init__(fn, delay)
-
     _clearer = _W.clearInterval
     _setter = _W.setInterval
 
 
 class Timeout(_AbstractTimer):
-    """Create a timeout
-    The first argument must be a function that takes no arguments
-    The second argument is the delay in seconds.
-    The function will be called after delay seconds.
-    To stop the function from being called either set the delay to None or call the clear() method
-    Setting a new delay value stops the pending function, which will now be called after the new delay seconds.
-    """
-
-    def __init__(self, fn, delay=None):
-        super().__init__(fn, delay)
-
     _clearer = _W.clearTimeout
     _setter = _W.setTimeout
 
 
 # ALTERNATIVE IDEA
 class TimerRef:
-    _cancel = None
+    _clear = None
 
     def __init__(self, id):
-        self.id = id
+        self._id = id
 
     def cancel(self):
-        self._cancel(self.id)
+        self._clear(self._id)
 
 
 class DeferRef(TimerRef):
-    _cancel = _W.clearTimeout
+    _clear = _W.clearTimeout
 
 
 class RepeatRef(TimerRef):
-    _cancel = _W.clearInterval
+    _clear = _W.clearInterval
 
 
 def cancel(ref):
