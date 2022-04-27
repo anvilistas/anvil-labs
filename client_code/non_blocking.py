@@ -213,6 +213,41 @@ class Timeout(_AbstractTimer):
     _setter = _W.setTimeout
 
 
+# ALTERNATIVE IDEA
+class TimerRef:
+    _clear = None
+
+    def __init__(self, id):
+        self.id = id
+
+    def clear(self):
+        self._clear(self.id)
+
+
+class DelayRef:
+    _clear = _W.clearTimeout
+
+
+class RepeatRef:
+    _clear = _W.clearInterval
+
+
+def clear(ref):
+    if ref is None:
+        return
+    if not isinstance(ref, TimerRef):
+        raise TypeError("Invalid reference")
+    return ref.clear()
+
+
+def delay(fn, timeout):
+    return DelayRef(_W.setTimeout(fn, timeout))
+
+
+def repeat(fn, interval):
+    return RepeatRef(_W.setInterval(fn, interval))
+
+
 if __name__ == "__main__":
     # TESTS
     from time import sleep as _sleep
