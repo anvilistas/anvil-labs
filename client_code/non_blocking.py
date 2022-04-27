@@ -224,11 +224,11 @@ class TimerRef:
         self._cancel(self.id)
 
 
-class DeferRef:
+class DeferRef(TimerRef):
     _cancel = _W.clearTimeout
 
 
-class RepeatRef:
+class RepeatRef(TimerRef):
     _cancel = _W.clearInterval
 
 
@@ -296,24 +296,26 @@ if __name__ == "__main__":
         global _x, _v
         _v += 1
         if _v >= 5:
-            _x.delay = None
+            cancel(_x)
 
-    print("Testing Interval")
-    _x = Interval(_f)
+    print("Testing repeat")
+    _x = repeat(_f, 0.01)
+    _x.cancel()
     assert _v == 0
-    _x.delay = 0.01
+    _x = repeat(_f, 0.01)
     _sleep(0.1)
     assert _v == 5
-    _x.delay = 0.01
+    _x = repeat(_f, 0.01)
     assert _v == 5
     _sleep(0.1)
     assert _v == 6
 
-    print("Testing Timeout")
+    print("Testing defer")
     _v = 0
-    _x = Timeout(_f, delay=0.05)
+    _x = defer(_f, delay=0.05)
     _sleep(0.01)
-    _x.delay = 0.05
+    cancel(_x)
+    _x = defer(_f, delay=0.05)
     _sleep(0.1)
     assert _v == 1
 
