@@ -215,29 +215,29 @@ class Timeout(_AbstractTimer):
 
 # ALTERNATIVE IDEA
 class TimerRef:
-    _clear = None
+    _cancel = None
 
     def __init__(self, id):
         self.id = id
 
-    def clear(self):
-        self._clear(self.id)
+    def cancel(self):
+        self._cancel(self.id)
 
 
 class DelayRef:
-    _clear = _W.clearTimeout
+    _cancel = _W.clearTimeout
 
 
 class RepeatRef:
-    _clear = _W.clearInterval
+    _cancel = _W.clearInterval
 
 
-def clear(ref):
+def cancel(ref):
     if ref is None:
         return
     if not isinstance(ref, TimerRef):
         raise TypeError("Invalid reference")
-    return ref.clear()
+    return ref.cancel()
 
 
 def delay(fn, timeout):
