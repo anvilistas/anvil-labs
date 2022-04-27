@@ -88,7 +88,7 @@ A Timeout is particularly useful for pending saves
 
 .. code-block:: python
 
-    from anvil_labs.non_blocking import Interval
+    from anvil_labs.non_blocking import Timeout
 
     pending = []
 
