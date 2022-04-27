@@ -15,7 +15,7 @@ In this example, we don't care about the return.
 
 .. code-block:: python
 
-    from anvil_labs.non_blocking import call_server_async
+    from anvil_labs.non_blocking import call_async
 
     def button_click(self, **event_args):
         self.update_database()
@@ -23,14 +23,14 @@ In this example, we don't care about the return.
 
     def update_database(self):
         # Unlike anvil.server.call we do not wait for the call to return
-        call_server_async("update", self.item)
+        call_async("update", self.item)
 
 
 If you care about the return value, you can provide handlers.
 
 .. code-block:: python
 
-    from anvil_labs.non_blocking import call_server_async
+    from anvil_labs.non_blocking import call_async
 
     def handle_result(self, res):
         print(res)
@@ -41,12 +41,12 @@ If you care about the return value, you can provide handlers.
         Notification("there was a problem", style="danger").show()
 
     def update_database(self, **event_args):
-        call_server_async("update", self.item).on_result(self.handle_result, self.handle_error)
+        call_async("update", self.item).on_result(self.handle_result, self.handle_error)
         # Equivalent to
-        async_call = call_server_async("update", self.item)
+        async_call = call_async("update", self.item)
         async_call.on_result(self.handle_result, self.handle_error)
         # Equivalent to
-        async_call = call_server_async("update", self.item)
+        async_call = call_async("update", self.item)
         async_call.on_result(self.handle_result)
         async_call.on_error(self.handle_error)
 
@@ -113,12 +113,11 @@ API
 ---
 
 .. function:: call_async(fn, *args, **kws)
+              call_async(fn_name, *args, **kws)
 
     Returns an ``AyncCall`` object. The *fn* will be called in a non-blocking way.
 
-.. function:: call_server_async(fn_name, *args, **kws)
-
-    Returns an ``AyncCall`` object. The server function will be called in a non-blocking way.
+    If the first argument is a string then the server function with name *fn_name* will be called in a non-blocking way.
 
 .. function:: wait_for(async_call_object)
 

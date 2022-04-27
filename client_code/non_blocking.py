@@ -128,18 +128,18 @@ class _AsyncCall:
 _AsyncCall.wait = _AsyncCall.await_result
 
 
-def call_async(fn, *args, **kws):
-    "call a function in a non-blocking way"
-    if not callable(fn):
-        raise TypeError("the first argument must be a callable")
-    return _AsyncCall(fn, *args, **kws)
+def call_async(fn_or_name, *args, **kws):
+    "call a function, or server function in a non-blocking way"
+    if isinstance(fn_or_name, str):
+        return _AsyncCall(_call_s, fn_or_name, *args, **kws)
+    if callable(fn_or_name):
+        return _AsyncCall(fn_or_name, *args, **kws)
+    msg = "the first argument must be a callable or the name of a server function"
+    raise TypeError(msg)
 
 
-def call_server_async(fn_name, *args, **kws):
-    "call a server function in a non_blocking way"
-    if not isinstance(fn_name, str):
-        raise TypeError("the first argument must be the server function name as a str")
-    return _AsyncCall(_call_s, fn_name, *args, **kws)
+# Backward compatability - remove at some point
+call_server_async = call_async
 
 
 def wait_for(async_call_object):
