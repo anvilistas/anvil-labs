@@ -78,9 +78,8 @@ To end or cancel the repeated call use the ``cancel`` method.
 defer
 *****
 
-Call a function after a timeout using the ``defer()`` function.
-After the timeout is reached the function will be called.
-To ``cancel`` the delayed call, use the ``cancel()`` method.
+Call a function after a set period of time using the ``defer()`` function.
+To ``cancel`` the deferred call, use the ``cancel()`` method.
 
 .. code-block:: python
 
@@ -95,14 +94,14 @@ To ``cancel`` the delayed call, use the ``cancel()`` method.
             return
         anvil.server.call_s("save", saves)
 
-    save_timeout = None
+    deferred_save = None
 
     def on_save(saves):
-        global pending, save_timeout
-        non_blocking.cancel(save_timeout)
-        # we could also use save_timeout.cancel() but we start with None
+        global pending, deferred_save
+        non_blocking.cancel(deferred_save)
+        # we could also use deferred_save.cancel() but we start with None
         pending.extend(saves)
-        save_timeout = non_blocking.defer(do_save, 1)
+        deferred_save = non_blocking.defer(do_save, 1)
 
     # calling on_save() repeatedly will cancel the current do_save deferred call and create a new one
 
