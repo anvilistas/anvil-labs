@@ -224,7 +224,7 @@ class TimerRef:
         self._cancel(self.id)
 
 
-class DelayRef:
+class DeferRef:
     _cancel = _W.clearTimeout
 
 
@@ -240,8 +240,8 @@ def cancel(ref):
     return ref.cancel()
 
 
-def delay(fn, timeout):
-    return DelayRef(_W.setTimeout(fn, timeout))
+def defer(fn, timeout):
+    return DeferRef(_W.setTimeout(fn, timeout))
 
 
 def repeat(fn, interval):

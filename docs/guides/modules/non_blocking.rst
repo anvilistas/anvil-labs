@@ -75,10 +75,10 @@ To end or cancel the repeated call use the ``cancel`` method.
     heartbeat = non_blocking.repeat(do_heartbeat, 1)
 
 
-delay
+defer
 *****
 
-Call a function after a timeout using the ``delay()`` function.
+Call a function after a timeout using the ``defer()`` function.
 After the timeout is reached the function will be called.
 To ``cancel`` the delayed call, use the ``cancel()`` method.
 
@@ -102,9 +102,9 @@ To ``cancel`` the delayed call, use the ``cancel()`` method.
         non_blocking.cancel(save_timeout)
         # we could also use save_timeout.cancel() but we start with None
         pending.extend(saves)
-        save_timeout = non_blocking.delay(do_save, 1)
+        save_timeout = non_blocking.defer(do_save, 1)
 
-    # calling on_save() repeatedly will cancel the current do_save delayed call and create a new one
+    # calling on_save() repeatedly will cancel the current do_save deferred call and create a new one
 
 
 API
