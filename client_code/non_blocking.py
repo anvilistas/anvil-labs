@@ -265,7 +265,7 @@ def defer(fn, delay):
         a reference to the deferred call that can be cancelled
         either with ref.cancel() or non_blocking.cancel(ref)
     """
-    return DeferRef(_W.setTimeout(fn, delay))
+    return DeferRef(_W.setTimeout(fn, delay * 1000))
 
 
 def repeat(fn, interval):
@@ -283,7 +283,7 @@ def repeat(fn, interval):
         a reference to the repeated call that can be cancelled
         either with ref.cancel() or non_blocking.cancel(ref)
     """
-    return RepeatRef(_W.setInterval(fn, interval))
+    return RepeatRef(_W.setInterval(fn, interval * 1000))
 
 
 if __name__ == "__main__":
