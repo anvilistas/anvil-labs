@@ -2,6 +2,7 @@
 # Copyright (c) 2021 anvilistas
 from uuid import UUID, uuid4
 
+import anvil.users
 from anvil.tables import app_tables, in_transaction, order_by
 
 from anvil_extras import logging
@@ -20,25 +21,44 @@ __version__ = "0.0.1"
 LOGGER = logging.Logger("historic-persistence", level=logging.INFO)
 
 
-class Authorization:
+def _default_identifier():
+    try:
+        user = anvil.users.get_user()["email"]
+    except Exception as e:
+        if isinstance(e, TypeError) or repr(e).startswith("ServiceNotAdded"):
+            user = None
+        else:
+            raise e
+    return user
+
+
+class _Authorization:
     """A class to check whether authorization exists for an operation on an object
 
     Attributes
     ----------
     policy: callable
         which must take an event instance as its argument and return a bool.
+    identifier : callable
+        which must return a string.
     """
 
-    def __init__(self, policy=None):
-        self.policy = policy
+    def __init__(self):
+        self.policy = None
+        self.identifier = None
 
     def check(self, event):
         if self.policy is None:
             return True
         return self.policy(event)
 
+    def user_id(self):
+        if self.identifier is None:
+            self.identifier = _default_identifier
+        return self.identifier()
 
-authorization = Authorization()
+
+authorization = _Authorization()
 
 
 def _is_valid_uid(uid):
@@ -100,7 +120,7 @@ def _state_diff(state, previous_state):
     return result if len(result) > 0 else None
 
 
-def _record_event(event, record_duplicates):
+def _record_event(event, record_duplicates, user_id):
     """Write a single event record to the data table
 
     Parameters
@@ -159,6 +179,7 @@ def _record_event(event, record_duplicates):
         state=state,
         predecessor=previous_event_id,
         state_diff=diff,
+        user_id=user_id,
     )
     sequence["value"] += 1
     return object_id
@@ -186,6 +207,8 @@ def save_event_records(events, record_duplicates, return_identifiers):
     if not isinstance(events, list):
         events = [events]
 
+    user_id = authorization.user_id()
+
     LOGGER.info(f"Saving payload of {len(events)} events")
     try:
         for event in events:
@@ -199,7 +222,7 @@ def save_event_records(events, record_duplicates, return_identifiers):
                 f"Attempting {type(event).__name__} of {type(event.affected).__name__} "
                 f"object (id: {event.affected.uid})"
             )
-            uid = _record_event(event, record_duplicates)
+            uid = _record_event(event, record_duplicates, user_id)
             if return_identifiers:
                 result.append(uid)
         LOGGER.info(f"{len(events)} Events saved")
