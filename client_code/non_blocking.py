@@ -151,11 +151,21 @@ def wait_for(async_call_object):
     return async_call_object.await_result()
 
 
+_warning = False
+
+
 class _AbstractTimer:
     _clearer = None
     _setter = None
 
     def __init__(self, fn, delay=None):
+        global _warning
+        if not _warning:
+            _warning = True
+            print(
+                "WARNING: Interval and Timeout have been deprecated in favour of repeat() and defer() and will soon be removed."
+                "\nSee latest documentation: https://anvil-labs.readthedocs.io/en/latest/guides/modules/non_blocking.html"
+            )
         assert callable(
             fn
         ), f"the first argument to {type(self).__name__} must be a callable that takes no arguments"
@@ -183,34 +193,86 @@ class _AbstractTimer:
 
 
 class Interval(_AbstractTimer):
-    """Create an interval
-    The first argument must be a function that takes no arguments
-    The second argument is the delay in seconds.
-    The function will be called every delay seconds.
-    To stop the interval either set its delay to None or call the clear() method
-    """
-
-    def __init__(self, fn, delay=None):
-        super().__init__(fn, delay)
-
     _clearer = _W.clearInterval
     _setter = _W.setInterval
 
 
 class Timeout(_AbstractTimer):
-    """Create a timeout
-    The first argument must be a function that takes no arguments
-    The second argument is the delay in seconds.
-    The function will be called after delay seconds.
-    To stop the function from being called either set the delay to None or call the clear() method
-    Setting a new delay value stops the pending function, which will now be called after the new delay seconds.
-    """
-
-    def __init__(self, fn, delay=None):
-        super().__init__(fn, delay)
-
     _clearer = _W.clearTimeout
     _setter = _W.setTimeout
+
+
+# ALTERNATIVE IDEA
+class TimerRef:
+    _clear = None
+
+    def __init__(self, id):
+        self._id = id
+
+    def cancel(self):
+        self._clear(self._id)
+
+
+class DeferRef(TimerRef):
+    _clear = _W.clearTimeout
+
+
+class RepeatRef(TimerRef):
+    _clear = _W.clearInterval
+
+
+def cancel(ref):
+    """Cancel an active call to delay or defer
+    Parameters
+    ----------
+    ref: should be None, or the return value from calling delay/defer
+
+    e.g.
+    >>> ref = defer(fn, 1)
+    >>> cancel(ref)
+    """
+    if ref is None:
+        return
+    if not isinstance(ref, TimerRef):
+        msg = "Invalid argumnet to cancel(), expected None or the return value from calling delay/defer"
+        raise TypeError(msg)
+    return ref.cancel()
+
+
+def defer(fn, delay):
+    """Defer a function call after a set period of time has elapsed (in seconds)
+
+    Parameters
+    ----------
+    fn : a callable that takes no args
+    delay : int | float
+        the time delay in seconds to wait before calling fn
+
+    Returns
+    -------
+    DeferRef
+        a reference to the deferred call that can be cancelled
+        either with ref.cancel() or non_blocking.cancel(ref)
+    """
+    return DeferRef(_W.setTimeout(fn, delay * 1000))
+
+
+def repeat(fn, interval):
+    """Repeatedly call a function with a set interval (in seconds)
+
+    Parameters
+    ----------
+    fn : a callable that takes no args
+    interval : int | float
+        the time between calls to fn
+
+    Returns
+    -------
+    RepeatRef
+        a reference to the repeated call that can be cancelled
+        either with ref.cancel() or non_blocking.cancel(ref)
+    """
+    return RepeatRef(_W.setInterval(fn, interval * 1000))
 
 
 if __name__ == "__main__":
@@ -223,24 +285,26 @@ if __name__ == "__main__":
         global _x, _v
         _v += 1
         if _v >= 5:
-            _x.delay = None
+            cancel(_x)
 
-    print("Testing Interval")
-    _x = Interval(_f)
+    print("Testing repeat")
+    _x = repeat(_f, 0.01)
+    _x.cancel()
     assert _v == 0
-    _x.delay = 0.01
+    _x = repeat(_f, 0.01)
     _sleep(0.1)
     assert _v == 5
-    _x.delay = 0.01
+    _x = repeat(_f, 0.01)
     assert _v == 5
     _sleep(0.1)
     assert _v == 6
 
-    print("Testing Timeout")
+    print("Testing defer")
     _v = 0
-    _x = Timeout(_f, delay=0.05)
+    _x = defer(_f, delay=0.05)
     _sleep(0.01)
-    _x.delay = 0.05
+    cancel(_x)
+    _x = defer(_f, delay=0.05)
     _sleep(0.1)
     assert _v == 1
 
