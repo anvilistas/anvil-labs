@@ -4,6 +4,7 @@ from anvil_labs import non_blocking
 from anvil_labs.atomic import action, atom, reaction, selector
 
 __version__ = "0.0.1"
+_DEFAULT_PROJECTORS = ["current"]
 
 
 @atom
@@ -19,7 +20,7 @@ class Archivist:
         deferral : int
             number of seconds to wait before retrying if a save is already in progress
         """
-        self.projectors = projectors or []
+        self.projectors = projectors or _DEFAULT_PROJECTORS
         self.deferral = deferral
         self.saving = []
         self.pending = []
