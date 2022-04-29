@@ -29,7 +29,7 @@ class Archivist:
     def __init__(
         self,
         publisher,
-        projectors=None,
+        projectors=_DEFAULT_PROJECTORS,
         deferral=2,
         channel=_DEFAULT_CHANNEL,
         message_titles=None,
@@ -55,7 +55,7 @@ class Archivist:
         error_handler : callable
             called with any error from the save_events call
         """
-        self.projectors = projectors or _DEFAULT_PROJECTORS
+        self.projectors = projectors
         self.deferral = deferral
         self.message_titles = message_titles or _DEFAULT_MESSAGE_TITLES
         self.result_handler = result_handler
