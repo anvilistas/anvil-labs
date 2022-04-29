@@ -74,7 +74,7 @@ class Archivist:
         unsaved = self.pending
         if not unsaved:
             return
-        self.saving, self.pending = self.pending, []
+        self.saving, self.pending = unsaved, []
         async_call = non_blocking.call_async(
             "anvil_labs.historic.save_events", unsaved, projectors=self.projectors
         )
@@ -89,7 +89,7 @@ class Archivist:
         ----------
         unsaved : List
         """
-        if not unsaved:
+        if not pending:
             return
         non_blocking.cancel(self.deferred_save)
         if self.saving:
