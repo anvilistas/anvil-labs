@@ -3,6 +3,7 @@
 from uuid import UUID, uuid4
 
 import anvil.users
+from anvil.server import ServiceNotAdded
 from anvil.tables import app_tables, in_transaction, order_by
 
 from anvil_extras import logging
@@ -24,11 +25,8 @@ LOGGER = logging.Logger("historic-persistence", level=logging.INFO)
 def _default_identifier():
     try:
         user = anvil.users.get_user()["email"]
-    except Exception as e:
-        if isinstance(e, TypeError) or repr(e).startswith("ServiceNotAdded"):
-            user = None
-        else:
-            raise e
+    except (TypeError, ServiceNotAdded):
+        user = None
     return user
 
 

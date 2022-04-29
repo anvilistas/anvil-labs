@@ -21,9 +21,8 @@ def _has_permission(require_user):
 
     user = anvil.users.get_user()
     if user is None:
-        raise anvil.users.AuthenticationFailed(
-            "You must be logged in to call this server function"
-        )
+        msg = "You must be logged in to call this server function"
+        raise anvil.users.AuthenticationFailed(msg)
 
     if require_user is True:
         return True
@@ -35,12 +34,8 @@ def _wrap_require(fn, name, require_user):
     @_wraps(fn)
     def require_wrapper(*args, **kws):
         if not _has_permission(require_user):
-            from anvil._server import PermissionDenied
-
-            # TOOO this should be in the public namespace!
-            raise PermissionDenied(
-                f"You do not have permission to call server function '{name}'"
-            )
+            msg = f"You do not have permission to call server function '{name}'"
+            raise _server.PermissionDenied(msg)
         return fn(*args, **kws)
 
     return require_wrapper
