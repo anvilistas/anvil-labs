@@ -10,7 +10,8 @@ _DEFAULT_PROJECTORS = ("current", )
 @atom
 class Archivist:
     def __init__(self, publisher, projectors=None, deferral=2):
-        """A class to sending events to the server for persistence.
+        """A class to handle sending events to the server in response to published
+        messages.
 
         Parameters
         ----------
