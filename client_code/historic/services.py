@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
+from anvil_extras import logging
+
 from anvil_labs import non_blocking
 from anvil_labs.atomic import action, atom, reaction, selector
 
@@ -11,17 +13,7 @@ _DEFAULT_MESSAGE_TITLES = {
     "single": "historic.event.occurred",
     "multiple": "historic.events.occurred",
 }
-
-
-def _default_result_handler(archivist, result):
-    archivist.saving = []
-
-
-@action
-def _default_error_handler(archivist, err):
-    print(f"Error in server call: {err}")
-    archivist.failed.extend(archivist.saving)
-    archivist.saving = []
+LOGGER = logging.Logger("historic.archivist")
 
 
 @atom
@@ -33,8 +25,8 @@ class Archivist:
         deferral=2,
         channel=_DEFAULT_CHANNEL,
         message_titles=None,
-        result_handler=_default_result_handler,
-        error_handler=_default_error_handler,
+        post_result_handler=None,
+        post_error_handler=None,
     ):
         """A class to handle sending events to the server in response to published
         messages.
@@ -50,16 +42,16 @@ class Archivist:
             the channel to listen for messages on
         message_titles : dict
             mapping keys "single" and "multiple" to the titles of messages to listen for
-        result_handler : callable
+        post_result_handler : callable
             called with the result of the save_events call
-        error_handler : callable
+        post_error_handler : callable
             called with any error from the save_events call
         """
         self.projectors = projectors
         self.deferral = deferral
         self.message_titles = message_titles or _DEFAULT_MESSAGE_TITLES
-        self.result_handler = result_handler
-        self.error_handler = error_handler
+        self.post_result_handler = post_result_handler
+        self.post_error_handler = post_error_handler
         self.saving = []
         self.pending = []
         self.failed = []
@@ -85,6 +77,19 @@ class Archivist:
 
         if message.title == self.message_titles["multiple"]:
             self.pending.extend(message.content)
+
+    def _handle_result(self, result):
+        self.saving = []
+        if self.post_result_handler:
+            self.post_result_handler(result)
+
+    @action
+    def _default_error_handler(self, err):
+        LOGGER.error(f"Error in server call: {err}")
+        self.failed.extend(self.saving)
+        self.saving = []
+        if self.post_error_handler:
+            self.post_error_handler(err)
 
     def _do_update(self):
         """Make an async call to the server to save any pending changes"""
