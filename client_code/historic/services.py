@@ -1,6 +1,8 @@
 from anvil_labs import non_blocking
 from anvil_labs.atomic import action, atom, reaction, selector
 
+__version__ = "0.0.1"
+
 
 @atom
 class Archivist:
