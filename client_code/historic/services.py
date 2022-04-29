@@ -4,12 +4,38 @@ from anvil_labs import non_blocking
 from anvil_labs.atomic import action, atom, reaction, selector
 
 __version__ = "0.0.1"
+
 _DEFAULT_PROJECTORS = ("current",)
+_DEFAULT_CHANNEL = "event"
+_DEFAULT_MESSAGE_TITLES = {
+    "single": "historic.event.occurred",
+    "multiple": "historic.events.occurred",
+}
+
+
+def _default_result_handler(archivist, result):
+    archivist.saving = []
+
+
+@action
+def _default_error_handler(archivist, err):
+    print(f"Error in server call: {err}")
+    archivist.failed.extend(archivist.saving)
+    archivist.saving = []
 
 
 @atom
 class Archivist:
-    def __init__(self, publisher, projectors=None, deferral=2):
+    def __init__(
+        self,
+        publisher,
+        projectors=None,
+        deferral=2,
+        channel=_DEFAULT_CHANNEL,
+        message_titles=None,
+        result_handler=_default_result_handler,
+        error_handler=_default_error_handler,
+    ):
         """A class to handle sending events to the server in response to published
         messages.
 
@@ -20,14 +46,25 @@ class Archivist:
             of projector names to run after events have been saved
         deferral : int
             number of seconds to wait before retrying if a save is already in progress
+        channel : str
+            the channel to listen for messages on
+        message_titles : dict
+            mapping keys "single" and "multiple" to the titles of messages to listen for
+        result_handler : callable
+            called with the result of the save_events call
+        error_handler : callable
+            called with any error from the save_events call
         """
         self.projectors = projectors or _DEFAULT_PROJECTORS
         self.deferral = deferral
+        self.message_titles = message_titles or _DEFAULT_MESSAGE_TITLES
+        self.result_handler = result_handler
+        self.error_handler = error_handler
         self.saving = []
         self.pending = []
         self.failed = []
         publisher.subscribe(
-            channel="event", subscriber=self, handler=self._handle_message
+            channel=channel, subscriber=self, handler=self._handle_message
         )
         reaction(lambda: self.pending, self._update_db)
         self.deferred_save = None
@@ -43,32 +80,11 @@ class Archivist:
         return "saved"
 
     def _handle_message(self, message):
-        if message.title == "historic.event.occurred":
+        if message.title == self.message_titles["single"]:
             self.pending.append(message.content)
 
-        if message.title == "historic.events.occurred":
+        if message.title == self.message_titles["multiple"]:
             self.pending.extend(message.content)
-
-    def _handle_result(self, result):
-        """A handler for the result of an async server call
-
-        Parameters
-        ----------
-        result : object
-        """
-        self.saving = []
-
-    @action
-    def _handle_error(self, err):
-        """A handler for errors during an async server call
-
-        Parameters
-        ----------
-        err : Exception
-        """
-        print(f"Error in server call: {err}")
-        self.failed.extend(self.saving)
-        self.saving = []
 
     def _do_update(self):
         """Make an async call to the server to save any pending changes"""
@@ -79,8 +95,8 @@ class Archivist:
         async_call = non_blocking.call_async(
             "anvil_labs.historic.save_events", unsaved, projectors=self.projectors
         )
-        async_call.on_result(self._handle_result)
-        async_call.on_error(self._handle_error)
+        async_call.on_result(self.result_handler)
+        async_call.on_error(self.error_handler)
 
     @action
     def _update_db(self, pending):
