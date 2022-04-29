@@ -89,6 +89,8 @@ class Archivist:
         ----------
         unsaved : List
         """
+        if not unsaved:
+            return
         non_blocking.cancel(self.deferred_save)
         if self.saving:
             self.deferred_save = non_blocking.defer(self._do_update, self.deferral)
