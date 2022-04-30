@@ -34,7 +34,7 @@ from anvil_extras import logging
 __version__ = "0.0.1"
 _projectors = {}
 
-LOGGER = logging.Logger("historic-projection")
+LOGGER = logging.Logger("anvil_labs.historic.projection")
 
 
 class register:
@@ -174,12 +174,13 @@ class Projector:
         self.played_to = None
 
     def play(
-        self, play_from=None, play_to=None, log_level=logging.INFO, *args, **kwargs
+        self, log_level, play_from=None, play_to=None, *args, **kwargs
     ):
         """Send the relevant event records to the player in sequential order
 
         Parameters
         ----------
+        log_level : str
         play_from : int
         play_to : int
 

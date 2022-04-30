@@ -18,7 +18,7 @@ from ..historic.exceptions import (
 
 __version__ = "0.0.1"
 
-LOGGER = logging.Logger("historic-persistence")
+LOGGER = logging.Logger("anvil_labs.historic.persistence")
 
 
 def _default_identifier():
@@ -187,7 +187,7 @@ def _record_event(event, record_duplicates, user_id):
 
 @in_transaction
 def save_event_records(
-    events, record_duplicates, return_identifiers, log_level=logging.INFO
+    events, log_level, record_duplicates, return_identifiers
 ):
     """Save event records for a batch of events
 
