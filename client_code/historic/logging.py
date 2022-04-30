@@ -9,7 +9,7 @@ LOGGER = logging.Logger("anvil_labs.historic", level=logging.INFO)
 
 def set_debug(with_debug):
     levels = {True: logging.DEBUG, False: logging.INFO}
-    LOGGER.setLevel(levels[with_debug])
+    LOGGER.level(levels[with_debug])
 
 
 def set_log_level(level):
