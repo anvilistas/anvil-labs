@@ -18,7 +18,7 @@ from ..historic.exceptions import (
 
 __version__ = "0.0.1"
 
-LOGGER = logging.Logger("historic-persistence", level=logging.INFO)
+LOGGER = logging.Logger("anvil_labs.historic.persistence")
 
 
 def _default_identifier():
@@ -186,7 +186,7 @@ def _record_event(event, record_duplicates, user_id):
 
 
 @in_transaction
-def save_event_records(events, record_duplicates, return_identifiers):
+def save_event_records(events, log_level, record_duplicates, return_identifiers):
     """Save event records for a batch of events
 
     Parameters
@@ -203,13 +203,14 @@ def save_event_records(events, record_duplicates, return_identifiers):
         either empty or with the uids of the saved objects depending on
         return_identifiers
     """
+    LOGGER.level = log_level
     result = []
     if not isinstance(events, list):
         events = [events]
 
     user_id = authorization.user_id()
 
-    LOGGER.info(f"Saving payload of {len(events)} events")
+    LOGGER.debug(f"Saving payload of {len(events)} events")
     try:
         for event in events:
             if not authorization.check(event):
@@ -218,14 +219,14 @@ def save_event_records(events, record_duplicates, return_identifiers):
                     f"{type(event.affected).__name__} "
                     f"object (id: {event.affected.uid}])"
                 )
-            LOGGER.info(
+            LOGGER.debug(
                 f"Attempting {type(event).__name__} of {type(event.affected).__name__} "
                 f"object (id: {event.affected.uid})"
             )
             uid = _record_event(event, record_duplicates, user_id)
             if return_identifiers:
                 result.append(uid)
-        LOGGER.info(f"{len(events)} Events saved")
+        LOGGER.debug(f"{len(events)} Events saved")
         return result
     except Exception as e:
         LOGGER.error(

@@ -34,7 +34,7 @@ from anvil_extras import logging
 __version__ = "0.0.1"
 _projectors = {}
 
-LOGGER = logging.Logger("historic-projection", level=logging.INFO)
+LOGGER = logging.Logger("anvil_labs.historic.projection")
 
 
 class register:
@@ -156,14 +156,14 @@ class Projector:
 
     def __enter__(self):
         """Lock the relevant projection table row by entering the projector id"""
-        LOGGER.info(f"Projector {self.uid} starting")
+        LOGGER.debug(f"Projector {self.uid} starting")
         row = _projection_row(self.name, self.uid)
         self.row = row if row is not None else None
         return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         """Update and unlock the relevant projection table row"""
-        LOGGER.info(f"Projector {self.uid} shutting down")
+        LOGGER.debug(f"Projector {self.uid} shutting down")
         if self.row is not None:
             self.row.update(
                 last_played_at=dt.datetime.now(),
@@ -173,11 +173,12 @@ class Projector:
         self.row = None
         self.played_to = None
 
-    def play(self, play_from=None, play_to=None, *args, **kwargs):
+    def play(self, log_level, play_from=None, play_to=None, *args, **kwargs):
         """Send the relevant event records to the player in sequential order
 
         Parameters
         ----------
+        log_level : str
         play_from : int
         play_to : int
 
@@ -185,6 +186,8 @@ class Projector:
         """
         if self.row is None:
             return
+
+        LOGGER.level = log_level
 
         _play_from = (
             play_from
@@ -198,7 +201,7 @@ class Projector:
             event_id=q.greater_than_or_equal_to(_play_from),
         )
         if len(events) == 0:
-            LOGGER.info(
+            LOGGER.debug(
                 f"The {self.name} projection is already at observation {_play_from}."
             )
             self.played_to = _play_from
@@ -213,16 +216,16 @@ class Projector:
             _play_to = play_to
             events = (e for e in events if e["event_id"] <= play_to)
 
-        LOGGER.info(
+        LOGGER.debug(
             f"Playing the {self.name} projection from event {_play_from} to {_play_to}"
         )
         self.player(events, *args, **kwargs)
         self.played_to = _play_to
-        LOGGER.info(
+        LOGGER.debug(
             f"The {self.name} projection has been played up to event {_play_to}"
         )
 
-    def rewind(self, rewind_to=None, *args, **kwargs):
+    def rewind(self, rewind_to=None, log_level=logging.INFO, *args, **kwargs):
         """Send the relevant event records to the rewinder in reverse order
 
         Parameters
@@ -234,25 +237,31 @@ class Projector:
         if self.row is None:
             return
 
+        LOGGER.level = log_level
+
         events = app_tables.events.search(
             tables.order_by("event_id", ascending=False),
             event_id=q.greater_than(rewind_to),
         )
         if len(events) == 0:
-            LOGGER.info(f"The {self.name} projection is already at event {rewind_to}.")
+            LOGGER.debug(f"The {self.name} projection is already at event {rewind_to}.")
             return
 
-        LOGGER.info(f"Rewinding the {self.name} projection to event {rewind_to}")
+        LOGGER.debug(f"Rewinding the {self.name} projection to event {rewind_to}")
         self.rewinder(events, *args, **kwargs)
         self.played_to = rewind_to
-        LOGGER.info(f"The {self.name} projection has been rewound to event {rewind_to}")
+        LOGGER.debug(
+            f"The {self.name} projection has been rewound to event {rewind_to}"
+        )
 
-    def reset(self, *args, **kwargs):
+    def reset(self, log_level=logging.INFO, *args, **kwargs):
         """Call the projector's reset function"""
         if self.row is None:
             return
 
-        LOGGER.info(f"Resetting {self.name} projection")
+        LOGGER.level = log_level
+
+        LOGGER.debug(f"Resetting {self.name} projection")
         self.resetter(*args, **kwargs)
         self.played_to = 0
-        LOGGER.info(f"The {self.name} projection has been reset")
+        LOGGER.debug(f"The {self.name} projection has been reset")

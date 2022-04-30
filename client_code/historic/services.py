@@ -5,6 +5,8 @@ from anvil_extras import logging
 from anvil_labs import non_blocking
 from anvil_labs.atomic import action, atom, reaction, selector
 
+from .logging import LOGGER
+
 __version__ = "0.0.1"
 
 _DEFAULT_PROJECTORS = ("current",)
@@ -98,7 +100,10 @@ class Archivist:
             return
         self.saving, self.pending = unsaved, []
         async_call = non_blocking.call_async(
-            "anvil_labs.historic.save_events", unsaved, projectors=self.projectors
+            "anvil_labs.historic.save_events",
+            unsaved,
+            LOGGER.level,
+            projectors=self.projectors,
         )
         async_call.on_result(self.result_handler)
         async_call.on_error(self.error_handler)

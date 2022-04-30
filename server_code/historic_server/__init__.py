@@ -3,8 +3,8 @@
 import anvil.server
 from anvil.tables import app_tables
 
+from ..historic.events import Change, Creation, Termination
 from ..historic.exceptions import UnregisteredClassError
-from ..historic.events import Creation, Change, Termination
 from .persistence import save_event_records
 from .projection import play
 
@@ -16,24 +16,26 @@ def register(cls, name):
     _classes[name] = cls
 
 
-def play_projectors(projectors):
-    if projectors is None:
-        return
+def play_projectors(projectors, log_level):
     for projector in projectors:
-        play(projector)
+        play(projector, log_level)
 
 
-def save_event(event, projectors):
+def save_event(event, projectors, log_level):
     identifier = save_event_records(
-        event, record_duplicates=False, return_identifiers=True
+        event, log_level, record_duplicates=False, return_identifiers=True
     )[0]
-    play_projectors(projectors)
+    play_projectors(projectors, log_level)
     return identifier
 
 
 @anvil.server.callable("anvil_labs.historic.save_events")
 def save_events(
-    events, record_duplicates=False, return_identifiers=False, projectors=None
+    events,
+    log_level,
+    record_duplicates=False,
+    return_identifiers=False,
+    projectors=None,
 ):
     """Save event records and optionally play all projections
 
@@ -43,6 +45,7 @@ def save_events(
 
     events : list
         of Event instances
+    log_level : str
     prevent_duplication : bool
         Whether to disallow records where the state is unchanged from previously
     return_identifiers : bool
@@ -54,18 +57,21 @@ def save_events(
     None or list
         Depending on the value of return_identifiers
     """
-    identifiers = save_event_records(events, record_duplicates, return_identifiers)
-    play_projectors(projectors)
+    identifiers = save_event_records(
+        events, log_level, record_duplicates, return_identifiers
+    )
+    play_projectors(projectors, log_level)
     return identifiers if return_identifiers else None
 
 
 @anvil.server.callable("anvil_labs.historic.create")
-def create(obj, projectors=None):
+def create(obj, log_level, projectors=None):
     """Save a new object and optionally play all projections
 
     Parameters
     ----------
     obj : portable class instance
+    log_level : str
     projectors : list
         of projector names to play
 
@@ -74,16 +80,17 @@ def create(obj, projectors=None):
     str
         The uid of the object
     """
-    return save_event(Creation(obj), projectors)
+    return save_event(Creation(obj), log_level, projectors)
 
 
 @anvil.server.callable("anvil_labs.historic.update")
-def update(obj, projectors=None):
+def update(obj, log_level, projectors=None):
     """Save changes to an object and optionally play all projections
 
     Parameters
     ----------
     obj : portable class instance
+    log_level : str
     projectors : list
         of projector names to play
 
@@ -92,22 +99,25 @@ def update(obj, projectors=None):
     str
         The uid of the object
     """
-    return save_event(Change(obj), projectors)
+    return save_event(Change(obj), log_level, projectors)
 
 
 @anvil.server.callable("anvil_labs.historic.delete")
-def delete(obj, projectors=None):
+def delete(obj, log_level, projectors=None):
     """Delete an object and optionally play all projections
 
     Parameters
     ----------
     obj : portable class instance
+    log_level : str
     projectors : list
         of projector names to play
     """
     event = Termination(obj)
-    save_event_records(event, prevent_duplication=True, return_identifiers=False)[0]
-    play_projectors(projectors)
+    save_event_records(
+        event, log_level, prevent_duplication=True, return_identifiers=False
+    )[0]
+    play_projectors(projectors, log_level)
 
 
 @anvil.server.callable("anvil_labs.historic.fetch")

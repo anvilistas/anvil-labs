@@ -2,6 +2,8 @@
 # Copyright (c) 2021 anvilistas
 import anvil.server
 
+from .logging import LOGGER
+
 __version__ = "0.0.1"
 
 
@@ -20,7 +22,10 @@ def create(obj, projectors=None):
         The uid of the object
     """
     return anvil.server.call(
-        "anvil_labs.historic.create", obj=obj, projectors=projectors
+        "anvil_labs.historic.create",
+        obj=obj,
+        log_level=LOGGER.level,
+        projectors=projectors,
     )
 
 
@@ -39,7 +44,10 @@ def update(obj, projectors=None):
         The uid of the object
     """
     return anvil.server.call(
-        "anvil_labs.historic.update", obj=obj, projectors=projectors
+        "anvil_labs.historic.update",
+        obj=obj,
+        log_level=LOGGER.level,
+        projectors=projectors,
     )
 
 
@@ -52,4 +60,9 @@ def delete(obj, projectors=None):
     projectors : list
         of projector names to play
     """
-    anvil.server.call("anvil_labs.historic.delete", obj=obj, projectors=projectors)
+    anvil.server.call(
+        "anvil_labs.historic.delete",
+        obj=obj,
+        log_level=LOGGER.level,
+        projectors=projectors,
+    )
