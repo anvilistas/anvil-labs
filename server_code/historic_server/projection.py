@@ -173,9 +173,7 @@ class Projector:
         self.row = None
         self.played_to = None
 
-    def play(
-        self, log_level, play_from=None, play_to=None, *args, **kwargs
-    ):
+    def play(self, log_level, play_from=None, play_to=None, *args, **kwargs):
         """Send the relevant event records to the player in sequential order
 
         Parameters

@@ -186,9 +186,7 @@ def _record_event(event, record_duplicates, user_id):
 
 
 @in_transaction
-def save_event_records(
-    events, log_level, record_duplicates, return_identifiers
-):
+def save_event_records(events, log_level, record_duplicates, return_identifiers):
     """Save event records for a batch of events
 
     Parameters
