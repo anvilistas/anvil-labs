@@ -7,6 +7,8 @@ import anvil.js
 import anvil.js.window as _W
 import anvil.server
 
+_version__ = "0.0.1"
+
 _script = """
 function f(r){let t={};r.registerFn=(n,s)=>{t[n]=s};function e(){r.task_state=new Proxy({},{set(n,s,a){return n[s]===a||(n[s]=a,r.postMessage({type:"STATE",state:{...n}})),!0}})}r.onmessage=async n=>{let{data:s}=n;switch(s.type){case"CALL":{e(),console.debug(`RPC call ${s.id}:`,s.fn,s.args);let a=t[s.fn],i,o;if(!a)o=`No handler registered for '${s.fn}'`;else try{i=await a(...s.args)}catch(l){o=l.toString()}try{stopExecution=!1,r.postMessage({type:"RESPONSE",id:s.id,value:i,error:o})}catch(l){console.error(l,"Failed to post RPC response:",i,o)}break}case"KILL":stopExecution||(stopExecution=!0);break}}}var c;function y(){if(c!==void 0)return c;for(let r of document.getElementsByTagName("script"))if(r.src.includes("skulpt.min.js")){c=r.src;break}return c}function S(){Sk.configure({output(l){return self.postMessage({type:"OUT",message:l})},yieldLimit:300});let{builtin:{RuntimeError:r},ffi:{toJs:t,toPy:e},misceval:{tryCatch:n,chain:s,Suspension:a,asyncToPromise:i}}=Sk;Sk.builtins.self=e(self);let o={};$compiledmod(o);for(let[l,h]of Object.entries(o))h.tp$call&&self.registerFn(l,(...p)=>{p=p.map(u=>e(u));let k=n(()=>s(h.tp$call(p),u=>t(u)),u=>{throw u});return k instanceof a?i(()=>k,{"*":()=>{if(stopExecution)throw new r("killed")}}):k})}var _=`
 let stopExecution = false;
