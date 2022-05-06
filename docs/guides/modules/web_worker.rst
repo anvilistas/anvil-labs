@@ -14,8 +14,6 @@ Create a worker module - say ``fib_worker``
 
 .. code-block:: python
 
-    import time
-
     def fib(num):
         a, b = 1, 0
         i = 0
