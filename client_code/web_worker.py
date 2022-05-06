@@ -38,15 +38,6 @@ anvil.js.await_promise(_p)
 _Worker = anvil.js.window._BgWorker
 
 
-class Worker:
-    def __init__(self, module):
-        self._worker = _Worker(module)
-
-    def launch_task(self, fn, *args):
-        task = self._worker.launch_task(fn, *args)
-        return Task(task)
-
-
 class Task:
     def __init__(self, task):
         self._task = task
@@ -95,3 +86,12 @@ class Task:
 
     def __repr__(self):
         return f"<WorkerTask {self._task._name!r} ({self._task._id})>"
+
+
+class Worker:
+    def __init__(self, module):
+        self._worker = _Worker(module)
+
+    def launch_task(self, fn, *args):
+        task = self._worker.launch_task(fn, *args)
+        return Task(task)
