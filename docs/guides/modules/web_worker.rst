@@ -35,19 +35,23 @@ In your code use the ``web_worker`` module call the ``fib`` function as a backgr
 
     class Form1(Form1Template):
         def fib_result(self, result):
-            alert(f"fib returned {result}")
+            alert(result)
 
         def fib_error(self, error):
             raise error
 
-        def fib_state_change(self, state):
-            print(state["i"])
+        def timer_tick(self, state):
+            if self.task.is_completed():
+                self.timer.interval = 0
+            else:
+                print(self.task.get_state().get("i"))
 
         def button_1_click(self, **event_args):
-            my_worker.launch_task("fib", 42)
+            self.task = my_worker.launch_task("fib", 2**20)
+            self.timer.interval = 1
             my_worker.on_result(self.fib_result)
             my_worker.on_error(self.fib_error)
-            my_worker.on_state_change(self.fib_state_change)
+            # my_worker.on_state_change(self.fib_state_change)
 
 Notes
 -----
