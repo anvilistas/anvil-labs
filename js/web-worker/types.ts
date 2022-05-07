@@ -3,14 +3,16 @@ import RSVP from "./rsvp_types.d.ts";
 
 export type TaskId = string;
 export type OutstandingCalls = { [callId: TaskId]: RSVP.Deferred<any> };
-export type HandlerFn = (...args: any[]) => Promise<any>;
+export type HandlerFn = (args: any[], kws: { [key: string]: any }) => Promise<any>;
 export type Handlers = { [handler: string]: HandlerFn };
 
 export interface ResponseData {
     type: "RESPONSE";
     id: TaskId;
     value?: any;
-    error?: string;
+    errorType?: string;
+    errorArgs?: any[];
+    errorTb?: any[];
 }
 
 export interface OutData {
@@ -33,4 +35,5 @@ export interface CallData {
     id: TaskId;
     fn: string;
     args: any[];
+    kws: { [key: string]: any };
 }

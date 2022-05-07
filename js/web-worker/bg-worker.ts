@@ -4,9 +4,7 @@ import type { ResponseData, OutData, StateData, CallData, TaskId, OutstandingCal
 import { webWorkerScript } from "./make-script.ts";
 
 declare var Sk: any;
-const {
-    builtin: { str: pyStr, RuntimeError, print: stdout },
-} = Sk;
+
 // declare var RSVP: any;
 
 declare global {
@@ -18,11 +16,41 @@ declare global {
 }
 
 interface CustomWorker extends Worker {
-    launchTask(fnName: string, ...args: any[]): [TaskId, string, Promise<any>];
+    launchTask(fnName: string, args: any[], kws: { [key: string]: any }): [TaskId, string, Promise<any>];
     postMessage(message: CallData | KillData): void;
     onmessage(ev: MessageEvent<ResponseData | OutData | StateData>): void;
     currentTask: null | { fn: string; id: TaskId };
     stateHandler: (state: any) => void;
+}
+
+const {
+    misceval: { callsimArray: pyCall, buildClass },
+    ffi: { toPy },
+    builtin: { RuntimeError, str: pyStr, print: stdout },
+} = Sk;
+
+export const WorkerTaskKilled = buildClass({ __name__: "anvil_labs.web_worker" }, () => {}, "WorkerTaskKilled", [
+    RuntimeError,
+]);
+
+function reconstructError(type: string, args: any[], tb: any) {
+    let reconstructed;
+    if (type === "WorkerTaskKilled") {
+        reconstructed = pyCall(WorkerTaskKilled, args);
+        reconstructed.traceback = tb;
+        return reconstructed;
+    }
+    try {
+        const pyError = Sk.builtins[type];
+        reconstructed = pyCall(
+            pyError,
+            args.map((x) => toPy(x))
+        );
+        reconstructed.traceback = tb;
+    } catch {
+        reconstructed = new Error(...args);
+    }
+    return reconstructed;
 }
 
 export function initWorkerRPC(target: CustomWorker) {
@@ -30,11 +58,11 @@ export function initWorkerRPC(target: CustomWorker) {
     target.currentTask = null;
     target.stateHandler = () => {};
 
-    target.launchTask = (fn, ...args) => {
+    target.launchTask = (fn, args, kws) => {
         const id = crypto.randomUUID();
         target.currentTask = { fn, id };
 
-        target.postMessage({ type: "CALL", id, fn, args });
+        target.postMessage({ type: "CALL", id, fn, args, kws });
 
         outstandingCalls[id] = window.RSVP.defer();
         return [id, fn, new Promise((r) => r(outstandingCalls[id].promise))];
@@ -54,17 +82,16 @@ export function initWorkerRPC(target: CustomWorker) {
             }
 
             case "RESPONSE": {
+                const { id, value, errorType, errorArgs, errorTb } = data;
                 const call = outstandingCalls[data.id];
                 if (!call) {
                     console.warn(`Got worker response for invalid call ${data.id}`, data);
+                } else if (errorType) {
+                    console.debug(`RPC error response ${id}:`, errorType, errorArgs);
+                    call.reject(reconstructError(errorType, errorArgs!, errorTb));
                 } else {
-                    if (data.error) {
-                        console.debug(`RPC error response ${data.id}:`, data.error);
-                        call.reject(data.error);
-                    } else {
-                        console.debug(`RPC response ${data.id}:`, data.value);
-                        call.resolve(data.value);
-                    }
+                    console.debug(`RPC response ${id}:`, value);
+                    call.resolve(value);
                 }
                 delete outstandingCalls[data.id];
                 target.currentTask = null;
@@ -100,7 +127,7 @@ class Task {
                 this._rv = r;
             },
             (e) => {
-                if (e && e.includes("RuntimeError: killed")) {
+                if (e instanceof WorkerTaskKilled) {
                     this._status = "killed";
                 } else {
                     this._status = "failed";
@@ -187,12 +214,12 @@ export class BackgroundWorker {
         initWorkerRPC(this.target);
     }
 
-    launch_task(fnName: string, ...args: any[]) {
+    launch_task(fnName: string, args: any[], kws: { [key: string]: any }) {
         const currentTask = this.target.currentTask;
         if (currentTask !== null) {
             throw new RuntimeError("BackgroundWorker already has an active task");
         }
-        const [id, name, result] = this.target.launchTask(fnName, ...args);
+        const [id, name, result] = this.target.launchTask(fnName, args, kws);
         return new Task(id, name, result, this.target);
     }
 }

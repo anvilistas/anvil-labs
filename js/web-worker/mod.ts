@@ -1,8 +1,11 @@
-import { BackgroundWorker as Worker } from "./bg-worker.ts";
+import { BackgroundWorker as Worker, WorkerTaskKilled } from "./bg-worker.ts";
 declare global {
     interface Window {
-        _BgWorker: typeof Worker;
+        anvilLabs: {
+            Worker: typeof Worker;
+            WorkerTaskKilled: typeof WorkerTaskKilled;
+        };
     }
 }
 
-window._BgWorker = Worker;
+window.anvilLabs = { Worker, WorkerTaskKilled };
