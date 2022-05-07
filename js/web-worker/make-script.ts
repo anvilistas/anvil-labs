@@ -6,18 +6,9 @@ declare var Sk: any;
 declare var stopExecution: boolean;
 declare var $compiledmod: (scope: any) => void;
 
-let skulptUrl: string;
-
 function getSkultpUrl() {
-    if (skulptUrl !== undefined) return skulptUrl;
-
-    for (const s of document.getElementsByTagName("script")) {
-        if (s.src.includes("skulpt.min.js")) {
-            skulptUrl = s.src;
-            break;
-        }
-    }
-    return skulptUrl!;
+    const scripts = document.getElementsByTagName("script");
+    return Array.from(scripts).find((s) => s.src?.includes("skulpt.min.js"))!.src;
 }
 
 function workWithSkulpt() {
@@ -31,19 +22,33 @@ function workWithSkulpt() {
     const {
         builtin: { RuntimeError },
         ffi: { toJs, toPy },
-        misceval: { tryCatch, chain: chainOrSuspend, Suspension, asyncToPromise: suspToPromise },
+        misceval: {
+            tryCatch,
+            chain: chainOrSuspend,
+            Suspension,
+            asyncToPromise: suspToPromise,
+            buildClass,
+            callsimArray: pyCall,
+        },
     } = Sk;
 
     Sk.builtins.self = toPy(self);
+
+    const WorkerTaskKilled = buildClass({ __name__: "anvil_labs.web_worker" }, () => {}, "WorkerTaskKilled", [
+        RuntimeError,
+    ]);
 
     const moduleScope: { [attr: string]: any } = {};
     $compiledmod(moduleScope);
     for (const [attr, maybeFn] of Object.entries(moduleScope)) {
         if (maybeFn.tp$call) {
-            (self as unknown as CustomWorker).registerFn(attr, (...args) => {
+            (self as unknown as CustomWorker).registerFn(attr, (args: any[], kws: { [key: string]: any }) => {
                 args = args.map((x) => toPy(x));
+                kws = Object.entries(kws)
+                    .map(([k, v]) => [k, toPy(v)])
+                    .flat();
                 const ret = tryCatch(
-                    () => chainOrSuspend(maybeFn.tp$call(args), (rv: any) => toJs(rv)),
+                    () => chainOrSuspend(maybeFn.tp$call(args, kws), (rv: any) => toJs(rv)),
                     (e: any) => {
                         throw e;
                     }
@@ -52,7 +57,8 @@ function workWithSkulpt() {
                     return suspToPromise(() => ret, {
                         "*": () => {
                             if (stopExecution) {
-                                throw new RuntimeError("killed");
+                                const { id, fn } = (self as unknown as CustomWorker).currentTask!;
+                                throw pyCall(WorkerTaskKilled, [`<WorkerTask '${fn}' (${id})> Killed`]);
                             }
                         },
                     });
@@ -65,10 +71,9 @@ function workWithSkulpt() {
 
 export const webWorkerScript = `
 let stopExecution = false;
+self.importScripts([\\'${getSkultpUrl()}\\']);
 (${initWorkerRPC})(self);
-self.importScripts(['${getSkultpUrl()}']); Sk.builtinFiles = ${JSON.stringify(
-    Sk.builtinFiles
-)}; Sk.builtins.worker = Sk.ffi.toPy(self);
+Sk.builtinFiles = ${JSON.stringify(Sk.builtinFiles)}; Sk.builtins.worker = Sk.ffi.toPy(self);
 {source};
 (${workWithSkulpt})();
 `;

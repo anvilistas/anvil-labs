@@ -1,0 +1,15 @@
+{
+    "trailingComma": "es5",
+    "tabWidth": 4,
+    "printWidth": 120,
+    "proseWrap": "never",
+    "overrides": [
+        {
+            "files": "*.md, *.yaml",
+            "options": {
+                "proseWrap": "preserve",
+                "tabWidth": 2
+            }
+        }
+    ]
+}

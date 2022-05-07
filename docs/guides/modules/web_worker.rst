@@ -58,10 +58,12 @@ Notes
 
 A worker module, like ``fib_worker`` above, can only import libraries from python's standard lib.
 
+Exceptions raised should be from the standard lib.
+
 Only JSONable objects can be passed to and from the worker to the client.
 
 A Worker object can only launch a single background task at any one time.
-You could create more Worker objects if you wanted multiple tasks to run in parallel.
+You can create more Worker objects if you want multiple tasks to run in parallel.
 
 The API for client side ``web_worker`` matches Anvil's API for launching and communicating with background tasks.
 Using a Timer to check the current state of the web worker task will work in the same way.
