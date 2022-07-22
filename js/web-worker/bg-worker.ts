@@ -1,19 +1,38 @@
 // deno-lint-ignore-file no-explicit-any no-var
-import RSVP from "./rsvp_types.d.ts";
-import type { ResponseData, OutData, StateData, CallData, TaskId, OutstandingCalls, KillData } from "./types.ts";
+import type {
+    ResponseData,
+    OutData,
+    StateData,
+    CallData,
+    TaskId,
+    OutstandingCalls,
+    KillData,
+    Deferred,
+} from "./types.ts";
 import { webWorkerScript } from "./make-script.ts";
 
 declare var Sk: any;
-
-// declare var RSVP: any;
 
 declare global {
     interface Window {
         anvilAppMainPackage: string;
         anvilCDNOrigin: string;
-        RSVP: typeof RSVP;
     }
 }
+
+
+
+export function defer<T = any>() {
+    const deferred = { resolve: () => {}, reject: () => {} } as Partial<Deferred<T>>;
+
+    deferred.promise = new Promise<T>((resolve, reject) => {
+        deferred.resolve = resolve;
+        deferred.reject = reject;
+    });
+
+    return deferred as Deferred<T>;
+}
+
 
 interface CustomWorker extends Worker {
     launchTask(fnName: string, args: any[], kws: { [key: string]: any }): [TaskId, string, Promise<any>];
@@ -46,7 +65,7 @@ function reconstructError(type: string, args: any[], tb: any) {
             pyError,
             args.map((x) => toPy(x))
         );
-        reconstructed.traceback = tb;
+        reconstructed.traceback = tb ?? [];
     } catch {
         reconstructed = new Error(...args);
     }
@@ -64,7 +83,7 @@ export function initWorkerRPC(target: CustomWorker) {
 
         target.postMessage({ type: "CALL", id, fn, args, kws });
 
-        outstandingCalls[id] = window.RSVP.defer();
+        outstandingCalls[id] = defer();
         return [id, fn, new Promise((r) => r(outstandingCalls[id].promise))];
     };
 
@@ -127,11 +146,12 @@ class Task {
                 this._rv = r;
             },
             (e) => {
+                this._complete = true;
                 if (e instanceof WorkerTaskKilled) {
                     this._status = "killed";
+                    this._err = new RuntimeError("'" + this._name + "' worker task was killed");
                 } else {
                     this._status = "failed";
-                    this._complete = true;
                     this._err = e;
                 }
             }
@@ -169,6 +189,9 @@ class Task {
         return this._status;
     }
     get_return_value() {
+        if (this._err) {
+            throw this._err;
+        }
         return this._rv;
     }
     get_error() {
@@ -180,8 +203,8 @@ class Task {
         return this._startTime;
     }
     is_completed() {
-        if (this._status === "killed") {
-            throw new RuntimeError("'" + this._name + "' worker task was killed");
+        if (this._err) {
+            throw this._err;
         }
         return this._complete;
     }
