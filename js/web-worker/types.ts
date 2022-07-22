@@ -1,10 +1,15 @@
 // deno-lint-ignore-file no-explicit-any
-import RSVP from "./rsvp_types.d.ts";
 
 export type TaskId = string;
-export type OutstandingCalls = { [callId: TaskId]: RSVP.Deferred<any> };
+export type OutstandingCalls = { [callId: TaskId]: Deferred<any> };
 export type HandlerFn = (args: any[], kws: { [key: string]: any }) => Promise<any>;
 export type Handlers = { [handler: string]: HandlerFn };
+
+export type Deferred<T> = {
+    promise: Promise<T>;
+    resolve: (value: T | PromiseLike<T>) => void;
+    reject: (reason?: any) => void;
+};
 
 export interface ResponseData {
     type: "RESPONSE";

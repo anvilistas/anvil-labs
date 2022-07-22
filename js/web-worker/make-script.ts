@@ -71,6 +71,7 @@ function workWithSkulpt() {
 
 export const webWorkerScript = `
 let stopExecution = false;
+const window = self;
 self.importScripts([\\'${getSkultpUrl()}\\']);
 (${initWorkerRPC})(self);
 Sk.builtinFiles = ${JSON.stringify(Sk.builtinFiles)}; Sk.builtins.worker = Sk.ffi.toPy(self);
