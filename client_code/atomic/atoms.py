@@ -50,7 +50,7 @@ def atom(base):
         methods and dunder methods are ignored.
         """
 
-        __slots__ = REGISTRAR  # slots don't actually work yet
+        __slots__ = REGISTRAR
         __is_atom__ = True
 
         def __new__(cls, *args, **kws):
@@ -95,13 +95,6 @@ def atom(base):
                 return f"<{base.__name__} atom>"
             else:
                 return base.__repr__(self)
-
-        @property
-        def __dict__(self):
-            # TODO remove when skulpt has slots
-            d = super(AtomProxy, self).__dict__.copy()
-            d.pop(REGISTRAR, None)
-            return d
 
     AtomProxy.__name__ = base.__name__
     AtomProxy.__qualname__ = base.__qualname__
@@ -148,7 +141,7 @@ class DictAtom(dict):
         dict.__init__(self, ((k, as_atom(self, k, v)) for k, v in target.items()))
         add_registrar(self)
 
-    __hash__ = object.__hash__
+    __hash__ = object.__hash__  # type: ignore
 
     def __getitem__(self, key):
         register(self, key)
