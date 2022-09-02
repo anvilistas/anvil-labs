@@ -77,16 +77,10 @@ def make__init__(fields):
 
 @codegen
 def make__repr__(fields):
-    if is_server_side():
-        args = ", ".join(
-            "{self.__match_args__[" + name[1:] + "]}={self." + name + "!r}"
-            for name in fields
-        )
-    else:
-        args = ", ".join(
-            "{self.__match_args__[" + str(i) + "]}={self." + name + "!r}"
-            for i, name in enumerate(fields)
-        )
+    args = ", ".join(
+        "{self.__match_args__[" + str(i) + "]}={self." + name + "!r}"
+        for i, name in enumerate(fields)
+    )
     return "def __repr__(self):\n" ' return f"{type(self).__name__}(' + args + ')"\n'
 
 
@@ -135,7 +129,7 @@ def dataklass(cls):
 
 
 def portable_dataklass(cls):
-    return anvil.server.portable(dataklass(cls))
+    return anvil.server.portable_class(dataklass(cls))
 
 
 # Example use
