@@ -6,53 +6,61 @@
 
 from functools import lru_cache, reduce
 
-from anvil.js.window import Function as _Function
+import anvil.server
+from anvil import is_server_side
 
 __version__ = "0.0.1"
 
-__all__ = ["dataklass"]
+__all__ = ["dataklass", "portable_dataklass"]
 
+if is_server_side():
 
-adjustRawPyFunction = _Function(
-    "wrappedFunc",
-    "fields",
-    """
-const clone = function(f) {
-    const temp = function temporary() { return f.apply(this, arguments); };
-    for (const key in f) {
-        if (f.hasOwnProperty(key)) {
-            temp[key] = f[key];
-        }
-    }
-    return temp;
-};
+    def codegen(func):
+        @lru_cache(maxsize=128)
+        def make_func_code(numfields):
+            names = [f"_{n}" for n in range(numfields)]
+            d = {}
+            exec(func(names), {}, d)
+            return d.popitem()[1]
 
-const func = Sk.ffi.toPy(wrappedFunc);
-const func_code = func.func_code;
-let co_varnames = func_code.co_varnames;
-const start = co_varnames.indexOf("_0");
-co_varnames = [...co_varnames.slice(0, start), ...fields, ...co_varnames.slice(start + fields.length)];
-const copy = clone(func_code);
-copy.co_varnames = co_varnames;
-return new Sk.builtin.func(copy, func.func_globals);
+        return make_func_code
 
-""",
-)
+    def patch_args_and_attributes(func, fields, start=0):
+        return type(func)(
+            func.__code__.replace(
+                co_names=(*func.__code__.co_names[:start], *fields),
+                co_varnames=("self", *fields),
+            ),
+            func.__globals__,
+        )
 
+    def patch_attributes(func, fields, start=0):
+        return type(func)(
+            func.__code__.replace(co_names=(*func.__code__.co_names[:start], *fields)),
+            func.__globals__,
+        )
 
-def codegen(func):
-    @lru_cache
-    def make_func_code(numfields):
-        names = [f"_{n}" for n in range(numfields)]
-        d = {}
-        exec(func(names), {}, d)
-        return d.popitem()[1]
+    def get_nfields(fields):
+        return len(fields)
 
-    def decorate(fields):
-        func = make_func_code(len(fields))
-        return adjustRawPyFunction(func, list(fields))
+else:
+    # We can't do any clever caching so don't bother
+    def codegen(func):
+        def make_func_code(fields):
+            d = {}
+            exec(func(fields), {}, d)
+            return d.popitem()[1]
 
-    return decorate
+        return make_func_code
+
+    def patch_args_and_attributes(func, fields, start=0):
+        return func
+
+    def patch_attributes(func, fields, start=0):
+        return func
+
+    def get_nfields(fields):
+        return fields
 
 
 def all_hints(cls):
@@ -69,12 +77,17 @@ def make__init__(fields):
 
 @codegen
 def make__repr__(fields):
-    return (
-        "def __repr__(self):\n"
-        ' return f"{type(self).__name__}('
-        + ", ".join("{self." + name + "!r}" for name in fields)
-        + ')"\n'
-    )
+    if is_server_side():
+        args = ", ".join(
+            "{self.__match_args__[" + name[1:] + "]}={self." + name + "!r}"
+            for name in fields
+        )
+    else:
+        args = ", ".join(
+            "{self.__match_args__[" + str(i) + "]}={self." + name + "!r}"
+            for i, name in enumerate(fields)
+        )
+    return "def __repr__(self):\n" ' return f"{type(self).__name__}(' + args + ')"\n'
 
 
 @codegen
@@ -93,33 +106,36 @@ def make__eq__(fields):
 @codegen
 def make__iter__(fields):
     return "def __iter__(self):\n" + "\n".join(
-        f"   yield self.{name}" for name in fields
+        f"  yield self.{name}" for name in fields
     )
 
 
 @codegen
 def make__hash__(fields):
     self_tuple = "(" + ",".join(f"self.{name}" for name in fields) + ",)"
-    return "def __hash__(self):\n" f"    return hash({self_tuple})\n"
+    return "def __hash__(self):\n" f"  return hash({self_tuple})\n"
 
 
 def dataklass(cls):
     fields = all_hints(cls)
+    nfields = get_nfields(fields)
     clsdict = cls.__dict__
-    print(fields)
-    print(clsdict)
     if "__init__" not in clsdict:
-        cls.__init__ = make__init__(fields)
+        cls.__init__ = patch_args_and_attributes(make__init__(nfields), fields)
     if "__repr__" not in clsdict:
-        cls.__repr__ = make__repr__(fields)
+        cls.__repr__ = patch_attributes(make__repr__(nfields), fields, 3)
     if "__eq__" not in clsdict:
-        cls.__eq__ = make__eq__(fields)
+        cls.__eq__ = patch_attributes(make__eq__(nfields), fields, 1)
     if "__iter__" not in clsdict:
-        cls.__iter__ = make__iter__(fields)
+        cls.__iter__ = patch_attributes(make__iter__(nfields), fields)
     if "__hash__" not in clsdict:
-        cls.__hash__ = make__hash__(fields)
-    cls.__match_args__ = fields
+        cls.__hash__ = patch_attributes(make__hash__(nfields), fields, 1)
+    cls.__match_args__ = tuple(fields)
     return cls
+
+
+def portable_dataklass(cls):
+    return anvil.server.portable(dataklass(cls))
 
 
 # Example use
@@ -130,4 +146,5 @@ if __name__ == "__main__":
         x: int
         y: int
 
+    print(Coordinates(1, 3).x)
     print(Coordinates(1, 3))
