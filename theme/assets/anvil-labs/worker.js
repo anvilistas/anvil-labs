@@ -1,0 +1,1 @@
+(()=>{var n=()=>{throw new Error("not implemented")};function i(t){let r=n(t),e=Sk.builtinFiles.files;if(t.startsWith("app/")){e[t]=r;let[o,s]=t.split("/");e[`app/${s}/__init__.py`]??="pass"}return r}Object.defineProperty(Sk,"read",{get(){return i},set(t){n=t},configurable:!0});})();
