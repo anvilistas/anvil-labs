@@ -230,7 +230,7 @@ export class BackgroundWorker {
         }
         const blobSource = webWorkerScript
             .replace("{$filename$}", JSON.stringify(pyModName))
-            .replace("{$files$}", JSON.stringify(Sk.builtinFiles));
+            .replace("{$files$}", JSON.stringify(JSON.stringify(Sk.builtinFiles)));
         const blob = new Blob([blobSource], { type: "text/javascript" });
         this.target = new Worker(URL.createObjectURL(blob)) as CustomWorker;
         initWorkerRPC(this.target);
