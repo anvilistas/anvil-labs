@@ -7,6 +7,14 @@ It is a limited API and should only be used for computational heavy calcuations 
 If you're doing something on the client that seems to be making the page unresponsive,
 then a web worker might be for you.
 
+
+You will need to include the following script tags in your Native Libraries for this module to work:
+
+.. code-block:: python
+
+    <script src="_/theme/anvil-labs/worker.js" defer></script>
+
+
 Example
 -------
 

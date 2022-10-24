@@ -1,26 +1,30 @@
 // deno-lint-ignore-file no-explicit-any no-var
 import { initWorkerRPC } from "./web-worker.ts";
 import type { CustomWorker } from "./web-worker.ts";
+import jsMod from "../dummy-modules/anvil-js.ts";
+import serverMod from "../dummy-modules/anvil-server.ts";
 
 declare var Sk: any;
 declare var stopExecution: boolean;
-declare var $compiledmod: (scope: any) => void;
 
 function getSkultpUrl() {
     const scripts = document.getElementsByTagName("script");
     return Array.from(scripts).find((s) => s.src?.includes("skulpt.min.js"))!.src;
 }
 
-function workWithSkulpt() {
+function configureSkulpt() {
     Sk.configure({
         output(message: string) {
             return self.postMessage({ type: "OUT", message });
         },
         yieldLimit: 300,
+        syspath: ["app"],
     });
+}
 
+function workWithSkulpt() {
     const {
-        builtin: { RuntimeError },
+        builtin: { RuntimeError, str: pyStr },
         ffi: { toJs, toPy },
         misceval: {
             tryCatch,
@@ -38,8 +42,8 @@ function workWithSkulpt() {
         RuntimeError,
     ]);
 
-    const moduleScope: { [attr: string]: any } = {};
-    $compiledmod(moduleScope);
+    const moduleScope: { [attr: string]: any } = Sk.sysmodules.quick$lookup(new pyStr("__main__")).$d;
+
     for (const [attr, maybeFn] of Object.entries(moduleScope)) {
         if (maybeFn.tp$call) {
             (self as unknown as CustomWorker).registerFn(attr, (args: any[], kws: { [key: string]: any }) => {
@@ -73,8 +77,16 @@ export const webWorkerScript = `
 let stopExecution = false;
 const window = self;
 self.importScripts([\\'${getSkultpUrl()}\\']);
+self.anvilLabsEndpoint={$endpoints$};
 (${initWorkerRPC})(self);
-Sk.builtinFiles = ${JSON.stringify(Sk.builtinFiles)}; Sk.builtins.worker = Sk.ffi.toPy(self);
-{source};
-(${workWithSkulpt})();
+Sk.builtinFiles = {$files$}; Sk.builtins.worker = Sk.ffi.toPy(self);
+const $f = Sk.builtinFiles.files;
+$f["src/lib/anvil/__init__.py"] = "";
+$f["src/lib/anvil/js.js"] = \`var $builtinmodule=${jsMod};\`;
+$f["src/lib/anvil/server.js"] = \`var $builtinmodule=${serverMod};\`;
+(${configureSkulpt})();
+Sk.misceval.asyncToPromise(() => Sk.importMain({$filename$}, false, true)).then(() => {
+  self.moduleLoaded.resolve();
+  (${workWithSkulpt})();
+})
 `;

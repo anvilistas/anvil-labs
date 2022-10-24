@@ -20,8 +20,6 @@ declare global {
     }
 }
 
-
-
 export function defer<T = any>() {
     const deferred = { resolve: () => {}, reject: () => {} } as Partial<Deferred<T>>;
 
@@ -32,7 +30,6 @@ export function defer<T = any>() {
 
     return deferred as Deferred<T>;
 }
-
 
 interface CustomWorker extends Worker {
     launchTask(fnName: string, args: any[], kws: { [key: string]: any }): [TaskId, string, Promise<any>];
@@ -90,7 +87,7 @@ export function initWorkerRPC(target: CustomWorker) {
     target.onmessage = ({ data }) => {
         switch (data.type) {
             case "OUT": {
-                const { id, fn } = target.currentTask!;
+                const { id, fn } = target.currentTask ?? {};
                 stdout([`<worker-task '${fn}' (${id})>:`, data.message], ["end", pyStr.$empty]);
                 break;
             }
@@ -219,20 +216,22 @@ class Task {
 
 export class BackgroundWorker {
     target: CustomWorker;
-    constructor(pyMod: string) {
-        // convert pyMod to a javascript file
-        // then convert to blob url
-        // then use this as a web worker url
-        if (!pyMod.startsWith(window.anvilAppMainPackage)) {
-            pyMod = window.anvilAppMainPackage + "." + pyMod;
+    constructor(pyModName: string) {
+        if (!pyModName.startsWith(window.anvilAppMainPackage)) {
+            pyModName = window.anvilAppMainPackage + "." + pyModName;
         }
-        let mod = Sk.sysmodules.quick$lookup(new Sk.builtin.str(pyMod));
+        let mod = Sk.sysmodules.quick$lookup(new Sk.builtin.str(pyModName));
         if (!mod) {
-            Sk.importModule(pyMod, false, true);
-            mod = Sk.sysmodules.quick$lookup(new Sk.builtin.str(pyMod));
+            Sk.importModule(pyModName, false, true);
+            mod = Sk.sysmodules.quick$lookup(new Sk.builtin.str(pyModName));
         }
-        const jsMod = mod.$js;
-        const blob = new Blob([webWorkerScript.replace("{source}", jsMod)], { type: "text/javascript" });
+        if (mod === undefined) {
+            throw new Sk.builtin.RuntimeError("Problem importing module '" + pyModName + "'");
+        }
+        const blobSource = webWorkerScript
+            .replace("{$filename$}", JSON.stringify(pyModName))
+            .replace("{$files$}", JSON.stringify(Sk.builtinFiles));
+        const blob = new Blob([blobSource], { type: "text/javascript" });
         this.target = new Worker(URL.createObjectURL(blob)) as CustomWorker;
         initWorkerRPC(this.target);
     }
