@@ -24,7 +24,7 @@ function configureSkulpt() {
 
 function workWithSkulpt() {
     const {
-        builtin: { RuntimeError, str: pyStr },
+        builtin: { RuntimeError },
         ffi: { toJs, toPy },
         misceval: {
             tryCatch,
@@ -42,7 +42,7 @@ function workWithSkulpt() {
         RuntimeError,
     ]);
 
-    const moduleScope: { [attr: string]: any } = Sk.sysmodules.quick$lookup(new pyStr("__main__")).$d;
+    const moduleScope: { [attr: string]: any } = Sk.sysmodules.quick$lookup(toPy("__main__")).$d;
 
     for (const [attr, maybeFn] of Object.entries(moduleScope)) {
         if (maybeFn.tp$call) {
