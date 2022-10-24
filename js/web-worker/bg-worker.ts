@@ -87,7 +87,7 @@ export function initWorkerRPC(target: CustomWorker) {
     target.onmessage = ({ data }) => {
         switch (data.type) {
             case "OUT": {
-                const { id, fn } = target.currentTask!;
+                const { id, fn } = target.currentTask ?? {};
                 stdout([`<worker-task '${fn}' (${id})>:`, data.message], ["end", pyStr.$empty]);
                 break;
             }

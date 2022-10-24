@@ -39,7 +39,6 @@ export default function () {
         },
     });
 
-    jsMod.window = Sk.builtins.self;
 
     return jsMod;
 }
