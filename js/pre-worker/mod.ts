@@ -6,12 +6,20 @@ let oldRead: (x: string) => any = () => {
 };
 
 function updateFiles(filename: string, sourceCode: string) {
-    if (filename.startsWith("app/")) {
-        const files = Sk.builtinFiles.files;
-        files[filename] = sourceCode;
-        const [app, root] = filename.split("/");
-        // root app package needs to exist
-        files[`app/${root}/__init__.py`] ??= "pass";
+    if (!filename.startsWith("app/")) return sourceCode;
+    const files = Sk.builtinFiles.files;
+    files[filename] = sourceCode;
+    const [app, root] = filename.split("/");
+    // root app package needs to exist
+    files[`app/${root}/__init__.py`] ??= "pass";
+
+    var x = "var y = {$source$};";
+    try {
+        eval(x.replace("{$source$}", JSON.stringify(sourceCode)));
+        console.log(`%cSUCCESS:${filename}`, "color: green;");
+    } catch (e) {
+        console.error(`%cPROBLEM LOADING ${filename}`, "color: red;");
+        console.error(e);
     }
     return sourceCode;
 }
