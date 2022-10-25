@@ -1,6 +1,18 @@
 // deno-lint-ignore-file no-explicit-any no-var
 import RSVP from "./rsvp_types.d.ts";
-import type { HandlerFn, CallData, ResponseData, OutData, StateData, TaskId, Handlers, KillData, Deferred } from "./types.ts";
+import type {
+    HandlerFn,
+    CallData,
+    ResponseData,
+    OutData,
+    StateData,
+    ID,
+    Handlers,
+    KillData,
+    Deferred,
+    ImportData,
+    ModuleData,
+} from "./types.ts";
 
 declare var Sk: any;
 declare var stopExecution: boolean;
@@ -15,12 +27,13 @@ declare global {
 
 export interface CustomWorker extends Worker {
     registerFn(fnName: string, handler: HandlerFn): void;
-    postMessage(message: ResponseData | OutData | StateData): void;
-    onmessage(ev: MessageEvent<CallData | KillData>): void;
-    currentTask: null | { fn: string; id: TaskId };
+    postMessage(message: ResponseData | OutData | StateData | ImportData): void;
+    onmessage(ev: MessageEvent<CallData | KillData | ModuleData>): void;
+    currentTask: null | { fn: string; id: ID };
     task_state: any;
     stateHandler: (state: any) => void;
     moduleLoaded: Deferred<any>;
+    fetchModule(filename: string): Promise<string>;
 }
 
 export function initWorkerRPC(target: CustomWorker) {
@@ -64,6 +77,16 @@ export function initWorkerRPC(target: CustomWorker) {
                 return true;
             },
         });
+    }
+
+    const unresolvedModules: Map<string, Deferred<string | null>> = new Map();
+
+    target.fetchModule = (filename: string) => {
+        const id = crypto.randomUUID();
+        target.postMessage({ type: "IMPORT", id, filename });
+        const deferred = defer();
+        unresolvedModules.set(id, deferred)
+        return deferred.promise;
     }
 
     target.onmessage = async (m) => {
@@ -113,6 +136,13 @@ export function initWorkerRPC(target: CustomWorker) {
             case "KILL":
                 if (!stopExecution) stopExecution = true;
                 break;
+
+            case "MODULE": {
+                const {id, content} = data;
+                const { resolve } = unresolvedModules.get(id)!;
+                unresolvedModules.delete(id);
+                resolve(content);
+            }
         }
     };
 }

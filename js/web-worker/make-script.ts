@@ -6,6 +6,7 @@ import serverMod from "../dummy-modules/anvil-server.ts";
 
 declare var Sk: any;
 declare var stopExecution: boolean;
+declare var self: CustomWorker;
 
 function getSkultpUrl() {
     const scripts = document.getElementsByTagName("script");
@@ -13,12 +14,32 @@ function getSkultpUrl() {
 }
 
 function configureSkulpt() {
+    const anvilFiles = new Map(
+        Object.entries({
+            "src/lib/anvil/__init__.py": "",
+            "src/lib/anvil/js.js": `var $builtinmodule=${jsMod};`,
+            "src/lib/anvil/server.js": `var $builtinmodule=${serverMod};`,
+        })
+    );
+
     Sk.configure({
         output(message: string) {
             return self.postMessage({ type: "OUT", message });
         },
         yieldLimit: 300,
         syspath: ["app"],
+        read(filename: string) {
+            const rv = anvilFiles.get(filename);
+            if (rv !== undefined) return rv;
+            return Sk.misceval.promiseToSuspension(
+                self.fetchModule(filename).then((content) => {
+                    if (content == null) {
+                        throw "No module named " + filename;
+                    }
+                    return content;
+                })
+            );
+        },
     });
 }
 
@@ -36,7 +57,7 @@ function workWithSkulpt() {
         },
     } = Sk;
 
-    Sk.builtins.self = toPy(self);
+    Sk.builtins.self = Sk.builtins.worker = toPy(self);
 
     const WorkerTaskKilled = buildClass({ __name__: "anvil_labs.web_worker" }, () => {}, "WorkerTaskKilled", [
         RuntimeError,
@@ -79,12 +100,6 @@ const window = self;
 self.importScripts([\\'${getSkultpUrl()}\\']);
 self.anvilLabsEndpoint={$endpoints$};
 (${initWorkerRPC})(self);
-Sk.builtinFiles = JSON.parse({$files$});
-Sk.builtins.worker = Sk.ffi.toPy(self);
-const $f = Sk.builtinFiles.files;
-$f["src/lib/anvil/__init__.py"] = "";
-$f["src/lib/anvil/js.js"] = \`var $builtinmodule=${jsMod};\`;
-$f["src/lib/anvil/server.js"] = \`var $builtinmodule=${serverMod};\`;
 (${configureSkulpt})();
 Sk.misceval.asyncToPromise(() => Sk.importMain({$filename$}, false, true)).then(() => {
   self.moduleLoaded.resolve();

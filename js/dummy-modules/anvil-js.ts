@@ -3,7 +3,7 @@ declare var Sk: any;
 export default function () {
     const {
         ffi: { proxy, toPy },
-        abstr: { setUpModuleMethods },
+        abstr: { setUpModuleMethods, objectSetItem },
         misceval: { promiseToSuspension, chain: chainOrSuspend },
     } = Sk;
 
@@ -39,6 +39,7 @@ export default function () {
         },
     });
 
+    objectSetItem(Sk.sysmodules, toPy("anvil.js.window"), jsMod.window);
 
     return jsMod;
 }
