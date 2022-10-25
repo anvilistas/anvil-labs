@@ -4,10 +4,12 @@ import type {
     OutData,
     StateData,
     CallData,
-    TaskId,
+    ID,
     OutstandingCalls,
     KillData,
     Deferred,
+    ImportData,
+    ModuleData,
 } from "./types.ts";
 import { webWorkerScript } from "./make-script.ts";
 
@@ -32,10 +34,10 @@ export function defer<T = any>() {
 }
 
 interface CustomWorker extends Worker {
-    launchTask(fnName: string, args: any[], kws: { [key: string]: any }): [TaskId, string, Promise<any>];
-    postMessage(message: CallData | KillData): void;
-    onmessage(ev: MessageEvent<ResponseData | OutData | StateData>): void;
-    currentTask: null | { fn: string; id: TaskId };
+    launchTask(fnName: string, args: any[], kws: { [key: string]: any }): [ID, string, Promise<any>];
+    postMessage(message: CallData | KillData | ModuleData): void;
+    onmessage(ev: MessageEvent<ResponseData | OutData | StateData | ImportData>): void;
+    currentTask: null | { fn: string; id: ID };
     stateHandler: (state: any) => void;
 }
 
@@ -84,7 +86,7 @@ export function initWorkerRPC(target: CustomWorker) {
         return [id, fn, new Promise((r) => r(outstandingCalls[id].promise))];
     };
 
-    target.onmessage = ({ data }) => {
+    target.onmessage = async ({ data }) => {
         switch (data.type) {
             case "OUT": {
                 const { id, fn } = target.currentTask ?? {};
@@ -111,6 +113,29 @@ export function initWorkerRPC(target: CustomWorker) {
                 }
                 delete outstandingCalls[data.id];
                 target.currentTask = null;
+                return;
+            }
+
+            case "IMPORT": {
+                const { id, filename } = data;
+                let content: string | null = null;
+                try {
+                    content = Sk.read(filename);
+                    if (typeof content !== "string") {
+                        content = await Sk.misceval.asyncToPromise(() => content);
+                    }
+                } catch {
+                    if (filename.startsWith("app/")) {
+                        const [app, root, rest] = filename.split("/");
+                        if (rest === "__init__.py" && root !== "anvil") {
+                            // then we're an app root package and we should already appear in sysmodules
+                            content = "pass";
+                        }
+                    } else {
+                        content = null;
+                    }
+                }
+                target.postMessage({ type: "MODULE", id, content });
             }
         }
     };
@@ -128,7 +153,7 @@ class Task {
     _status: null | "completed" | "failed" | "killed" = null;
     _stateHandler: StateHandler = () => {};
     constructor(
-        readonly _id: TaskId,
+        readonly _id: ID,
         readonly _name: string,
         readonly _result: Promise<any>,
         readonly _target: CustomWorker
@@ -228,9 +253,7 @@ export class BackgroundWorker {
         if (mod === undefined) {
             throw new Sk.builtin.RuntimeError("Problem importing module '" + pyModName + "'");
         }
-        const blobSource = webWorkerScript
-            .replace("{$filename$}", JSON.stringify(pyModName))
-            .replace("{$files$}", JSON.stringify(JSON.stringify(Sk.builtinFiles)));
+        const blobSource = webWorkerScript.replace("{$filename$}", JSON.stringify(pyModName));
         const blob = new Blob([blobSource], { type: "text/javascript" });
         this.target = new Worker(URL.createObjectURL(blob)) as CustomWorker;
         initWorkerRPC(this.target);

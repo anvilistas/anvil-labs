@@ -1,4 +1,4 @@
-import { BackgroundWorker as Worker, WorkerTaskKilled } from "./bg-worker.ts";
+import { BackgroundWorker as Worker, WorkerTaskKilled } from "./client-worker.ts";
 declare global {
     interface Window {
         anvilLabs: {
