@@ -14,14 +14,6 @@ function getSkultpUrl() {
 }
 
 function configureSkulpt() {
-    const anvilFiles = new Map(
-        Object.entries({
-            "src/lib/anvil/__init__.py": "",
-            "src/lib/anvil/js.js": `var $builtinmodule=${jsMod};`,
-            "src/lib/anvil/server.js": `var $builtinmodule=${serverMod};`,
-        })
-    );
-
     Sk.configure({
         output(message: string) {
             return self.postMessage({ type: "OUT", message });
@@ -29,7 +21,8 @@ function configureSkulpt() {
         yieldLimit: 300,
         syspath: ["app"],
         read(filename: string) {
-            const rv = anvilFiles.get(filename);
+            // @ts-ignore
+            const rv = self.anvilFiles[filename];
             if (rv !== undefined) return rv;
             return Sk.misceval.promiseToSuspension(
                 self.fetchModule(filename).then((content) => {
@@ -100,6 +93,10 @@ const window = self;
 self.importScripts([\\'${getSkultpUrl()}\\']);
 self.anvilLabsEndpoint={$endpoints$};
 (${initWorkerRPC})(self);
+const $f = (self.anvilFiles = {});
+$f["src/lib/anvil/__init__.py"] = "";
+$f["src/lib/anvil/js.js"] = \`var $builtinmodule=${jsMod};\`;
+$f["src/lib/anvil/server.js"] = \`var $builtinmodule=${serverMod};\`;
 (${configureSkulpt})();
 Sk.misceval.asyncToPromise(() => Sk.importMain({$filename$}, false, true)).then(() => {
   self.moduleLoaded.resolve();
