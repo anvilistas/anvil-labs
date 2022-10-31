@@ -32,17 +32,15 @@ function addAPI() {
         for (let i = 0; i < kws.length; i += 2) {
             const key = kws[i];
             const val = kws[i + 1];
-            objectKws[key as string] = val;
+            objectKws[key as string] = Sk.ffi.toJs(val);
         }
-        raiseEvent(args[0], kws);
+        raiseEvent(args[0].toString(), kws);
     }
     raise_event.co_fastcall = true;
     self.raise_event = new Sk.builtin.func(raise_event);
 }
 
 self.onmessage = async (e) => {
-    console.log("%cDATA", "color: blue;", e.data);
-
     const data = e.data;
     const { type } = data;
     switch (type) {

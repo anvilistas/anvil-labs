@@ -2,7 +2,6 @@
 import { initWorkerRPC } from "./web-worker.ts";
 import type { CustomWorker } from "./web-worker.ts";
 import jsMod from "../dummy-modules/anvil-js.ts";
-import serverMod from "../dummy-modules/anvil-server.ts";
 
 declare var Sk: any;
 declare var stopExecution: boolean;
@@ -91,12 +90,11 @@ export const webWorkerScript = `
 let stopExecution = false;
 const window = self;
 self.importScripts([\\'${getSkultpUrl()}\\']);
-self.anvilLabsEndpoint={$endpoints$};
 (${initWorkerRPC})(self);
 const $f = (self.anvilFiles = {});
 $f["src/lib/anvil/__init__.py"] = "";
 $f["src/lib/anvil/js.js"] = \`var $builtinmodule=${jsMod};\`;
-$f["src/lib/anvil/server.js"] = \`var $builtinmodule=${serverMod};\`;
+$f["src/lib/anvil/server.js"] = "";
 (${configureSkulpt})();
 Sk.misceval.asyncToPromise(() => Sk.importMain({$filename$}, false, true)).then(() => {
   self.moduleLoaded.resolve();
