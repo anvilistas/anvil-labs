@@ -34,7 +34,7 @@ function addAPI() {
             const val = kws[i + 1];
             objectKws[key as string] = val;
         }
-        raiseEvent(args[0], kws);
+        raiseEvent(args[0].toString(), kws);
     }
     raise_event.co_fastcall = true;
     self.raise_event = new Sk.builtin.func(raise_event);
