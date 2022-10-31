@@ -3,6 +3,8 @@
 from anvil.js import window
 from anvil.js.window import navigator
 
+__version__ = "0.0.1"
+
 SW, REG = window.anvilLabs.importFrom("./_/theme/anvil_labs/client_sw.js").init()
 EVENT_LISTENERS = {}
 
