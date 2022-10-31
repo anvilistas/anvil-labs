@@ -94,7 +94,7 @@ self.importScripts([\\'${getSkultpUrl()}\\']);
 const $f = (self.anvilFiles = {});
 $f["src/lib/anvil/__init__.py"] = "";
 $f["src/lib/anvil/js.js"] = \`var $builtinmodule=${jsMod};\`;
-$f["src/lib/anvil/server.js"] = "";
+$f["src/lib/anvil/server.py"] = "";
 (${configureSkulpt})();
 Sk.misceval.asyncToPromise(() => Sk.importMain({$filename$}, false, true)).then(() => {
   self.moduleLoaded.resolve();
