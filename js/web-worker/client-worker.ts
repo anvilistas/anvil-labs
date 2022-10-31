@@ -245,14 +245,6 @@ export class BackgroundWorker {
         if (!pyModName.startsWith(window.anvilAppMainPackage)) {
             pyModName = window.anvilAppMainPackage + "." + pyModName;
         }
-        let mod = Sk.sysmodules.quick$lookup(new Sk.builtin.str(pyModName));
-        if (!mod) {
-            Sk.importModule(pyModName, false, true);
-            mod = Sk.sysmodules.quick$lookup(new Sk.builtin.str(pyModName));
-        }
-        if (mod === undefined) {
-            throw new Sk.builtin.RuntimeError("Problem importing module '" + pyModName + "'");
-        }
         const blobSource = webWorkerScript.replace("{$filename$}", JSON.stringify(pyModName));
         const blob = new Blob([blobSource], { type: "text/javascript" });
         this.target = new Worker(URL.createObjectURL(blob)) as CustomWorker;

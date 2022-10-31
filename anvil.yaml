@@ -7,3 +7,4 @@ services:
 - source: /runtime/services/tables.yml
   client_config: {}
   server_config: {}
+native_deps: {head_html: "<script>window.anvilLabs ??= {};window.anvilLabs.importFrom = async (url) => await import (url);</script>"}
