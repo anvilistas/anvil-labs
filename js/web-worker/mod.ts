@@ -8,4 +8,6 @@ declare global {
     }
 }
 
-window.anvilLabs = { Worker, WorkerTaskKilled };
+window.anvilLabs ??= {} as typeof window.anvilLabs;
+window.anvilLabs.Worker = Worker
+window.anvilLabs.WorkerTaskKilled = WorkerTaskKilled;
