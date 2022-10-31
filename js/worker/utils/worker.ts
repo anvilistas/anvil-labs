@@ -58,7 +58,9 @@ export function onModuleReceived(e: MessageEvent<any>) {
     const { data } = e;
     if (data.type === "MODULE") {
         const { id, content } = data;
-        const { resolve } = UNRESOLVED_MODULES.get(id)!;
+        const deferred = UNRESOLVED_MODULES.get(id);
+        if (deferred === undefined) return;
+        const { resolve } = deferred;
         UNRESOLVED_MODULES.delete(id);
         resolve(content);
     }
