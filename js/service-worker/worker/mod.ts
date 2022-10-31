@@ -41,8 +41,6 @@ function addAPI() {
 }
 
 self.onmessage = async (e) => {
-    console.log("%cDATA", "color: blue;", e.data);
-
     const data = e.data;
     const { type } = data;
     switch (type) {
