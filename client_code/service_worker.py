@@ -66,4 +66,5 @@ def init(modname):
 
 def register_sync(tag):
     """Call this function"""
-    REG.sync.register(tag)
+    if tag not in REG.sync.getTags():
+        REG.sync.register(tag)

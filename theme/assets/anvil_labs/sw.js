@@ -1,1 +1,128 @@
-var f=(t,n)=>()=>(t&&(n=t(t=0)),n);var T=(t,n)=>()=>(n||t((n={exports:{}}).exports,n),n.exports);function p(){let{ffi:{proxy:t,toPy:n},abstr:{setUpModuleMethods:r,objectSetItem:i},misceval:{promiseToSuspension:o,chain:c}}=Sk,l={__name__:n("js"),window:t(self)};async function h(a){let s=await new Function("return import("+JSON.stringify(a.toString())+")").call(null);return t(s)}return r("js",l,{await_promise:{$meth(a){let s=a.valueOf();return s instanceof Promise||s&&s.then&&typeof s.then=="function"?c(o(s),L=>n(L,{dictHook:E=>t(E)})):a},$flags:{OneArg:!0}},import_from:{$meth(a){return o(h(a))},$flags:{OneArg:!0}}}),i(Sk.sysmodules,n("anvil.js.window"),l.window),l}var y=f(()=>{});var g,m=f(()=>{y();g=new Map([["src/lib/anvil/__init__.py",""],["src/lib/anvil/js.js",`var $builtinmodule=${p};`],["src/lib/anvil/server.py",""]])});function S(){let t={resolve:()=>{},reject:()=>{}};return t.promise=new Promise((n,r)=>{t.resolve=n,t.reject=r}),t}function D(t){let n=crypto.randomUUID();postMessage({type:"IMPORT",id:n,filename:t});let r=S();return d.set(n,r),r.promise}function v(){Sk.configure({output(t){return self.postMessage({type:"OUT",message:t})},yieldLimit:300,syspath:["app"],read(t){let n=g.get(t);return n!==void 0?n:Sk.misceval.promiseToSuspension(D(t).then(r=>{if(r==null)throw"No module named "+t;return r}))}}),Sk.builtins.self=Sk.ffi.proxy(self),u.resolve(!0)}function O(t){let{data:n}=t;if(n.type==="MODULE"){let{id:r,content:i}=n,o=d.get(r);if(o===void 0)return;let{resolve:c}=o;d.delete(r),c(i)}}var u,d,w=f(()=>{m();u=S();d=new Map;self.addEventListener("message",O)});var x=T((_,b)=>{w();self.window=self;self.addEventListener("sync",t=>{M("sync",{tag:t.tag})});function j(){function t(n,r=[]){if(n.length!==1)throw new Sk.builtin.TypeError("Expeceted one arg to raise_event");let i={};for(let o=0;o<r.length;o+=2){let c=r[o],l=r[o+1];i[c]=Sk.ffi.toJs(l)}M(n[0].toString(),i)}t.co_fastcall=!0,self.raise_event=new Sk.builtin.func(t)}self.onmessage=async e=>{let data=e.data,{type}=data;switch(type){case"SKULPT":{let skMod=await fetch(data.url);eval(await skMod.text()),v(),j();break}case"INIT":{await u.promise;let{name:t}=data;Sk.misceval.asyncToPromise(()=>Sk.importMain(t,!1,!0));break}}};async function k(t){t.ANVIL_LABS=!0;let n=await self.clients.matchAll({includeUncontrolled:!0,type:"window"});for(let r of n)r.postMessage(t)}self.postMessage=k;function M(t,n={}){n.event_name=t,k({type:"EVENT",name:t,kws:n})}});export default x();
+function f() {
+    let {
+            ffi: { proxy: e, toPy: t },
+            abstr: { setUpModuleMethods: n, objectSetItem: o },
+            misceval: { promiseToSuspension: r, chain: a },
+        } = Sk,
+        c = { __name__: t("js"), window: e(self) };
+    async function g(i) {
+        let s = await new Function("return import(" + JSON.stringify(i.toString()) + ")").call(null);
+        return e(s);
+    }
+    return (
+        n("js", c, {
+            await_promise: {
+                $meth(i) {
+                    let s = i.valueOf();
+                    return s instanceof Promise || (s && s.then && typeof s.then == "function")
+                        ? a(r(s), (S) => t(S, { dictHook: (v) => e(v) }))
+                        : i;
+                },
+                $flags: { OneArg: !0 },
+            },
+            import_from: {
+                $meth(i) {
+                    return r(g(i));
+                },
+                $flags: { OneArg: !0 },
+            },
+        }),
+        o(Sk.sysmodules, t("anvil.js.window"), c.window),
+        c
+    );
+}
+var u = new Map([
+    ["src/lib/anvil/__init__.py", ""],
+    ["src/lib/anvil/js.js", `var $builtinmodule=${f};`],
+    ["src/lib/anvil/server.py", ""],
+]);
+var w = d();
+function d() {
+    let e = { resolve: () => {}, reject: () => {} };
+    return (
+        (e.promise = new Promise((t, n) => {
+            (e.resolve = t), (e.reject = n);
+        })),
+        e
+    );
+}
+var l = new Map();
+function M(e) {
+    let t = crypto.randomUUID();
+    postMessage({ type: "IMPORT", id: t, filename: e });
+    let n = d();
+    return l.set(t, n), n.promise;
+}
+function p() {
+    Sk.configure({
+        output(e) {
+            return self.postMessage({ type: "OUT", message: e });
+        },
+        yieldLimit: 300,
+        syspath: ["app"],
+        read(e) {
+            let t = u.get(e);
+            return t !== void 0
+                ? t
+                : Sk.misceval.promiseToSuspension(
+                      M(e).then((n) => {
+                          if (n == null) throw "No module named " + e;
+                          return n;
+                      })
+                  );
+        },
+    }),
+        (Sk.builtins.self = Sk.ffi.proxy(self)),
+        w.resolve(!0);
+}
+function _(e) {
+    let { data: t } = e;
+    if (t.type === "MODULE") {
+        let { id: n, content: o } = t,
+            r = l.get(n);
+        if (r === void 0) return;
+        let { resolve: a } = r;
+        l.delete(n), a(o);
+    }
+}
+self.addEventListener("message", _);
+self.window = self;
+importScripts(
+    "https://anvil.works/runtime-new/runtime/js/lib/skulpt.min.js",
+    "https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"
+);
+p();
+k();
+self.addEventListener("sync", (e) => {
+    m("sync", { tag: e.tag });
+});
+function k() {
+    function e(t, n = []) {
+        if (t.length !== 1) throw new Sk.builtin.TypeError("Expeceted one arg to raise_event");
+        let o = {};
+        for (let r = 0; r < n.length; r += 2) {
+            let a = n[r],
+                c = n[r + 1];
+            o[a] = Sk.ffi.toJs(c);
+        }
+        m(t[0].toString(), o);
+    }
+    (e.co_fastcall = !0), (self.raise_event = new Sk.builtin.func(e));
+}
+function h(e) {
+    let t = e.data,
+        { type: n } = t;
+    if (n !== "INIT") return;
+    let { name: o } = t;
+    Sk.misceval.asyncToPromise(() => Sk.importMain(o, !1, !0));
+}
+self.addEventListener("message", h);
+async function y(e) {
+    e.ANVIL_LABS = !0;
+    let t = await self.clients.matchAll({ includeUncontrolled: !0, type: "window" });
+    for (let n of t) n.postMessage(e);
+}
+self.postMessage = y;
+function m(e, t = {}) {
+    (t.event_name = e), y({ type: "EVENT", name: e, kws: t });
+}

@@ -14,7 +14,7 @@ async function onImport(e: any) {
 }
 
 export async function init() {
-    const reg = await navigator.serviceWorker.register("_/theme/anvil_labs/sw.js", { type: "module" });
+    const reg = await navigator.serviceWorker.register("_/theme/anvil_labs/sw.js");
     try {
         reg.update();
     } catch {

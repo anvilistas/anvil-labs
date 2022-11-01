@@ -10,7 +10,7 @@ const sw = path.resolve(__dirname, "./worker/mod.ts");
 let result = await esbuild.build({
     entryPoints: [sw],
     bundle: true,
-    format: "esm",
+    format: "cjs",
     outfile: path.resolve(__dirname, "../../theme/assets/anvil_labs/sw.js"),
     minify: true,
 });
