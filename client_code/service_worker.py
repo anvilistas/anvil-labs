@@ -1,30 +1,40 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
-from anvil.js import window
-from anvil.js.window import navigator
+from anvil.js import window as _W
 
 __version__ = "0.0.1"
 
-SW, REG = window.anvilLabs.importFrom("./_/theme/anvil_labs/client_sw.js").init()
+REG = _W.anvilLabs.importFrom("./_/theme/anvil_labs/client_sw.js").init()
 EVENT_LISTENERS = {}
 
-# escape haches
-service_worker = SW
+# escape hatches
 registration = REG
+sync_manager = REG.sync
+periodic_sync_manager = REG.periodicSync
 
-_Proxy = type(window)
+
+def _error_handler(err):
+    print("<SERVICE WORKER STDERR>:", repr(err))
+
+
+def set_default_error_handler(fn):
+    global _error_handler
+    _error_handler = fn
+
+
+_ProxyType = type(_W)
 
 
 def _message(event):
     data = event.data
-    if not isinstance(data, _Proxy):
+    if not isinstance(data, _ProxyType):
         return
     if "ANVIL_LABS" not in data:
         return
     type = data.type
 
     if type == "OUT":
-        print("<SERVICE WORKER>:", data.message)
+        print("<SERVICE WORKER STDOUT>:", data.message, end="")
 
     if type == "EVENT":
         kws = data.kws
@@ -33,14 +43,14 @@ def _message(event):
             listener(**kws)
 
 
-navigator.serviceWorker.addEventListener("message", _message)
+_W.navigator.serviceWorker.addEventListener("message", _message)
 
 # custom api
-def add_listener(event, listener):
+def subscribe(event, listener):
     EVENT_LISTENERS.setdefault(event, []).append(listener)
 
 
-def remove_listener(event, listener=None):
+def unsubscribe(event, listener=None):
     if not isinstance(event, str):
         raise TypeError(f"event should be a str, got {type(event).__name__}")
     if listener is None:
@@ -59,12 +69,28 @@ def remove_listener(event, listener=None):
 
 
 def init(modname):
-    if not modname.startswith(window.anvilAppMainPackage):
-        modname = window.anvilAppMainPackage + "." + modname
-    SW.postMessage({"type": "INIT", "name": modname})
+    if not modname.startswith(_W.anvilAppMainPackage):
+        modname = _W.anvilAppMainPackage + "." + modname
+    REG.active.postMessage({"type": "INIT", "name": modname})
 
 
-def register_sync(tag):
-    """Call this function"""
-    if tag not in REG.sync.getTags():
-        REG.sync.register(tag)
+def _camel(s):
+    init, *rest = s.split("_")
+    return init + "".join(map(str.title, rest))
+
+
+def register_sync(tag, **options):
+    """Registers a background sync when the app comes back online - may fail in some browsers"""
+    if sync_manager.getTags(tag):
+        return
+    options = {_camel(k): v for k, v in options.items()}
+    sync_manager.register(tag, options)
+
+
+def register_periodic_sync(tag, *, min_interval=None, **options):
+    """Registers a periodic sync request with the browser with the specified tag and options"""
+    if periodic_sync_manager.getTags(tag):
+        return
+    options["min_interval"] = min_interval
+    options = {_camel(k): v for k, v in options.items()}
+    periodic_sync_manager.register(tag, options)

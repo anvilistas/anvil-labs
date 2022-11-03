@@ -112,8 +112,8 @@ export function initWorkerRPC(target: CustomWorker) {
                             errorType = e.tp$name;
                             errorTb = e.traceback;
                         } else {
-                            errorType = e.constructor ?? "<unknown>";
-                            errorArgs = [e.message];
+                            errorType = e.constructor?.name ?? "<unknown>";
+                            errorArgs = e.message ? [e.message] : [];
                         }
                     }
                 }

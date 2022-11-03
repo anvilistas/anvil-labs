@@ -59,14 +59,21 @@ function reconstructError(type: string, args: any[], tb: any) {
         return reconstructed;
     }
     try {
-        const pyError = Sk.builtins[type];
+        const pyError = Sk.builtin[type];
         reconstructed = pyCall(
             pyError,
             args.map((x) => toPy(x))
         );
         reconstructed.traceback = tb ?? [];
     } catch {
-        reconstructed = new Error(...args);
+        let jsError;
+        try {
+            // @ts-ignore
+            jsError = new window[type](...args);
+        } catch {
+            jsError = new Error(...args);
+        }
+        reconstructed = new Sk.builtin.ExternalError(jsError);
     }
     return reconstructed;
 }

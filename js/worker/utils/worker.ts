@@ -21,11 +21,29 @@ export const UNRESOLVED_MODULES: Map<string, Deferred<string | null>> = new Map(
 
 export function fetchModule(filename: string) {
     const id = crypto.randomUUID();
-    postMessage({ type: "IMPORT", id, filename });
+    self.postMessage({ type: "IMPORT", id, filename });
     const deferred = defer();
     UNRESOLVED_MODULES.set(id, deferred);
     return deferred.promise;
 }
+
+export const errHandler = (e: any) => {
+    const {
+        builtin: { BaseException },
+        ffi: { toJs },
+    } = Sk;
+
+    let errorType, errorArgs, errorTb;
+    if (e instanceof BaseException) {
+        errorArgs = toJs(e.args);
+        errorType = e.tp$name;
+        errorTb = e.traceback;
+    } else {
+        errorType = e.constructor?.name ?? "<unknown>";
+        errorArgs = e.message ? [e.message] : [];
+    }
+    self.postMessage({ type: "ERROR", errorType, errorArgs, errorTb });
+};
 
 export function configureSkulpt() {
     Sk.configure({
@@ -45,6 +63,9 @@ export function configureSkulpt() {
                     return content;
                 })
             );
+        },
+        uncaughtException: (err: any) => {
+            errHandler(err);
         },
     });
 
