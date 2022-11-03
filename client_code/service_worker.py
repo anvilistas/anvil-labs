@@ -5,10 +5,12 @@ from anvil.js import window as _W
 __version__ = "0.0.1"
 
 REG = _W.anvilLabs.importFrom("./_/theme/anvil_labs/client_sw.js").init()
+SW = REG.installing or REG.waiting or REG.active
 EVENT_LISTENERS = {}
 
 # escape hatches
 registration = REG
+service_worker = SW
 sync_manager = REG.sync
 periodic_sync_manager = REG.periodicSync
 
@@ -71,7 +73,7 @@ def unsubscribe(event, listener=None):
 def init(modname):
     if not modname.startswith(_W.anvilAppMainPackage):
         modname = _W.anvilAppMainPackage + "." + modname
-    REG.active.postMessage({"type": "INIT", "name": modname})
+    SW.postMessage({"type": "INIT", "name": modname})
 
 
 def _camel(s):
