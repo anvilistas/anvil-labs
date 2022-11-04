@@ -1,20 +1,40 @@
 /// <reference lib="WebWorker" />
 // we'll need to request imports that we don't have
 // the main app will need to register a handler for bg syncing
+importScripts(
+    "https://anvil.works/runtime-new/runtime/js/lib/skulpt.min.js",
+    "https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js",
+    "https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"
+);
 
-import { configureSkulpt, SKULPT_LOADED } from "../../worker/utils/worker.ts";
+import { configureSkulpt, defer, errHandler } from "../../worker/utils/worker.ts";
+
+self.window = self;
 
 declare const self: ServiceWorkerGlobalScope;
 declare const Sk: any;
 
+const {
+    builtin: {
+        func: pyFunc,
+        none: { none$: pyNone },
+    },
+    misceval: { asyncToPromise },
+    ffi: { toJs },
+    importMain,
+} = Sk;
+
 // Skulpt expectes window to exist
-self.window = self;
+
+configureSkulpt();
+addAPI();
 
 declare global {
     interface ServiceWorkerGlobalScope {
         postMessage(data: any): void;
         raise_event(eventName: string): void;
         window: ServiceWorkerGlobalScope;
+        sync_event_handler(cb: (e: any) => void): (e: any) => void;
     }
 }
 
@@ -37,31 +57,27 @@ function addAPI() {
         raiseEvent(args[0].toString(), objectKws);
     }
     raise_event.co_fastcall = true;
-    self.raise_event = new Sk.builtin.func(raise_event);
+
+    self.raise_event = new pyFunc(raise_event);
+    self.sync_event_handler = (cb) => (e) => e.waitUntil(cb(e));
+
 }
 
-self.onmessage = async (e) => {
+async function onInitModule(e: any) {
     const data = e.data;
     const { type } = data;
-    switch (type) {
-        case "SKULPT": {
-            // This is very hacky - do it so that we can use browser cache
-            // we could use importScripts - but we need to do importScripts on load
-            // and before then we don't necessarily know the location of the skulpt file
-            const skMod = await fetch(data.url);
-            eval(await skMod.text());
-            configureSkulpt();
-            addAPI();
-            break;
-        }
-        case "INIT": {
-            await SKULPT_LOADED.promise;
-            const { name } = data;
-            Sk.misceval.asyncToPromise(() => Sk.importMain(name, false, true));
-            break;
-        }
+    if (type !== "INIT") return;
+    const { name } = data;
+    try {
+        await asyncToPromise(() => importMain(name, false, true));
+    } catch (e) {
+        console.error(e);
+        errHandler(e);
     }
-};
+}
+
+self.addEventListener("message", onInitModule);
+
 
 async function postMessage(data: { type: string; [key: string]: any }) {
     // flag for the client

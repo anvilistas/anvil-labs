@@ -1,7 +1,14 @@
 /// <reference lib="dom" />
-import { getModule, getSkulptUrl } from "../../worker/utils/client.ts";
+import { getModule } from "../../worker/utils/client.ts";
 
-let sw: ServiceWorker | null;
+let reg: ServiceWorkerRegistration;
+declare const Sk: any;
+
+const {
+    builtin: { ExternalError },
+    misceval: { callsimArray: pyCall, callsimOrSuspendArray: pyCallOrSuspend },
+    ffi: { toPy },
+} = Sk;
 
 async function onImport(e: any) {
     const { data } = e;
@@ -10,24 +17,58 @@ async function onImport(e: any) {
     const { filename, id } = data;
 
     const content = await getModule(filename);
-    sw?.postMessage({ type: "MODULE", content, id });
+    reg.active?.postMessage({ type: "MODULE", content, id });
+}
+
+function reconstructError(type: string, args: any[], tb: any) {
+    let reconstructed;
+    try {
+        const pyError = Sk.builtin[type];
+        reconstructed = pyCall(
+            pyError,
+            args.map((x) => toPy(x))
+        );
+        reconstructed.traceback = tb ?? [];
+    } catch {
+        let jsError;
+        try {
+            // @ts-ignore
+            jsError = new window[type](...args);
+        } catch {
+            jsError = new Error(...args);
+        }
+        reconstructed = new ExternalError(jsError);
+    }
+    return reconstructed;
+}
+
+function onError(e: any) {
+    const { data } = e;
+    if (!data.ANVIL_LABS) return;
+    if (data.type !== "ERROR") return;
+    const { errorType, errorArgs, errorTb } = data;
+    const error = reconstructError(errorType, errorArgs, errorTb);
+    // a bit of a hack
+    const mod = Sk.sysmodules.quick$lookup(toPy("anvil_labs.service_worker"));
+    if (!mod) {
+        throw error;
+    }
+    const errorHandler = mod.$d._error_handler;
+    pyCallOrSuspend(errorHandler, [error]);
 }
 
 export async function init() {
-    const reg = await navigator.serviceWorker.register("_/theme/anvil_labs/sw.js", { type: "module" });
+    reg = await navigator.serviceWorker.register("_/theme/anvil_labs/sw.js");
     try {
-        reg.update();
+        await reg.update();
     } catch {
         // we might be offline
     }
 
-    sw = reg.active || reg.installing || reg.waiting || null;
-
-    sw?.postMessage({ type: "SKULPT", url: getSkulptUrl() });
-
     navigator.serviceWorker.addEventListener("message", onImport);
+    navigator.serviceWorker.addEventListener("message", onError);
 
-    return [sw, reg];
+    return reg;
 }
 
 export default init;
