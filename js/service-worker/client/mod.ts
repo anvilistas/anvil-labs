@@ -46,8 +46,8 @@ function onError(e: any) {
     const { data } = e;
     if (!data.ANVIL_LABS) return;
     if (data.type !== "ERROR") return;
-    const { errorType, errorArgs, errorTB } = data;
-    const error = reconstructError(errorType, errorArgs, errorTB);
+    const { errorType, errorArgs, errorTb } = data;
+    const error = reconstructError(errorType, errorArgs, errorTb);
     // a bit of a hack
     const mod = Sk.sysmodules.quick$lookup(toPy("anvil_labs.service_worker"));
     if (!mod) {
