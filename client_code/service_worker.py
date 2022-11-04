@@ -17,6 +17,7 @@ periodic_sync_manager = REG.periodicSync
 
 def _error_handler(err):
     print("<SERVICE WORKER STDERR>:", repr(err))
+    raise err
 
 
 def set_default_error_handler(fn):

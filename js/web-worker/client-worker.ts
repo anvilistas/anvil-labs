@@ -252,7 +252,7 @@ export class BackgroundWorker {
         if (!pyModName.startsWith(window.anvilAppMainPackage)) {
             pyModName = window.anvilAppMainPackage + "." + pyModName;
         }
-        const blobSource = webWorkerScript.replace("{$filename$}", JSON.stringify(pyModName));
+        const blobSource = webWorkerScript.replace("{$filename$}", JSON.stringify(pyModName)).replace("self.anvilAppOrigin", JSON.stringify(window.anvilAppOrigin));
         const blob = new Blob([blobSource], { type: "text/javascript" });
         this.target = new Worker(URL.createObjectURL(blob)) as CustomWorker;
         initWorkerRPC(this.target);

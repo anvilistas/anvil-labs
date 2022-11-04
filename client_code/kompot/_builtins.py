@@ -63,6 +63,10 @@ class Tuple(tuple, Iterable):
     pass
 
 
+class Bytes(bytes, Iterable):
+    pass
+
+
 class Date:
     def __init__(self, v: date):
         self.v = v
@@ -128,6 +132,7 @@ registered_builtins = {
     date: Date,
     datetime: DateTime,
     type: Type,
+    bytes: Bytes,
 }
 
 
