@@ -7,7 +7,7 @@ importScripts(
     "https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"
 );
 
-import { configureSkulpt, defer, errHandler } from "../../worker/utils/worker.ts";
+import { configureSkulpt, errHandler } from "../../worker/utils/worker.ts";
 
 self.window = self;
 
@@ -60,7 +60,6 @@ function addAPI() {
 
     self.raise_event = new pyFunc(raise_event);
     self.sync_event_handler = (cb) => (e) => e.waitUntil(cb(e));
-
 }
 
 async function onInitModule(e: any) {
@@ -78,6 +77,16 @@ async function onInitModule(e: any) {
 
 self.addEventListener("message", onInitModule);
 
+self.anvilAppOrigin = "";
+
+function onAppOrigin(e: any) {
+    const data = e.data;
+    const { type } = data;
+    if (type !== "APPORIGIN") return;
+    const { origin } = data;
+    self.anvilAppOrigin = origin as string;
+}
+self.addEventListener("message", onAppOrigin);
 
 async function postMessage(data: { type: string; [key: string]: any }) {
     // flag for the client

@@ -2,6 +2,7 @@
 import { initWorkerRPC } from "./web-worker.ts";
 import type { CustomWorker } from "./web-worker.ts";
 import jsMod from "../dummy-modules/anvil-js.ts";
+import jsonMod from "../dummy-modules/json.ts";
 
 declare var Sk: any;
 declare var stopExecution: boolean;
@@ -92,9 +93,11 @@ const window = self;
 self.importScripts([\\'${getSkultpUrl()}\\']);
 (${initWorkerRPC})(self);
 const $f = (self.anvilFiles = {});
-$f["src/lib/anvil/__init__.py"] = "";
+$f["src/lib/json.js"] = \`var $builtinmodule=${jsonMod};\`;
+$f["src/lib/anvil/__init__.py"] = "def is_server_side():return False";
 $f["src/lib/anvil/js.js"] = \`var $builtinmodule=${jsMod};\`;
-$f["src/lib/anvil/server.py"] = "";
+$f["src/lib/anvil/tz.py"] = \`import datetime,time\nclass tzoffset(datetime.tzinfo):\n  def __init__(A,**B):A._offset=datetime.timedelta(**B)\n  def utcoffset(A,dt):return A._offset\n  def dst(A,dt):return datetime.timedelta()\n  def tzname(A,dt):return None\nclass tzlocal(tzoffset):\n  def __init__(B):\n    if time.localtime().tm_isdst and time.daylight:A=-time.altzone\n    else:A=-time.timezone\n    tzoffset.__init__(B,seconds=A)\nclass tzutc(tzoffset):0\nUTC=tzutc()\`;
+$f["src/lib/anvil/server.py"] = \`class SerializationError(Exception):0\ndef get_app_origin():return self.anvilAppOrigin\ndef get_api_origin():return get_app_origin()+'/_/api'\ndef call(*args,**kws):\n  from anvil_labs.kompot import serialize,preserve,reconstruct;name,*args=args;rv=self.fetch(get_api_origin()+f"/anvil_labs_private_call?name={name}",{'headers':{'Content-Type':'application/json'},'method':'POST','body':self.JSON.stringify(preserve([args,kws]))});result,error=rv.json()\n  if error:raise Exception(error)\n  return reconstruct(dict(result))\ndef portable_class(*args,**kws):0\`;
 (${configureSkulpt})();
 Sk.misceval.asyncToPromise(() => Sk.importMain({$filename$}, false, true)).then(() => {
   self.moduleLoaded.resolve();
