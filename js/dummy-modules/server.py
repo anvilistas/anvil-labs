@@ -2,6 +2,8 @@
 # Copyright (c) 2021 anvilistas
 # flake8: noqa
 
+__version__ = "0.0.1"
+
 
 class SerializationError(Exception):
     pass

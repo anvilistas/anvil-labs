@@ -4,6 +4,8 @@
 import datetime
 import time
 
+__version__ = "0.0.1"
+
 
 class tzoffset(datetime.tzinfo):
     def __init__(self, **kwargs):
