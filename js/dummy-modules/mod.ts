@@ -1,6 +1,5 @@
 import jsMod from "./anvil-js.ts";
 import jsonMod from "./json.ts";
-import tzMod from "./anvil-tz.ts";
 
 export const ANVIL_FILES = new Map([
     ["src/lib/json.js", `var $builtinmodule=${jsonMod};`],
