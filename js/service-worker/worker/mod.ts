@@ -75,6 +75,8 @@ async function onInitModule(e: any) {
     const { type } = data;
     if (type !== "INIT") return;
     const { name } = data;
+    // we're being loaded from the client so clear our module cache
+    await modStore.clear();
     await loadInitModule(name);
 }
 
@@ -82,7 +84,6 @@ self.addEventListener("message", onInitModule);
 
 self.addEventListener("activate", (e) => {
     console.log("%cSW ACTIVATED", "color: hotpink;");
-    e.waitUntil(modStore.clear());
 });
 
 async function onAppOrigin(e: any) {
