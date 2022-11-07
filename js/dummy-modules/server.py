@@ -37,7 +37,9 @@ def call(*args, **kws):
     return reconstruct(dict(result))
 
 
-def portable_class(*args, **kws):
-    from anvil_labs.kompot import register
-
-    return register(*args)
+def portable_class(cls, name=None):
+    if name is None and isinstance(cls, str):
+        name = cls
+        return lambda cls: cls
+    else:
+        return cls
