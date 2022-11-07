@@ -8,6 +8,8 @@ REG = _W.anvilLabs.importFrom("./_/theme/anvil_labs/client_sw.js").init()
 SW = REG.installing or REG.waiting or REG.active
 EVENT_LISTENERS = {}
 
+SW.postMessage({"type": "APPORIGIN", "origin": _W.anvilAppOrigin})
+
 # escape hatches
 registration = REG
 service_worker = SW

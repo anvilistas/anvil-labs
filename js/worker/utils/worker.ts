@@ -1,6 +1,19 @@
+importScripts(
+    "https://anvil.works/runtime-new/runtime/js/lib/skulpt.min.js",
+    "https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js",
+    "https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"
+);
+
 // deno-lint-ignore-file no-explicit-any
 import { ANVIL_FILES } from "../../dummy-modules/mod.ts";
 import { Deferred } from "../types.ts";
+
+// Create table 1 in databaseName
+// @ts-ignore
+export const modStore = localforage.createInstance({
+    name: "anvil-labs-sw",
+    storeName: "lib",
+});
 
 declare const Sk: any;
 
@@ -45,6 +58,10 @@ export const errHandler = (e: any) => {
     self.postMessage({ type: "ERROR", errorType, errorArgs, errorTb });
 };
 
+async function checkStore(filename: string) {
+    return await modStore.getItem(filename);
+}
+
 export function configureSkulpt() {
     Sk.configure({
         output(message: string) {
@@ -56,12 +73,24 @@ export function configureSkulpt() {
             const rv = ANVIL_FILES.get(filename);
             if (rv !== undefined) return rv;
             return Sk.misceval.promiseToSuspension(
-                fetchModule(filename).then((content) => {
-                    if (content == null) {
-                        throw "No module named " + filename;
-                    }
-                    return content;
-                })
+                checkStore(filename)
+                    .then((content) => {
+                        // we were found in the store
+                        if (content != null) return content;
+
+                        return fetchModule(filename).then((content) => {
+                            // use zero as a place holder for null
+                            // since getItem retuns null if it doesn't exist
+                            modStore.setItem(filename, content ?? 0);
+                            return content;
+                        });
+                    })
+                    .then((content) => {
+                        if (content == null || content === 0) {
+                            throw "No module named " + filename;
+                        }
+                        return content;
+                    })
             );
         },
         uncaughtException: (err: any) => {
