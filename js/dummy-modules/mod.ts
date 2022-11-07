@@ -11,6 +11,6 @@ export const ANVIL_FILES = new Map([
     ],
     [
         "src/lib/anvil/server.py",
-        `class SerializationError(Exception):0\ndef get_app_origin():return self.anvilAppOrigin\ndef get_api_origin():return get_app_origin()+'/_/api'\ndef call(*args,**kws):\n\tfrom anvil_labs.kompot import serialize,preserve,reconstruct;name,*args=args;rv=self.fetch(get_api_origin()+f"/anvil_labs_private_call?name={name}",{'headers':{'Content-Type':'application/json'},'method':'POST','body':self.JSON.stringify(preserve([args,kws]))});result,error=rv.json()\n\tif error:raise Exception(error)\n\treturn reconstruct(dict(result))\ndef portable_class(*args,**kws):0`,
+        `class SerializationError(Exception):0\ndef get_app_origin():return self.anvilAppOrigin\ndef get_api_origin():return get_app_origin()+'/_/api'\ndef call(*args,**kws):\n\tfrom anvil_labs.kompot import preserve,reconstruct,serialize;name,*args=args;rv=self.fetch(get_api_origin()+f"/anvil_labs_private_call?name={name}",{'headers':{'Content-Type':'application/json'},'method':'POST','body':self.JSON.stringify(preserve([args,kws]))});result,error=rv.json()\n\tif error:raise Exception(error)\n\treturn reconstruct(dict(result))\ndef portable_class(cls,name=None):\n\tif name is None and isinstance(cls,str):name=cls;return lambda cls:cls\n\telse:return cls`,
     ],
 ]);
