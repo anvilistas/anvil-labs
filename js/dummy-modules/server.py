@@ -38,4 +38,6 @@ def call(*args, **kws):
 
 
 def portable_class(*args, **kws):
-    pass
+    from anvil_labs.kompot import register
+
+    return register(*args)
