@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
+from anvil.js import import_from as _import_from
 from anvil.js import window as _W
 
 __version__ = "0.0.1"
 
-REG = _W.anvilLabs.importFrom("./_/theme/anvil_labs/client_sw.js").init()
+REG = _import_from("./_/theme/anvil_labs/client_sw.js").init()
 SW = REG.installing or REG.waiting or REG.active
 EVENT_LISTENERS = {}
 
