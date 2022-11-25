@@ -155,9 +155,7 @@ class RowBackedStore:
             setattr(self._despatcher, name, value)
 
     def _despatch(self, action):
-        result = call(
-            self._server_functions[action], self.despatcher.serialize()
-        )
+        result = call(self._server_functions[action], self.despatcher.serialize())
         self.despatcher.clear()
         return result
 
