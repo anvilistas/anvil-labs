@@ -36,6 +36,7 @@ print(book.title)
 import anvil.server
 
 from ._register import register
+from ._rpc import call
 
 __version__ = "0.0.1"
 
@@ -154,7 +155,7 @@ class RowBackedStore:
             setattr(self._despatcher, name, value)
 
     def _despatch(self, action):
-        result = kompot.call(
+        result = call(
             self._server_functions[action], self.despatcher.serialize()
         )
         self.despatcher.clear()
