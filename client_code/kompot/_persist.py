@@ -216,22 +216,21 @@ def _delete(self):
     return self._store.delete()
 
 
+MEMBERS = {
+    "__getattr__": _get_value,
+    "__getitem__": _get_value,
+    "__setattr__": _set_value,
+    "__setitem__": _set_value,
+    "get": _get,
+    "create": _create,
+    "save": _save,
+    "delete": _delete,
+}
+
+
 def persisted_class(cls):
     """A decorator for a class with a persistence mechanism"""
-    members = {
-        "__module__": cls.__module__,
-        "__getattr__": _get_value,
-        "__getitem__": _get_value,
-        "__setattr__": _set_value,
-        "__setitem__": _set_value,
-        "get": _get,
-        "create": _create,
-        "save": _save,
-        "delete": _delete,
-    }
-    class_members = {k: v for k, v in cls.__dict__.items() if k not in members}
-    members.update(class_members)
-    return type(cls.__name__, (object,), members)
+    return type(cls.__name__, (object,), dict(cls.__dict__, **MEMBERS))
 
 
 def _row_backed_constructor(self):
