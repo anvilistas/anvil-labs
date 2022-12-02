@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
-import zoneinfo
 from datetime import date, datetime
 
-from ..cluegen import DatumBase, cluegen
+from ...cluegen import DatumBase, cluegen
 from .util import enum
 
 __version__ = "0.0.1"
@@ -60,7 +59,7 @@ ZodParsedType = enum(
         # "symbol",
         "function",
         # "undefined",
-        "null",
+        "none",  # skulpt doesn't like null
         "array",
         "tuple",
         # "object",
@@ -83,7 +82,7 @@ def get_parsed_type(data):
     t = type(data)
 
     if t is NoneType:
-        return ZodParsedType.null
+        return ZodParsedType.none
 
     if t is str:
         return ZodParsedType.string

@@ -50,7 +50,7 @@ def datetime(precision=None, offset=False, **check):
     return rv
 
 
-def __getattr__(self, name):
+def __getattr__(name):
     if name not in __all__:
         raise AttributeError(name)
 

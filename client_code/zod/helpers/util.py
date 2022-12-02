@@ -5,6 +5,6 @@ __version__ = "0.0.1"
 
 
 def enum(name, members):
-    _ = type(name, (), {})
+    _ = type(name, (), {})()
     _.__dict__.update({member: member for member in members})
     return _

@@ -3,7 +3,6 @@
 
 from anvil import is_server_side
 
-from . import utils
 from ._errors import ZodError, ZodIssueCode
 from .helpers import ZodParsedType, get_parsed_type, regex
 from .helpers.parse_util import (
@@ -18,7 +17,7 @@ from .helpers.parse_util import (
     is_valid,
 )
 
-_version__ = "0.0.1"
+__version__ = "0.0.1"
 
 
 # enum class
@@ -85,7 +84,7 @@ class ZodType:
     def optional(self):
         # TODO
         pass
-        # return ZodOptional.create()
+        # return ZodOptional._create()
 
 
 class ZodString(ZodType):
@@ -120,7 +119,7 @@ class ZodString(ZodType):
                     )
                     status.dirty()
             elif kind == "max":
-                if len(input.data > check["value"]):
+                if len(input.data) > check["value"]:
                     ctx = self._get_or_return_ctx(input, ctx)
                     add_issue_to_context(
                         ctx,
@@ -271,9 +270,9 @@ class ZodString(ZodType):
         )
 
     @classmethod
-    def create(cls, **params):
+    def _create(cls, **params):
         _def = {"checks": [], "type_name": cls.__name__, **params}
         return cls(_def)
 
 
-string = ZodString.create
+string = ZodString._create
