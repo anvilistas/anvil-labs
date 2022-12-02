@@ -112,3 +112,7 @@ def is_aborted(x):
 
 def is_dirty(x):
     return x.status == DIRTY
+
+
+def OK(value):
+    return ParseReturn(status=VALID, value=value)

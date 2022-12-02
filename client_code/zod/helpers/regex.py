@@ -23,33 +23,6 @@ _raw = {
 _cache = {}
 
 
-def datetime(precision=None, offset=False, **check):
-    import re
-
-    rv = _cache.get((precision, offset))
-    if rv is not None is not None:
-        return rv
-
-    if precision:
-        if offset:
-            raw = rf"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{{{precision}}}(([+-]\\d{2}:\\d{2})|Z)$"
-        else:
-            raw = rf"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{{{precision}}}Z$"
-    if precision == 0:
-        if offset:
-            raw = r"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(([+-]\\d{2}:\\d{2})|Z)$"
-        else:
-            raw = r"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(([+-]\\d{2}:\\d{2})|Z)$"
-    else:
-        if offset:
-            raw = r"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(([+-]\\d{2}:\\d{2})|Z)$"
-        else:
-            raw = r"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
-
-    rv = _cache[(precision, offset)] = re.compile(raw)
-    return rv
-
-
 def __getattr__(name):
     if name not in __all__:
         raise AttributeError(name)

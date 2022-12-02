@@ -1,12 +1,16 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
+from datetime import date, datetime
+
 from anvil import is_server_side
 
 from ._errors import ZodError, ZodIssueCode
 from .helpers import ZodParsedType, get_parsed_type, regex
 from .helpers.parse_util import (
     INVALID,
+    OK,
+    VALID,
     Common,
     ParseContext,
     ParseInput,
@@ -33,13 +37,53 @@ def handle_result(ctx, result):
         return ParseResult(success=False, data=None, error=error)
 
 
+def process_params(
+    error_map=None, invalid_type_error=False, required_error=False, description=""
+):
+    if not any([error_map, invalid_type_error, required_error, description]):
+        return {}
+    if error_map and (invalid_type_error or required_error):
+        raise Exception(
+            'Can\'t use "invalid_type_error" or "required_error" in conjunction with custom error'
+        )
+
+    if error_map:
+        return {"error_map": error_map, "description": description}
+
+    def custom_map(iss, ctx):
+        if iss["code"] != "invalid_type":
+            return {"msg": ctx.default_error}
+        # TODO
+
+    return {"error_map": custom_map, "description": description}
+
+
 class ZodType:
+    _type = None
+
+    @classmethod
+    def _create(cls, **params):
+        _def = process_params(**params)
+        return cls(_def)
+
     def __init__(self, _def):
         self._def = _def
 
     @property
     def description(self):
         return self._def["description"]
+
+    def _check_invalid_type(self, input):
+        parsed_type = self._get_type(input)
+
+        if parsed_type is not self._type:
+            ctx = self._get_or_return_ctx(input)
+            add_issue_to_context(
+                ctx,
+                code=ZodIssueCode.invalid_type,
+                expected=self._type,
+                received=ctx.parsed_type,
+            )
 
     def _parse(self, input):
         raise NotImplementedError("should be implemented by subclass")
@@ -88,17 +132,10 @@ class ZodType:
 
 
 class ZodString(ZodType):
-    def _parse(self, input: ParseInput):
-        parsed_type = self._get_type(input)
+    _type = ZodParsedType.string
 
-        if parsed_type is not ZodParsedType.string:
-            ctx = self._get_or_return_ctx(input)
-            add_issue_to_context(
-                ctx,
-                code=ZodIssueCode.invalid_type,
-                expected=ZodParsedType.string,
-                received=ctx.parsed_type,
-            )
+    def _parse(self, input: ParseInput):
+        if self._check_invalid_type(input):
             return INVALID
 
         status = ParseStatus()
@@ -118,6 +155,7 @@ class ZodString(ZodType):
                         msg=check["msg"],
                     )
                     status.dirty()
+
             elif kind == "max":
                 if len(input.data) > check["value"]:
                     ctx = self._get_or_return_ctx(input, ctx)
@@ -130,6 +168,7 @@ class ZodString(ZodType):
                         msg=check["msg"],
                     )
                     status.dirty()
+
             elif kind == "email":
                 if not regex.EMAIL.match(input.data):
                     ctx = self._get_or_return_ctx(input, ctx)
@@ -210,17 +249,25 @@ class ZodString(ZodType):
                     )
                     status.dirty()
 
-            elif kind == "datetime":
-                dt_re = regex.datetime(**check)
-                if not dt_re.match(input.data):
+            elif kind == "datetime" or kind == "date":
+                format = check["format"]
+                try:
+                    if format is not None:
+                        datetime.strptime(input.data, format)
+                    elif kind == "datetime":
+                        datetime.fromisoformat(input.data)
+                    else:
+                        date.fromisoformat(input.data)
+                except Exception:
                     ctx = self._get_or_return_ctx(input, ctx)
                     add_issue_to_context(
                         ctx,
                         code=ZodIssueCode.invalid_string,
-                        validation="datetime",
+                        validation=kind,
                         msg=check["msg"],
                     )
                     status.dirty()
+
             else:
                 assert False
 
@@ -238,10 +285,11 @@ class ZodString(ZodType):
     def uuid(self, msg=""):
         return self._add_check(kind="uuid", msg=msg)
 
-    def datetime(self, offset=False, precision=None, msg=""):
-        return self._add_check(
-            kind="datetime", precision=precision, offset=offset, msg=msg
-        )
+    def datetime(self, format=None, msg=""):
+        return self._add_check(kind="datetime", format=format, msg=msg)
+
+    def date(self, format=None, msg=""):
+        return self._add_check(kind="date", format=format, msg=msg)
 
     def regex(self, regex, msg=""):
         return self._add_check(kind="uuid", regex=regex, msg=msg)
@@ -265,14 +313,96 @@ class ZodString(ZodType):
         return self.min(1, msg)
 
     def strip(self):
-        return ZodString(
-            {**self._def, "checks": [*self._def["checks"], {"kind": "strip"}]}
-        )
+        return self._add_check(kind="strip")
 
     @classmethod
     def _create(cls, **params):
-        _def = {"checks": [], "type_name": cls.__name__, **params}
+        _def = {
+            "checks": [],
+            **process_params(**params),
+        }
         return cls(_def)
 
 
+class ZodNumber(ZodType):
+    _type = ZodParsedType.number
+    pass
+
+
+class ZodBoolean(ZodType):
+    _type = ZodParsedType.boolean
+
+    def _parse(self, input: ParseInput):
+        if self._check_invalid_type(input):
+            return INVALID
+        return OK(input.data)
+
+
+class ZodNone(ZodType):
+    _type = ZodParsedType.none
+
+    def _parse(self, input: ParseInput):
+        if self._check_invalid_type(input):
+            return INVALID
+        return OK(input.data)
+
+
+class ZodAny(ZodType):
+    def _parse(self, input):
+        return OK(input.data)
+
+
+class ZodUnknown(ZodType):
+    _type = ZodParsedType.unknown
+    _unknown = True
+
+    def _parse(self, input):
+        return OK(input.data)
+
+
+class ZodNever(ZodType):
+    _type = ZodParsedType.never
+
+    def _parse(self, input):
+        ctx = self._get_or_return_ctx(input)
+        add_issue_to_context(
+            ctx,
+            code=ZodIssueCode.invalid_type,
+            expected=self._type,
+            received=ctx.parsed_type,
+        )
+        return INVALID
+
+
+class ZodLiteral(ZodType):
+    def _parse(self, input):
+        value = self._def["value"]
+        data = input.data
+        if value is data or (type(value) is type(data) and value == data):
+            return ParseReturn(status=VALID, value=data)
+        else:
+            ctx = self._get_or_return_ctx(input)
+            add_issue_to_context(ctx, code=ZodIssueCode.invalid_literal, expected=value)
+            return INVALID
+
+    @property
+    def value(self):
+        return self._def["value"]
+
+    @classmethod
+    def create(cls, value, **params):
+        return cls(
+            {
+                "value": value,
+                **process_params(**params),
+            }
+        )
+
+
 string = ZodString._create
+boolean = ZodBoolean._create
+none = ZodNone._create
+any_ = ZodAny._create
+unknown = ZodUnknown._create
+never = ZodNever._create
+literal = ZodLiteral._create
