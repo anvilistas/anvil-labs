@@ -1,160 +1,37 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
+from anvil import is_server_side
+
 from . import utils
+from ._errors import ZodError, ZodIssueCode
+from .helpers import ZodParsedType, get_parsed_type, regex
+from .helpers.parse_util import (
+    INVALID,
+    Common,
+    ParseContext,
+    ParseInput,
+    ParseResult,
+    ParseReturn,
+    ParseStatus,
+    add_issue_to_context,
+    is_valid,
+)
 
 _version__ = "0.0.1"
 
-VALID = "valid"
-DIRTY = "dirty"
-ABORTED = "aborted"
-MISSING = object()
-
-
-class ZodTypeDef(utils.Slotum):
-    __slots__ = ["error_map", "description"]
-
-
-class CommonContext(utils.Slotum):
-    __slots__ = ["issues", "context_error_map"]
-
-
-class ParseContext(utils.Slotum):
-    __slots__ = ["common", "path", "schema_error_map", "parent", "data", "parsed_type"]
-
-
-class ParseInput(utils.Slotum):
-    __slots__ = ["data", "path", "parent"]
-
-
-class ParseReturn(utils.Slotum):
-    __slots__ = ["status", "value"]
-
-
-class ParseStatus:
-    def __init__(self, value=VALID):
-        self.value = value
-
-    def dirty(self):
-        if self.value == VALID:
-            self.value = DIRTY
-
-    def abort(self):
-        if self.value != ABORTED:
-            self.value = ABORTED
-
-    @staticmethod
-    def merge_list(status, results):
-        list_value = []
-        for s in results:
-            if s.status == ABORTED:
-                return INVALID
-            if s.status == DIRTY:
-                status.dirty()
-            list_value.append(s.value)
-
-        return ParseReturn(status.value, list_value)
-
-    @staticmethod
-    def merge_dict(status, pairs):
-        final = {}
-        for key, value, always_set in pairs:
-            if key.status == ABORTED or value.status == ABORTED:
-                return INVALID
-            if key.status == DIRTY or value.status == DIRTY:
-                status.dirty()
-
-            if value.value is not MISSING or always_set:
-                final[key.value] = value.value
-
-        return ParseReturn(status.value, final)
-
-
-INVALID = ParseStatus(ABORTED)
-
-
-class Result(utils.Slotum):
-    __slots__ = ["success", "data", "error"]
-
-
-class ZodError(Exception):
-    pass  # TODO
-
-
-def is_valid(x):
-    return x.status == VALID
-
 
 # enum class
-ZodParseType = utils.enum("ZodParseType", ["str", "unknown"])
-ZodIssueCode = utils.enum(
-    "ZodIssueCode",
-    [
-        "invalid_type",
-        "invalid_literal",
-        "custom",
-        "invalid_union",
-        "invalid_union_discriminator",
-        "invalid_enum_value",
-        "unrecognized_keys",
-        "invalid_arguments",
-        "invalid_return_type",
-        "invalid_date",
-        "invalid_string",
-        "too_small",
-        "too_big",
-        "invalid_intersection_types",
-        "not_multiple_of",
-        "not_finite",
-    ],
-)
-
-
-def get_parsed_type(data):
-    tp = type(data)
-    if tp is str:
-        return ZodParseType.str
-    else:
-        return ZodParseType.unknown
-
-
-def make_issue(issue_data, data, path, error_maps):
-    full_path = [*path, *issue_data.get("path", [])]
-    # full_issue = {**issue_data, "path": full_path}
-    error_msg = ""
-    # const maps = errorMaps
-    #   .filter((m) => !!m)
-    #   .slice()
-    #   .reverse() as ZodErrorMap[];
-    # for (const map of maps) {
-    #   errormsg = map(fullIssue, { data, defaultError: errormsg }).msg;
-    # }
-    return {**issue_data, "path": full_path, "msg": issue_data.get("msg", error_msg)}
-
-
-def add_issue_to_context(ctx: ParseContext, **issue_data):
-    issue = make_issue(
-        issue_data=issue_data,
-        data=ctx.data,
-        path=ctx.path,
-        error_maps=[
-            # ctx.common.contextual_error_map,
-            # ctx.schema_error_map,
-            # get_error_map(),
-            # default_error_map()
-        ],  # filter(x => !!x)
-    )
-    ctx.common.issues.append(issue)
 
 
 def handle_result(ctx, result):
     if is_valid(result):
-        return Result(success=True, data=result.value, error=None)
+        return ParseResult(success=True, data=result.value, error=None)
     else:
         if not ctx.common.issues:
             raise Exception("Validation failed but no issues detected")
         error = ZodError(ctx.common.issues)
-        return Result(success=False, data=None, error=error)
+        return ParseResult(success=False, data=None, error=error)
 
 
 class ZodType:
@@ -194,7 +71,7 @@ class ZodType:
 
     def safe_parse(self, data, **params):
         ctx = ParseContext(
-            common=CommonContext(issues=[], context_error_map=params.get("error_map")),
+            common=Common(issues=[], context_error_map=params.get("error_map")),
             path=params.get("path", []),
             schema_error_map=self._def.get("error_map"),
             parent=None,
@@ -205,17 +82,22 @@ class ZodType:
         result = self._parse(input)
         return handle_result(ctx, result)
 
+    def optional(self):
+        # TODO
+        pass
+        # return ZodOptional.create()
+
 
 class ZodString(ZodType):
     def _parse(self, input: ParseInput):
         parsed_type = self._get_type(input)
 
-        if parsed_type is not ZodParseType.str:
+        if parsed_type is not ZodParsedType.string:
             ctx = self._get_or_return_ctx(input)
             add_issue_to_context(
                 ctx,
                 code=ZodIssueCode.invalid_type,
-                expected=ZodParseType.str,
+                expected=ZodParsedType.string,
                 received=ctx.parsed_type,
             )
             return INVALID
@@ -223,15 +105,120 @@ class ZodString(ZodType):
         status = ParseStatus()
         ctx = None
         for check in self._def["checks"]:
-            if check["kind"] == "min":
+            kind = check["kind"]
+
+            if kind == "min":
                 if len(input.data) < check["value"]:
                     ctx = self._get_or_return_ctx(input, ctx)
                     add_issue_to_context(
                         ctx,
                         code=ZodIssueCode.too_small,
                         minimum=check["value"],
-                        type="str",
+                        type="string",
                         inclusive=True,
+                        msg=check["msg"],
+                    )
+                    status.dirty()
+            elif kind == "max":
+                if len(input.data > check["value"]):
+                    ctx = self._get_or_return_ctx(input, ctx)
+                    add_issue_to_context(
+                        ctx,
+                        code=ZodIssueCode.too_big,
+                        maximum=check["value"],
+                        type="string",
+                        inclusive=True,
+                        msg=check["msg"],
+                    )
+                    status.dirty()
+            elif kind == "email":
+                if not regex.EMAIL.match(input.data):
+                    ctx = self._get_or_return_ctx(input, ctx)
+                    add_issue_to_context(
+                        ctx,
+                        code=ZodIssueCode.invalid_string,
+                        validation="email",
+                        msg=check["msg"],
+                    )
+                    status.dirty()
+
+            elif kind == "uuid":
+                if not regex.UUID.match(input.data):
+                    ctx = self._get_or_return_ctx(input, ctx)
+                    add_issue_to_context(
+                        ctx,
+                        code=ZodIssueCode.invalid_string,
+                        validation="uuid",
+                        msg=check["msg"],
+                    )
+                    status.dirty()
+
+            elif kind == "url":
+                url_valid = True
+                if not is_server_side():
+                    from anvil.js.window import URL
+
+                    try:
+                        URL(input.data)
+                    except Exception:
+                        url_valid = False
+                else:
+                    url_valid = regex.URL.match(input.data)
+                if not url_valid:
+                    ctx = self._get_or_return_ctx(input, ctx)
+                    add_issue_to_context(
+                        ctx,
+                        code=ZodIssueCode.invalid_string,
+                        validation="url",
+                        msg=check["msg"],
+                    )
+                    status.dirty()
+
+            elif kind == "regex":
+                match = check["regex"].match(input.data)
+                if match is None:
+                    ctx = self._get_or_return_ctx(input, ctx)
+                    add_issue_to_context(
+                        ctx,
+                        code=ZodIssueCode.invalid_string,
+                        validation="regex",
+                        msg=check["msg"],
+                    )
+                    status.dirty()
+
+            elif kind == "strip":
+                input.data = input.data.strip()
+
+            elif kind == "startswith":
+                if not input.data.startswith(check["value"]):
+                    ctx = self._get_or_return_ctx(input, ctx)
+                    add_issue_to_context(
+                        ctx,
+                        code=ZodIssueCode.invalid_string,
+                        validation={"startswith": check["value"]},
+                        msg=check["msg"],
+                    )
+                    status.dirty()
+
+            elif kind == "endswith":
+                if not input.data.endswith(check["value"]):
+                    ctx = self._get_or_return_ctx(input, ctx)
+                    add_issue_to_context(
+                        ctx,
+                        code=ZodIssueCode.invalid_string,
+                        validation={"endswith": check["value"]},
+                        msg=check["msg"],
+                    )
+                    status.dirty()
+
+            elif kind == "datetime":
+                dt_re = regex.datetime(**check)
+                if not dt_re.match(input.data):
+                    ctx = self._get_or_return_ctx(input, ctx)
+                    add_issue_to_context(
+                        ctx,
+                        code=ZodIssueCode.invalid_string,
+                        validation="datetime",
                         msg=check["msg"],
                     )
                     status.dirty()
@@ -243,8 +230,45 @@ class ZodString(ZodType):
     def _add_check(self, **check):
         return ZodString({**self._def, "checks": [*self._def["checks"], check]})
 
+    def email(self, msg=""):
+        return self._add_check(kind="email", msg=msg)
+
+    def url(self, msg=""):
+        return self._add_check(kind="url", msg=msg)
+
+    def uuid(self, msg=""):
+        return self._add_check(kind="uuid", msg=msg)
+
+    def datetime(self, offset=False, precision=None, msg=""):
+        return self._add_check(
+            kind="datetime", precision=precision, offset=offset, msg=msg
+        )
+
+    def regex(self, regex, msg=""):
+        return self._add_check(kind="uuid", regex=regex, msg=msg)
+
+    def startswith(self, value, msg=""):
+        return self._add_check(kind="startswith", value=value, msg=msg)
+
+    def endswith(self, value, msg=""):
+        return self._add_check(kind="endswith", value=value, msg=msg)
+
     def min(self, min_length: int, msg=""):
         return self._add_check(kind="min", value=min_length, msg=msg)
+
+    def max(self, min_length: int, msg=""):
+        return self._add_check(kind="max", value=min_length, msg=msg)
+
+    def len(self, len: int, msg=""):
+        return self.min(len, msg).max(len, msg)
+
+    def nonempty(self, msg=""):
+        return self.min(1, msg)
+
+    def strip(self):
+        return ZodString(
+            {**self._def, "checks": [*self._def["checks"], {"kind": "strip"}]}
+        )
 
     @classmethod
     def create(cls, **params):
@@ -252,4 +276,4 @@ class ZodString(ZodType):
         return cls(_def)
 
 
-stringType = ZodString.create
+string = ZodString.create
