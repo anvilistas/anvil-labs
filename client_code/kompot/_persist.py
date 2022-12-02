@@ -43,10 +43,10 @@ __version__ = "0.0.1"
 
 @register
 @anvil.server.portable_class
-class Despatcher:
+class Dispatcher:
     """A portable class for sending payloads from client to server
 
-    When changes are made to a persisted object, a Despatcher instance records those
+    When changes are made to a persisted object, a Dispatcher instance records those
     changes so they can be sent to the server if required.
 
     This is particularly useful for classes backed by data tables rows since a row
@@ -100,12 +100,12 @@ class LinkedAttribute:
 
     def __get__(self, instance, objtype=None):
         if instance is None:
-            raise AttributeError(f"{objtype.__name__} class has no such attribute")
+            return self
 
-        if instance._row and instance._despatcher.synced:
+        if instance._row and instance._dispatcher.synced:
             return instance._row[self._linked_table][self._linked_attr]
         else:
-            return getattr(instance._despatcher, self._linked_attr, None)
+            return getattr(instance._dispatcher, self._linked_attr, None)
 
     def __set__(self, instance, value):
         instance._set_value(self._name, value)
@@ -114,7 +114,7 @@ class LinkedAttribute:
 class RowBackedStore:
     """A class to hold a data tables row as the persistence mechanism for an object"""
 
-    def __init__(self, server_functions, linked_attributes, row=None, despatcher=None):
+    def __init__(self, server_functions, linked_attributes, row=None, dispatcher=None):
         """
         Parameters
         ----------
@@ -126,12 +126,12 @@ class RowBackedStore:
             required name for the dynamically created attribute to the name of the
             relevant column in the linked table
         row: anvil.tables.Row
-        despatcher: any
+        dispatcher: any
             A portable class suitable for sending changes from client to server
         """
         self._initialised = False
         self._row = row
-        self._despatcher = despatcher or Despatcher()
+        self._dispatcher = dispatcher or Dispatcher()
         self._server_functions = server_functions
         for linked_table, attributes in linked_attributes.items():
             for attr, linked_attr in attributes.items():
@@ -143,26 +143,26 @@ class RowBackedStore:
         self._initialised = True
 
     def __getattr__(self, name):
-        if self._row and self._despatcher.synced:
+        if self._row and self._dispatcher.synced:
             return self._row[name]
         else:
-            return getattr(self._despatcher, name, None)
+            return getattr(self._dispatcher, name, None)
 
     def __setattr__(self, name, value):
         if name.startswith("_") or not self._initialised:
             object.__setattr__(self, name, value)
         else:
-            setattr(self._despatcher, name, value)
+            setattr(self._dispatcher, name, value)
 
     def _despatch(self, action):
-        result = call(self._server_functions[action], self.despatcher.serialize())
-        self.despatcher.clear()
+        result = call(self._server_functions[action], self._dispatcher.serialize())
+        self._dispatcher.clear()
         return result
 
     def get(self, *args, **kwargs):
         "Fetch a data tables row and make it available to the parent object"
         self._row = anvil.server.call(self._server_functions["get"], *args, **kwargs)
-        self._despatcher.clear()
+        self._dispatcher.clear()
 
     def create(self):
         """Create a new data tables row from the parent object"""
@@ -233,15 +233,12 @@ def persisted_class(cls):
     return type(cls.__name__, (object,), dict(cls.__dict__, **MEMBERS))
 
 
-def _row_backed_constructor(self):
-    def init(self, row=None):
-        self.store = RowBackedStore(self.server_functions, self.linked_attributes, row)
-
-    return init
+def _row_backed_init(self, row=None):
+    self._store = RowBackedStore(self.server_functions, self.linked_attributes, row)
 
 
 def row_backed_class(cls):
     """A decorator for a class persisted by a data tables row"""
     _cls = persisted_class(cls)
-    setattr(_cls, "__init__", _row_backed_constructor)
+    setattr(_cls, "__init__", _row_backed_init)
     return _cls
