@@ -7,8 +7,9 @@ from datetime import datetime as _datetime
 from anvil import is_server_side
 
 from ._errors import ZodError, ZodIssueCode
-from .helpers import ZodParsedType, get_parsed_type, regex
+from .helpers import ZodParsedType, get_parsed_type, regex, util
 from .helpers.error_util import error_to_obj
+from .helpers.object_util import merge_shapes
 from .helpers.parse_util import (
     DIRTY,
     INVALID,
@@ -398,7 +399,7 @@ class ZodAbstractNumber(ZodType):
             else:
                 assert False
 
-        return ParseReturn(statu=status.value, value=input.data)
+        return ParseReturn(status=status.value, value=input.data)
 
     def _add_check(self, **check):
         return type(self)({**self._def, "checks": [*self._def["checks"], check]})
@@ -606,8 +607,11 @@ class ZodObject(ZodType):
             if unknown_keys == "passthrough":
                 for key in extra_keys:
                     pairs.append(
-                        ParseReturn(VALID, key),
-                        ParseReturn(VALID, ctx.data[key], False),
+                        (
+                            ParseReturn(VALID, key),
+                            ParseReturn(VALID, ctx.data[key]),
+                            False,
+                        )
                     )
             elif unknown_keys == "strict":
                 if extra_keys:
@@ -626,10 +630,13 @@ class ZodObject(ZodType):
             for key in extra_keys:
                 value = ctx.data[key]
                 pairs.append(
-                    ParseReturn(VALID, key),
-                    catchall._parse(
-                        ParseInputLazyPath(ctx, value, ctx.path, key), key in ctx.data
-                    ),
+                    (
+                        ParseReturn(VALID, key),
+                        catchall._parse(
+                            ParseInputLazyPath(ctx, value, ctx.path, key),
+                        ),
+                        key in ctx.data,
+                    )
                 )
 
         return ParseStatus.merge_dict(status, pairs)
@@ -660,14 +667,83 @@ class ZodObject(ZodType):
     def passthrough(self):
         return ZodObject({**self._def, "unknown_keys": "passthrough"})
 
+    def augment(self, shape):
+        return ZodObject(
+            {**self._def, "shape": lambda: merge_shapes(self.shape, shape)}
+        )
+
+    extend = augment
+
+    def set_key(self, key, schema):
+        return self.augment({key: schema})
+
+    def merge(self, merging):
+        merged = {
+            "unknown_keys": merging._def["unknown_keys"],
+            "catchall": merging._def["catchall"],
+            "shape": lambda: merge_shapes(
+                self._def["shape"](), merging._def["shape"]()
+            ),
+        }
+        return ZodObject(merged)
+
     def catchall(self, index):
         return ZodObject({**self._def, "catchall": index})
+
+    def pick(self, mask):
+        this_shape = self.shape
+        shape = {k: this_shape[k] for k in mask if k in this_shape}
+        return ZodObject({**self._def, "shape": lambda: shape})
+
+    def omit(self, mask):
+        this_shape = self.shape
+        shape = {k: v for k, v in this_shape.items() if k not in mask}
+        return ZodObject({**self._def, "shape": lambda: shape})
+
+    def partial(self, mask=None):
+        if mask:
+            shape = {
+                k: (v.optional() if k in mask else v) for k, v in self.shape.items()
+            }
+        else:
+            shape = {k: v.optional() for k, v in self.shape.items()}
+        return ZodObject({**self._def, "shape": lambda: shape})
+
+    def required(self, mask=None):
+        def unwrap(field):
+            while isinstance(field, ZodOptional):
+                field = field._def["inner_type"]
+
+        if mask:
+            shape = {k: (unwrap(v) if k in mask else v) for k, v in self.shape.items()}
+        else:
+            shape = {k: unwrap(v) for k, v in self.shape.items()}
+        return ZodObject({**self._def, "shape": lambda: shape})
+
+    def keyof(self):
+        return ZodEnum._create(self.shape.keys())
+        # return createZodEnum(list(self.shape.keys()))
+        pass
 
     @classmethod
     def _create(cls, shape, **params):
         return super()._create(
             shape=lambda: shape, unknown_keys="strip", catchall=never(), **params
         )
+
+
+class ZodLazy(ZodType):
+    def _parse(self, input):
+        ctx = self._get_or_return_ctx(input)
+        return self.schema._parse(ParseInput(data=ctx.data, path=ctx.path, parent=ctx))
+
+    @property
+    def schema(self):
+        return self._def["getter"]()
+
+    @classmethod
+    def _create(cls, getter, **params):
+        return super()._create(getter=getter, **params)
 
 
 class ZodLiteral(ZodType):
@@ -688,6 +764,33 @@ class ZodLiteral(ZodType):
     @classmethod
     def _create(cls, value, **params):
         return super()._create(value=value, **params)
+
+
+class ZodEnum(ZodType):
+    def _parse(self, input):
+        values = self._def["values"]
+        if input.data not in values:
+            ctx = self._get_or_return_ctx(input)
+            add_issue_to_context(
+                ctx,
+                code=ZodIssueCode.invalid_type,
+                expected=" | ".join(repr(a) for a in values),
+                received=ctx.parsed_type,
+            )
+            return INVALID
+        return OK(input.data)
+
+    @property
+    def options(self):
+        return self._def["values"]
+
+    @property
+    def enum(self):
+        return util.enum("ENUM", self.options)
+
+    @classmethod
+    def _create(cls, options, **params):
+        return super()._create(values=list(options), **params)
 
 
 class ZodWraps(ZodType):
@@ -744,7 +847,11 @@ class ZodUnion(ZodType):
         for option in options:
             # child_ctx = ...
             child_ctx = ParseContext(
-                **{**ctx, "common": Common(**{**ctx.common, "parent": None})}
+                **{
+                    **ctx,
+                    "common": Common(**{**ctx.common, "issues": []}),
+                    "parent": None,
+                }
             )
 
             result = option._parse(
@@ -794,3 +901,8 @@ float = ZodFloat._create
 number = ZodNumber._create
 union = ZodUnion._create
 object = ZodObject._create
+# array = ZodArray._create
+enum = ZodEnum._create
+# tuple = ZodTuple._create
+# record = ZodRecord._create
+lazy = ZodLazy._create

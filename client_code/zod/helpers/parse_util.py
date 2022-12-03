@@ -70,7 +70,7 @@ class ParseStatus:
         return ParseReturn(status.value, final)
 
 
-INVALID = ParseStatus(ABORTED)
+INVALID = ParseReturn(ABORTED, None)
 
 
 def make_issue(issue_data, data, path, error_maps):
