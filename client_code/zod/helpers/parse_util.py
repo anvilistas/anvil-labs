@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
-from . import Slotum
+from .slotum import Slotum
 
 __version__ = "0.0.1"
 

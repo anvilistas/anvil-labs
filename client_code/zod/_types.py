@@ -1,15 +1,14 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
-from datetime import date, datetime
-from typing import Optional
+from datetime import date as _date
+from datetime import datetime as _datetime
 
 from anvil import is_server_side
 
-from client_code.zod.helpers.error_util import error_to_obj
-
 from ._errors import ZodError, ZodIssueCode
 from .helpers import ZodParsedType, get_parsed_type, regex
+from .helpers.error_util import error_to_obj
 from .helpers.parse_util import (
     DIRTY,
     INVALID,
@@ -27,6 +26,8 @@ from .helpers.parse_util import (
 )
 
 __version__ = "0.0.1"
+
+any_ = any
 
 
 class ParseInputLazyPath:
@@ -54,7 +55,7 @@ def handle_result(ctx, result):
 def process_params(
     error_map=None, invalid_type_error=False, required_error=False, **extra
 ):
-    if not any([error_map, invalid_type_error, required_error]):
+    if not any_([error_map, invalid_type_error, required_error]):
         return extra
     if error_map and (invalid_type_error or required_error):
         raise Exception(
@@ -99,6 +100,7 @@ class ZodType:
                 expected=self._type,
                 received=ctx.parsed_type,
             )
+            return True
 
     def _parse(self, input):
         raise NotImplementedError("should be implemented by subclass")
@@ -284,11 +286,11 @@ class ZodString(ZodType):
                 format = check["format"]
                 try:
                     if format is not None:
-                        datetime.strptime(input.data, format)
+                        _datetime.strptime(input.data, format)
                     elif kind == "datetime":
-                        datetime.fromisoformat(input.data)
+                        _datetime.fromisoformat(input.data)
                     else:
-                        date.fromisoformat(input.data)
+                        _date.fromisoformat(input.data)
                 except Exception:
                     ctx = self._get_or_return_ctx(input, ctx)
                     add_issue_to_context(
@@ -779,15 +781,16 @@ class ZodUnion(ZodType):
 string = ZodString._create
 boolean = ZodBoolean._create
 none = ZodNone._create
-any_ = ZodAny._create
+any = ZodAny._create
 unknown = ZodUnknown._create
 never = ZodNever._create
 literal = ZodLiteral._create
 optional = ZodOptional._create
 nullable = ZodNullable._create
-date_ = ZodDate._create
-datetime_ = ZodDateTime._create
+date = ZodDate._create
+datetime = ZodDateTime._create
 integer = ZodInteger._create
 float = ZodFloat._create
 number = ZodNumber._create
 union = ZodUnion._create
+object = ZodObject._create
