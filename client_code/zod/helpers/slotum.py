@@ -3,6 +3,8 @@
 
 from ...cluegen import DatumBase, cluegen
 
+__version__ = "0.0.1"
+
 
 def all_slots(cls):
     slots = []
