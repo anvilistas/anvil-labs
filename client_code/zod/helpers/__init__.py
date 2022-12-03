@@ -3,6 +3,7 @@
 from datetime import date, datetime
 
 from ...cluegen import DatumBase, cluegen
+from .parse_util import MISSING
 from .util import enum
 
 __version__ = "0.0.1"
@@ -43,6 +44,21 @@ class Slotum(DatumBase):
             + ')"'
         )
 
+    @cluegen
+    def keys(cls):
+        slots = all_slots(cls)
+        return "def keys(self):\n" + f"  return {slots!r}"
+
+    @cluegen
+    def __getitem__(cls):
+        slots = all_slots(cls)
+        return (
+            "def __getitem__(self, key):\n"
+            + f"  if key in {slots!r}:\n"
+            + "    return getattr(self, key)\n"
+            + "  raise KeyError(key)"
+        )
+
 
 # Adjusted for python
 ZodParsedType = enum(
@@ -59,6 +75,7 @@ ZodParsedType = enum(
         # "symbol",
         "function",
         # "undefined",
+        "missing",
         "none",  # skulpt doesn't like null
         "array",
         "tuple",
@@ -78,6 +95,8 @@ NoneType = type(None)
 
 
 def get_parsed_type(data):
+    if data is MISSING:
+        return ZodParsedType.missing
 
     t = type(data)
 
