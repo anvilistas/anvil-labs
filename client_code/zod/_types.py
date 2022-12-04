@@ -8,9 +8,9 @@ from anvil import is_server_side
 
 from ._errors import ZodError, ZodIssueCode
 from .helpers import ZodParsedType, get_parsed_type, regex, util
-from .helpers.error_util import error_to_obj
-from .helpers.object_util import merge_shapes
+from .helpers.object_util import getitem, merge_shapes
 from .helpers.parse_util import (
+    ABORTED,
     DIRTY,
     INVALID,
     MISSING,
@@ -29,6 +29,7 @@ from .helpers.parse_util import (
 __version__ = "0.0.1"
 
 any_ = any
+isinstance_ = isinstance
 
 
 class ParseInputLazyPath:
@@ -81,7 +82,7 @@ class ZodType:
     def _create(cls, **params):
         return cls(process_params(**params))
 
-    def __init__(self, _def):
+    def __init__(self, _def: dict):
         self._def = _def
 
     @property
@@ -146,6 +147,9 @@ class ZodType:
         result = self._parse(input)
         return handle_result(ctx, result)
 
+    def array(self):
+        return ZodArray._create(self)
+
     def optional(self):
         return ZodOptional._create(self)
 
@@ -153,16 +157,46 @@ class ZodType:
         return ZodNullable._create(self)
 
     def default(self, value):
-        default = value
-        if not callable(value):
-            default = lambda: value  # noqa E731
-        return ZodDefault({"inner_type": self, "default": default})
+        return ZodDefault._create(self, value)
+
+    def catch(self, value):
+        return ZodCaatch._create(self, value)
 
     def or_(self, other):
         return ZodUnion._create([self, other])
 
     def and_(self, other):
-        pass
+        raise NotImplementedError("not implemented used z.object(A).merge(z.object(B))")
+
+    def refine(self, check, msg=None):
+        def get_issue_props(val):
+            if msg is None or type(msg) is str:
+                return {"msg": msg}
+            elif callable(msg):
+                return msg(val)
+            else:
+                return msg
+
+        def _refinement(val, ctx):
+            if check(val):
+                return True
+            else:
+                ctx.add_issue(code=ZodIssueCode.cusom, **get_issue_props(val))
+                return False
+
+        self._refinement(_refinement)
+
+    def _refinement(self, refinement):
+        return ZodEffects._create(
+            schema=self, effect={"type": "refinment", "refinement": refinement}
+        )
+
+    super_refine = _refinement
+
+    def transform(self, transform):
+        return ZodEffects._create(
+            schema=self, effect={"type": "transform", "transform": transform}
+        )
 
 
 class ZodString(ZodType):
@@ -659,7 +693,7 @@ class ZodObject(ZodType):
 
         for key in shape_keys:
             key_validator = shape[key]
-            value = ctx.data.get(key, MISSING)  # might want to change this
+            value = getitem(ctx.data, key, MISSING)
             pairs.append(
                 (
                     ParseReturn(VALID, key),
@@ -721,7 +755,7 @@ class ZodObject(ZodType):
                 except TypeError:
                     default_error = ctx.default_error
                 if issue.code == "unrecognized_keys":
-                    return {"msg": error_to_obj(msg)["msg"] or default_error}
+                    return {"msg": msg or default_error}
                 return {"msg": default_error}
 
             _def["error_map"] = error_map
@@ -777,7 +811,7 @@ class ZodObject(ZodType):
 
     def required(self, mask=None):
         def unwrap(field):
-            while isinstance(field, ZodOptional):
+            while isinstance_(field, ZodOptional):
                 field = field._def["inner_type"]
 
         if mask:
@@ -864,7 +898,9 @@ class ZodRecord(ZodType):
             (
                 key_type._parse(ParseInputLazyPath(ctx, key, ctx.path, key)),
                 value_type._parse(
-                    ParseInputLazyPath(ctx, ctx.data.get(key, MISSING), ctx.path, key)
+                    ParseInputLazyPath(
+                        ctx, getitem(ctx.data, key, MISSING), ctx.path, key
+                    )
                 ),
                 False,
             )
@@ -952,6 +988,53 @@ class ZodEnum(ZodType):
         return super()._create(values=list(options), **params)
 
 
+class CheckContext:
+    def __init__(self, status: ParseStatus, ctx: ParseContext):
+        self.status = status
+        self.ctx = ctx
+
+    def add_issue(self, **issue_data):
+        add_issue_to_context(self.ctx, **issue_data)
+        if issue_data.get("fatal"):
+            self.status.abort()
+        else:
+            self.status.dirty()
+
+    @property
+    def path(self):
+        return self.ctx.path
+
+
+class ZodEffects(ZodType):
+    def _parse(self, input):
+        status, ctx = self._process_input_params(input)
+
+        effect = self._def["effect"]
+        check_ctx = CheckContext(status, ctx)
+        if effect["type"] == "refinment":
+            inner = self._def["schema"]._parse(ParseInput(ctx.data, ctx.path, ctx))
+            if inner.status is ABORTED:
+                return INVALID
+            elif inner.status is DIRTY:
+                status.dirty()
+            effect["refinement"](inner.value, check_ctx)
+            return ParseReturn(status, inner.value)
+
+        if effect["type"] == "transform":
+            base = self._def["schema"]._parse(ParseInput(ctx.data, ctx.path, ctx))
+            if not is_valid(base):
+                return base
+
+            result = effect["transform"](base.value, check_ctx)
+            return ParseReturn(status, result)
+
+        assert False, "unnkown effect"
+
+    @classmethod
+    def _create(cls, schema, effect, **params):
+        return super()._create(schema=schema, effect=effect, **params)
+
+
 class ZodWraps(ZodType):
     _wraps = None
     _type = None
@@ -980,13 +1063,9 @@ class ZodNullable(ZodWraps):
     _type = ZodParsedType.none
 
 
-class ZodDefault(ZodType):
-    def _parse(self, input):
-        ctx = self._get_or_return_ctx(input)
-        data = ctx.data
-        if ctx.parsed_type is not ZodParsedType.missing:
-            data = self._def["default"]()
-        return self._def["inner_type"]._parse(data, path=ctx.path, parent=ctx)
+class ZodDefaultAbstract(ZodType):
+    def remove_default(self):
+        return self._def["inner_type"]
 
     @classmethod
     def _create(cls, type, default, **params):
@@ -994,6 +1073,23 @@ class ZodDefault(ZodType):
         if not callable(default):
             default_ = lambda: default  # noqa E731
         return super()._create(inner_type=type, default=default_, **params)
+
+
+class ZodDefault(ZodDefaultAbstract):
+    def _parse(self, input):
+        ctx = self._get_or_return_ctx(input)
+        data = ctx.data
+        if ctx.parsed_type is ZodParsedType.missing:
+            data = self._def["default"]()
+        return self._def["inner_type"]._parse(data, path=ctx.path, parent=ctx)
+
+
+class ZodCaatch(ZodDefaultAbstract):
+    def _parse(self, input):
+        ctx = self._get_or_return_ctx(input)
+        result = self._def["inner_type"]._parse(ParseInput(ctx.data, ctx.path, ctx))
+        value = result.value if result.status is VALID else self._def["default"]()
+        return ParseReturn(VALID, value)
 
 
 class ZodUnion(ZodType):
@@ -1044,6 +1140,22 @@ class ZodUnion(ZodType):
         return super()._create(options=types, **params)
 
 
+def custom(check=None, fatal=False, **params):
+    if check is not None:
+
+        def cusom_check(data, ctx):
+            if not check(data):
+                ctx.add_issue(code=ZodIssueCode.custom, fatal=fatal, **params)
+
+        return ZodAny._create().super_refine(cusom_check)
+    return ZodAny._create()
+
+
+def isinstance(cls, msg=""):
+    msg = msg or f"Input not instance of {cls.__name__}"
+    return custom(lambda data: isinstance(data, cls), fatal=True, msg=msg)
+
+
 string = ZodString._create
 boolean = ZodBoolean._create
 none = ZodNone._create
@@ -1060,8 +1172,9 @@ float = ZodFloat._create
 number = ZodNumber._create
 union = ZodUnion._create
 object = ZodObject._create
-# array = ZodArray._create
+array = ZodArray._create
 enum = ZodEnum._create
-# tuple = ZodTuple._create
-# record = ZodRecord._create
+tuple = ZodTuple._create
+record = ZodRecord._create
 lazy = ZodLazy._create
+NEVER = INVALID

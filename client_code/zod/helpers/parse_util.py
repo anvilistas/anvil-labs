@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
-from .slotum import Slotum
-
 __version__ = "0.0.1"
 
 VALID = "valid"
@@ -11,24 +9,52 @@ ABORTED = "aborted"
 MISSING = object()  # TODO
 
 
-class Common(Slotum):
-    __slots__ = ["issues", "context_error_map"]
+class DictLike:
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
+    def keys(self):
+        return self.__dict__.keys()
+
+    def __repr__(self):
+        items = self.__dict__.items()
+        return f"{type(self).__name__}({', '.join(f'{k}={v!r}' for k,v in items)})"
 
 
-class ParseContext(Slotum):
-    __slots__ = ["common", "path", "schema_error_map", "parent", "data", "parsed_type"]
+class Common(DictLike):
+    def __init__(self, issues, context_error_map):
+        self.issues = issues
+        self.context_error_map = context_error_map
 
 
-class ParseInput(Slotum):
-    __slots__ = ["data", "path", "parent"]
+class ParseContext(DictLike):
+    def __init__(self, common, path, schema_error_map, parent, data, parsed_type):
+        self.common = common
+        self.path = path
+        self.schema_error_map = schema_error_map
+        self.parent = parent
+        self.data = data
+        self.parsed_type = parsed_type
 
 
-class ParseReturn(Slotum):
-    __slots__ = ["status", "value"]
+class ParseInput(DictLike):
+    def __init__(self, data, path, parent):
+        self.data = data
+        self.path = path
+        self.parent = parent
 
 
-class ParseResult(Slotum):
-    __slots__ = ["success", "data", "error"]
+class ParseReturn(DictLike):
+    def __init__(self, status, value):
+        self.status = status
+        self.value = value
+
+
+class ParseResult(DictLike):
+    def __init__(self, success, data, error):
+        self.success = success
+        self.data = data
+        self.error = error
 
 
 class ParseStatus:
