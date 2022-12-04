@@ -3,8 +3,7 @@
 
 __version__ = "0.0.1"
 
-from ..errors import get_error_map
-from ..locales.en import error_map as default_error_map
+from ..errors import get_default_error_map, get_error_map
 from .util import DictLike
 
 VALID = "valid"
@@ -122,7 +121,7 @@ def add_issue_to_context(ctx: ParseContext, **issue_data):
                 ctx.common.contextual_error_map,
                 ctx.schema_error_map,
                 get_error_map(),
-                default_error_map,
+                get_default_error_map(),
             )
             if m
         ],

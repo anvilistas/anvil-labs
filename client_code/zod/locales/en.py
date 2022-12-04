@@ -5,13 +5,13 @@ from datetime import date, datetime
 
 from .._zod_error import ZodIssueCode
 from ..helpers import ZodParsedType
-from ..helpers.parse_util import ParseContext
+from ..helpers.parse_util import ErrorMapContext
 from ..helpers.util import join
 
 __version__ = "0.0.1"
 
 
-def error_map(issue, _ctx: ParseContext):
+def error_map(issue, _ctx: ErrorMapContext):
     msg = ""
     code = issue["code"]
     if code == ZodIssueCode.invalid_type:
@@ -29,8 +29,8 @@ def error_map(issue, _ctx: ParseContext):
     elif code == ZodIssueCode.invalid_union:
         msg = "Invalid input"
 
-    elif code == ZodIssueCode.invalid_union_discriminator:
-        msg = f"Invalid discriminator value. Expected {join(issue['options'])}"
+    # elif code == ZodIssueCode.invalid_union_discriminator:
+    #     msg = f"Invalid discriminator value. Expected {join(issue['options'])}"
 
     elif code == ZodIssueCode.invalid_enum_value:
         msg = f"Invalid enum value. Expected {join(issue['options'])}, received {issue['received']!r}"
@@ -47,10 +47,10 @@ def error_map(issue, _ctx: ParseContext):
     elif code == ZodIssueCode.invalid_string:
         if type(issue["validation"]) is dict:
             if "startswith" in issue["validation"]:
-                msg = f"Invalid input: must start with '{issue['validation'][ 'startswith' ]}'"
+                msg = f"Invalid input: must start with {issue['validation']['startswith']!r}"
             elif "endswith" in issue["validation"]:
                 msg = (
-                    f"Invalid input: must end with '{issue['validation']['endswith']}'"
+                    f"Invalid input: must end with {issue['validation']['endswith']!r}"
                 )
             else:
                 assert False, issue["validation"]

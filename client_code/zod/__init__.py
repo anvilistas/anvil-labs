@@ -24,5 +24,9 @@ from ._types import (
     union,
     unknown,
 )
+from ._zod_error import ZodError
+
+ParseError = ZodError
+
 
 __version__ = "0.0.1"
