@@ -555,6 +555,72 @@ class ZodNever(ZodType):
         return INVALID
 
 
+class ZodArray(ZodType):
+    _type = [ZodParsedType.array, ZodParsedType.tuple]
+
+    def _parse(self, input):
+        status, ctx = self._process_input_params(input)
+
+        if self._check_invalid_type(input):
+            return INVALID
+
+        for check in self._def["checks"]:
+            kind = check["kind"]
+
+            if kind == "min":
+                if len(ctx.data) < check["value"]:
+                    add_issue_to_context(
+                        ctx,
+                        code=ZodIssueCode.too_small,
+                        minimum=check["value"],
+                        type="array",
+                        inclusive=True,
+                        msg=check["msg"],
+                    )
+                    status.dirty()
+
+            elif kind == "max":
+                if len(ctx.data) > check["value"]:
+                    add_issue_to_context(
+                        ctx,
+                        code=ZodIssueCode.too_big,
+                        maximum=check["value"],
+                        type="array",
+                        inclusive=True,
+                        msg=check["msg"],
+                    )
+                    status.dirty()
+
+        type_schema = self._def["type"]
+
+        results = [
+            type_schema._parse(ParseInputLazyPath(ctx, item, ctx.path, i))
+            for i, item in enumerate(ctx.data)
+        ]
+
+        return ParseStatus.merge_list(status, results)
+
+    @property
+    def element(self):
+        return self._def["type"]
+
+    def min(self, min_length, msg=""):
+        return self._add_check(kind="min", value=min_length, msg=msg)
+
+    def max(self, max_length, msg=""):
+        return self._add_check(kind="max", value=max_length, msg=msg)
+
+    def len(self, len, msg=""):
+        return self.min(len, msg).max(len, msg)
+
+    def nonempty(self, msg=""):
+        return self.min(1, msg)
+
+    @classmethod
+    def _create(cls, schema, **params):
+        return super()._create(type=schema, checks=[], **params)
+
+
 class ZodObject(ZodType):
     _type = ZodParsedType.mapping
 
@@ -593,7 +659,7 @@ class ZodObject(ZodType):
 
         for key in shape_keys:
             key_validator = shape[key]
-            value = ctx.data.get(key, MISSING)
+            value = ctx.data.get(key, MISSING)  # might want to change this
             pairs.append(
                 (
                     ParseReturn(VALID, key),
@@ -722,14 +788,107 @@ class ZodObject(ZodType):
 
     def keyof(self):
         return ZodEnum._create(self.shape.keys())
-        # return createZodEnum(list(self.shape.keys()))
-        pass
 
     @classmethod
     def _create(cls, shape, **params):
         return super()._create(
             shape=lambda: shape, unknown_keys="strip", catchall=never(), **params
         )
+
+
+class ZodTuple(ZodType):
+    _type = [ZodParsedType.array, ZodParsedType.tuple]
+
+    def _parse(self, input):
+        status, ctx = self._process_input_params(input)
+        if self._check_invalid_type(input):
+            return INVALID
+
+        items = self._def["items"]
+        rest = self._def["rest"]
+
+        if len(ctx.data) < len(items):
+            add_issue_to_context(
+                ctx,
+                code=ZodIssueCode.too_small,
+                minimum=len(items),
+                inclusive=True,
+                type="array",
+            )
+            return INVALID
+
+        if not rest and len(ctx.data) > len(items):
+            add_issue_to_context(
+                ctx,
+                code=ZodIssueCode.too_big,
+                maximum=len(items),
+                inclusive=True,
+                type="array",
+            )
+            return INVALID
+
+        from itertools import zip_longest
+
+        results = [
+            schema._parse(ParseInputLazyPath(ctx, item, ctx.path, i))
+            for i, (item, schema) in enumerate(
+                zip_longest(ctx.data, items, fillvalue=rest)
+            )
+        ]
+        return ParseStatus.merge_list(status, results)
+
+    @property
+    def items(self):
+        return self._def["items"]
+
+    def rest(self, rest):
+        return ZodTuple({**self._def, "rest": rest})
+
+    @classmethod
+    def _create(cls, schemas, **params):
+        return super()._create(items=schemas, rest=None, **params)
+
+
+class ZodRecord(ZodType):
+    _type = ZodParsedType.mapping
+
+    def _parse(self, input):
+        status, ctx = self._process_input_params(input)
+        if self._check_invalid_type(input):
+            return INVALID
+
+        key_type = self._def["key_type"]
+        value_type = self._def["value_type"]
+
+        pairs = [
+            (
+                key_type._parse(ParseInputLazyPath(ctx, key, ctx.path, key)),
+                value_type._parse(
+                    ParseInputLazyPath(ctx, ctx.data.get(key, MISSING), ctx.path, key)
+                ),
+                False,
+            )
+            for key in ctx.data
+        ]
+
+        return ParseStatus.merge_dict(status, pairs)
+
+    @property
+    def key_schema(self):
+        return self._def["key_type"]
+
+    @property
+    def value_schema(self):
+        return self._def["value_type"]
+
+    element = value_schema
+
+    @classmethod
+    def _create(cls, *, keys=None, values=None, **params):
+        keys = keys or ZodString._create()
+        if values is None:
+            raise TypeError("record needs a value type")
+        return super()._create(keys_type=keys, value_type=values, **params)
 
 
 class ZodLazy(ZodType):
