@@ -652,6 +652,33 @@ class ZodArray(ZodType):
         return cls(dict(type=schema, checks=[], **process_params(**params)))
 
 
+class ZodEnum(ZodType):
+    def _parse(self, input):
+        values = self._def["values"]
+        if input.data not in values:
+            ctx = self._get_or_return_ctx(input)
+            add_issue_to_context(
+                ctx,
+                code=ZodIssueCode.invalid_type,
+                expected=" | ".join(repr(a) for a in values),
+                received=ctx.parsed_type,
+            )
+            return INVALID
+        return OK(input.data)
+
+    @property
+    def options(self):
+        return self._def["values"]
+
+    @property
+    def enum(self):
+        return util.enum("ENUM", self.options)
+
+    @classmethod
+    def create(cls, options, **params):
+        return cls(dict(values=list(options), **process_params(**params)))
+
+
 class ZodObject(ZodType):
     _type = ZodParsedType.mapping
 
@@ -961,33 +988,6 @@ class ZodLiteral(ZodType):
     @classmethod
     def create(cls, value, **params):
         return cls(dict(value=value, **process_params(**params)))
-
-
-class ZodEnum(ZodType):
-    def _parse(self, input):
-        values = self._def["values"]
-        if input.data not in values:
-            ctx = self._get_or_return_ctx(input)
-            add_issue_to_context(
-                ctx,
-                code=ZodIssueCode.invalid_type,
-                expected=" | ".join(repr(a) for a in values),
-                received=ctx.parsed_type,
-            )
-            return INVALID
-        return OK(input.data)
-
-    @property
-    def options(self):
-        return self._def["values"]
-
-    @property
-    def enum(self):
-        return util.enum("ENUM", self.options)
-
-    @classmethod
-    def create(cls, options, **params):
-        return cls(dict(values=list(options), **process_params(**params)))
 
 
 class CheckContext:
