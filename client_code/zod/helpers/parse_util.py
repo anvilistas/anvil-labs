@@ -3,38 +3,26 @@
 
 __version__ = "0.0.1"
 
+from ..errors import get_error_map
+from ..locales.en import error_map as default_error_map
+from .util import DictLike
+
 VALID = "valid"
 DIRTY = "dirty"
 ABORTED = "aborted"
 MISSING = object()  # TODO
 
 
-class DictLike:
-    def __getitem__(self, key):
-        return self.__dict__[key]
-
-    def __setitem__(self, key, val):
-        self.__dict__[key] = val
-
-    def keys(self):
-        return self.__dict__.keys()
-
-    def __repr__(self):
-        items = self.__dict__.items()
-        return f"{type(self).__name__}({', '.join(f'{k}={v!r}' for k,v in items)})"
-
-    def __str__(self):
-        return str(self.__dict__)
-
-
 class Common(DictLike):
-    def __init__(self, issues, context_error_map):
+    def __init__(self, issues, contextual_error_map):
         self.issues = issues
-        self.context_error_map = context_error_map
+        self.contextual_error_map = contextual_error_map
 
 
 class ParseContext(DictLike):
-    def __init__(self, common, path, schema_error_map, parent, data, parsed_type):
+    def __init__(
+        self, common: Common, path, schema_error_map, parent, data, parsed_type
+    ):
         self.common = common
         self.path = path
         self.schema_error_map = schema_error_map
@@ -105,18 +93,22 @@ class ParseStatus:
 INVALID = ParseReturn(ABORTED, None)
 
 
+class ErrorMapContext(DictLike):
+    def __init__(self, data, default_error):
+        self.data = data
+        self.default_error = default_error
+
+
 def make_issue(issue_data, data, path, error_maps):
     full_path = [*path, *issue_data.get("path", [])]
-    # full_issue = {**issue_data, "path": full_path}
+    full_issue = {**issue_data, "path": full_path}
     error_msg = ""
-    # const maps = errorMaps
-    #   .filter((m) => !!m)
-    #   .slice()
-    #   .reverse() as ZodErrorMap[];
-    # for (const map of maps) {
-    #   errormsg = map(fullIssue, { data, defaultError: errormsg }).msg;
-    # }
-    return {**issue_data, "path": full_path, "msg": issue_data.get("msg", error_msg)}
+    maps = reversed(list(filter(None, error_maps)))
+    for map in maps:
+        error_msg = map(
+            full_issue, ErrorMapContext(data=data, default_error=error_msg)
+        )["msg"]
+    return {**issue_data, "path": full_path, "msg": issue_data.get("msg") or error_msg}
 
 
 def add_issue_to_context(ctx: ParseContext, **issue_data):
@@ -125,11 +117,15 @@ def add_issue_to_context(ctx: ParseContext, **issue_data):
         data=ctx.data,
         path=ctx.path,
         error_maps=[
-            # ctx.common.contextual_error_map,
-            # ctx.schema_error_map,
-            # get_error_map(),
-            # default_error_map()
-        ],  # filter(x => !!x)
+            m
+            for m in (
+                ctx.common.contextual_error_map,
+                ctx.schema_error_map,
+                get_error_map(),
+                default_error_map,
+            )
+            if m
+        ],
     )
     ctx.common.issues.append(issue)
 

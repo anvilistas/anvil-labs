@@ -6,7 +6,7 @@ from datetime import datetime as _datetime
 
 from anvil import is_server_side
 
-from ._errors import ZodError, ZodIssueCode
+from ._zod_error import ZodError, ZodIssueCode
 from .helpers import ZodParsedType, get_parsed_type, regex, util
 from .helpers.object_util import getitem, merge_shapes
 from .helpers.parse_util import (
@@ -77,6 +77,7 @@ def process_params(
 
 class ZodType:
     _type = None
+    _type_name = None
 
     @classmethod
     def create(cls, **params):
@@ -99,7 +100,7 @@ class ZodType:
             add_issue_to_context(
                 ctx,
                 code=ZodIssueCode.invalid_type,
-                expected=self._type,
+                expected=self._type_name,
                 received=ctx.parsed_type,
             )
             return True
@@ -136,7 +137,7 @@ class ZodType:
 
     def safe_parse(self, data, **params):
         ctx = ParseContext(
-            common=Common(issues=[], context_error_map=params.get("error_map")),
+            common=Common(issues=[], contextual_error_map=params.get("error_map")),
             path=params.get("path", []),
             schema_error_map=self._def.get("error_map"),
             parent=None,
@@ -198,6 +199,7 @@ class ZodType:
 
 class ZodString(ZodType):
     _type = ZodParsedType.string
+    _type_name = _type
 
     def _parse(self, input: ParseInput):
         if self._check_invalid_type(input):
@@ -384,6 +386,7 @@ class ZodString(ZodType):
 
 class ZodAbstractNumber(ZodType):
     _type = ZodParsedType.number
+    _type_name = _type
 
     def _parse(self, input):
         if self._check_invalid_type(input):
@@ -405,7 +408,7 @@ class ZodAbstractNumber(ZodType):
                         ctx,
                         code=ZodIssueCode.too_small,
                         minimum=value,
-                        type=self._type,
+                        type=self._type_name,
                         inclusive=inclusive,
                         msg=check["msg"],
                     )
@@ -421,7 +424,7 @@ class ZodAbstractNumber(ZodType):
                         ctx,
                         code=ZodIssueCode.too_big,
                         minimum=value,
-                        type=self._type,
+                        type=self._type_name,
                         inclusive=inclusive,
                         msg=check["msg"],
                     )
@@ -473,18 +476,22 @@ class ZodAbstractNumber(ZodType):
 
 class ZodInteger(ZodAbstractNumber):
     _type = ZodParsedType.integer
+    _type_name = _type
 
 
 class ZodFloat(ZodAbstractNumber):
     _type = ZodParsedType.float
+    _type_name = _type
 
 
 class ZodNumber(ZodAbstractNumber):
     _type = [ZodParsedType.integer, ZodParsedType.float]
+    _type_name = ZodParsedType.number
 
 
 class ZodDateTime(ZodType):
     _type = ZodParsedType.datetime
+    _type_name = _type
 
     def _parse(self, input):
         if self._check_invalid_type(input):
@@ -501,7 +508,7 @@ class ZodDateTime(ZodType):
                     add_issue_to_context(
                         ctx,
                         code=ZodIssueCode.too_small,
-                        minimum=check["value"],
+                        minimum=check["value"].isoformat(),
                         type=self._type,
                         inclusive=True,
                         msg=check["msg"],
@@ -514,7 +521,7 @@ class ZodDateTime(ZodType):
                     add_issue_to_context(
                         ctx,
                         code=ZodIssueCode.too_big,
-                        maximum=check["value"],
+                        maximum=check["value"].isoformat(),
                         type=self._type,
                         inclusive=True,
                         msg=check["msg"],
@@ -539,10 +546,12 @@ class ZodDateTime(ZodType):
 
 class ZodDate(ZodDateTime):
     _type = ZodParsedType.date
+    _type_name = _type
 
 
 class ZodBoolean(ZodType):
     _type = ZodParsedType.boolean
+    _type_name = _type
 
     def _parse(self, input: ParseInput):
         if self._check_invalid_type(input):
@@ -552,6 +561,7 @@ class ZodBoolean(ZodType):
 
 class ZodNone(ZodType):
     _type = ZodParsedType.none
+    _type_name = _type
 
     def _parse(self, input: ParseInput):
         if self._check_invalid_type(input):
@@ -566,6 +576,7 @@ class ZodAny(ZodType):
 
 class ZodUnknown(ZodType):
     _type = ZodParsedType.unknown
+    _type_name = _type
     _unknown = True
 
     def _parse(self, input):
@@ -574,6 +585,7 @@ class ZodUnknown(ZodType):
 
 class ZodNever(ZodType):
     _type = ZodParsedType.never
+    _type_name = _type
 
     def _parse(self, input):
         ctx = self._get_or_return_ctx(input)
@@ -588,6 +600,7 @@ class ZodNever(ZodType):
 
 class ZodArray(ZodType):
     _type = [ZodParsedType.array, ZodParsedType.tuple]
+    _type_name = "array"
 
     def _parse(self, input):
         status, ctx = self._process_input_params(input)
@@ -681,6 +694,7 @@ class ZodEnum(ZodType):
 
 class ZodObject(ZodType):
     _type = ZodParsedType.mapping
+    _type_name = _type
 
     def __init__(self, _def):
         super().__init__(_def)
@@ -861,6 +875,7 @@ class ZodObject(ZodType):
 
 class ZodTuple(ZodType):
     _type = [ZodParsedType.array, ZodParsedType.tuple]
+    _type_name = _type
 
     def _parse(self, input):
         status, ctx = self._process_input_params(input)
@@ -914,6 +929,7 @@ class ZodTuple(ZodType):
 
 class ZodRecord(ZodType):
     _type = ZodParsedType.mapping
+    _type_name = _type
 
     def _parse(self, input):
         status, ctx = self._process_input_params(input)
@@ -1058,11 +1074,13 @@ class ZodWraps(ZodType):
 class ZodOptional(ZodWraps):
     _wraps = MISSING
     _type = ZodParsedType.missing
+    _type_name = _type
 
 
 class ZodNullable(ZodWraps):
     _wraps = None
     _type = ZodParsedType.none
+    _type_name = _type
 
 
 class ZodDefaultAbstract(ZodType):
@@ -1099,7 +1117,7 @@ class ZodUnion(ZodType):
         ctx = self._get_or_return_ctx(input)
         options = self._def["options"]
         dirty = None
-        all_issues = []
+        issues = []
 
         for option in options:
             # child_ctx = ...
@@ -1121,16 +1139,13 @@ class ZodUnion(ZodType):
                 dirty = {"result": result, "ctx": child_ctx}
 
             if child_ctx.common.issues:
-                all_issues.append(child_ctx.common.issues)  # should this be extend?
+                issues.append(child_ctx.common.issues)  # should this be extend?
 
         if dirty:
             ctx.common.issues.extend(dirty["ctx"].common.issues)
             return dirty["result"]
 
-        union_errors = [ZodError(issues) for issues in all_issues]
-        add_issue_to_context(
-            ctx, code=ZodIssueCode.invalid_union, union_erros=union_errors
-        )
+        add_issue_to_context(ctx, code=ZodIssueCode.invalid_union, union_issues=issues)
         return INVALID
 
     @property

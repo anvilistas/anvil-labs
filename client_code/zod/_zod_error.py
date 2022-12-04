@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
+import json
+
 from .helpers import util
-from .helpers.parse_util import DictLike
 
 __version__ = "0.0.1"
 
@@ -29,20 +30,33 @@ ZodIssueCode = util.enum(
 )
 
 
-class FieldErrors(DictLike):
+class FieldErrors(util.DictLike):
     def __init__(self):
         self._errors = []
+
+    def __getitem__(self, key):
+        try:
+            return self.__dict__[key]
+        except KeyError:
+            return FieldErrors()
+
+    def __repr__(self):
+        if len(self.__dict__) > 1 and not self._errors:
+            d = dict(self)
+            d.pop("_errors")
+            return repr(d)
+
+        return repr(self.__dict__)
 
 
 class ZodError(Exception):
     def __init__(self, issues):
         self.issues = issues
-        msg = ""
-        Exception.__init__(self, msg)
+        Exception.__init__(self, json.dumps(self.issues, indent=2))
 
     def format(self):
         def mapper(issue):
-            return issue.get("msg", "")
+            return issue.get("msg", "unknown")
 
         field_errors = FieldErrors()
 
@@ -52,8 +66,8 @@ class ZodError(Exception):
                 path = issue["path"]
 
                 if code == ZodIssueCode.invalid_union:
-                    for error in issue["union_errors"]:
-                        process_error(error)
+                    for issue in issue["union_issues"]:
+                        process_error(ZodError(issue))
                 elif not path:
                     field_errors._errors.append(mapper(issue))
 
@@ -63,8 +77,7 @@ class ZodError(Exception):
                     while i < len(path):
                         el = path[i]
                         terminal = i == len(path) - 1
-
-                        curr[el] = curr[el] or FieldErrors()
+                        curr[el] = curr.get(el) or FieldErrors()
                         if terminal:
                             curr[el]._errors.append(mapper(issue))
 
