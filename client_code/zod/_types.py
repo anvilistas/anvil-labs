@@ -17,6 +17,7 @@ from .helpers.parse_util import (
     OK,
     VALID,
     Common,
+    ErrorMapContext,
     ParseContext,
     ParseInput,
     ParseResult,
@@ -67,10 +68,12 @@ def process_params(
     if error_map:
         return {"error_map": error_map, **extra}
 
-    def custom_map(iss, ctx):
-        if iss["code"] != "invalid_type":
+    def custom_map(issue, ctx: ErrorMapContext):
+        if issue["code"] != "invalid_type":
             return {"msg": ctx.default_error}
-        # TODO
+        if issue["data"] is MISSING:
+            return {"msg": required_error or ctx.default_error}
+        return {"msg": invalid_type_error or ctx.default_error}
 
     return {"error_map": custom_map, **extra}
 
@@ -444,7 +447,8 @@ class ZodAbstractNumber(ZodType):
     def ge(self, value, msg=""):
         return self.set_limit("min", value, True, msg)
 
-    min = ge
+    def min(self, value, msg=""):
+        return self.set_limit("min", value, True, msg)
 
     def gt(self, value, msg=""):
         return self.set_limit("min", value, False, msg)
@@ -452,7 +456,8 @@ class ZodAbstractNumber(ZodType):
     def le(self, value, msg=""):
         return self.set_limit("max", value, True, msg)
 
-    max = le
+    def max(self, value, msg=""):
+        return self.set_limit("max", value, True, msg)
 
     def lt(self, value, msg=""):
         return self.set_limit("max", value, False, msg)
