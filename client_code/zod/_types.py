@@ -1183,7 +1183,7 @@ class ZodEffects(ZodType):
             elif inner.status is DIRTY:
                 status.dirty()
             effect["refinement"](inner.value, check_ctx)
-            return ParseReturn(status, inner.value)
+            return ParseReturn(status.value, inner.value)
 
         if effect["type"] == "transform":
             base = self._def["schema"]._parse(ParseInput(ctx.data, ctx.path, ctx))
@@ -1191,7 +1191,7 @@ class ZodEffects(ZodType):
                 return base
 
             result = effect["transform"](base.value, check_ctx)
-            return ParseReturn(status, result)
+            return ParseReturn(status.value, result)
 
         assert False, "unnkown effect"
 

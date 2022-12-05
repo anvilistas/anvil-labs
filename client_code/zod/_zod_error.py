@@ -29,7 +29,7 @@ ZodIssueCode = util.enum(
 
 
 class FieldErrors(util.DictLike):
-    __slots__ = ["_errors", "__dict__"]
+    __slots__ = ["_errors"]
 
     def __init__(self):
         self._errors = []
@@ -65,7 +65,7 @@ class ZodError(Exception):
         Exception.__init__(self, self.message)
 
     def format(self, mapper=_mapper):
-        if self._formatted:
+        if self._formatted is not None:
             return self._formatted
 
         self._formatted = field_errors = FieldErrors()
