@@ -13,7 +13,7 @@ __version__ = "0.0.1"
 
 def error_map(issue, _ctx: ErrorMapContext):
     msg = ""
-    code = issue["code"]
+    code = issue.get("code")
     if code == ZodIssueCode.invalid_type:
         if issue["received"] == ZodParsedType.missing:
             msg = "Required"
@@ -45,37 +45,38 @@ def error_map(issue, _ctx: ErrorMapContext):
         msg = "Invalid date"
 
     elif code == ZodIssueCode.invalid_string:
-        if type(issue["validation"]) is dict:
-            if "startswith" in issue["validation"]:
-                msg = f"Invalid input: must start with {issue['validation']['startswith']!r}"
-            elif "endswith" in issue["validation"]:
-                msg = (
-                    f"Invalid input: must end with {issue['validation']['endswith']!r}"
-                )
+        validation = issue.get("validation")
+        if type(validation) is dict:
+            if "startswith" in validation:
+                msg = f"Invalid input: must start with {validation['startswith']!r}"
+            elif "endswith" in validation:
+                msg = f"Invalid input: must end with {validation['endswith']!r}"
             else:
                 assert False, issue["validation"]
 
-        elif issue["validation"] != "regex":
+        elif validation != "regex":
             msg = f"Invalid {issue['validation']}"
         else:
             msg = "Invalid"
 
     elif code == ZodIssueCode.too_small:
-        if issue["type"] == "array":
+        t = issue.get("type")
+        if t == "array":
             msg = f"Array must contain {'at least' if issue['inclusive'] else 'more than'} {issue['minimum']} element(s)"
-        elif issue["type"] == "string":
+        elif t == "string":
             msg = f"String must contain {'at least' if issue['inclusive'] else 'over'} {issue['minimum']} character(s)"
-        elif issue["type"] in ("number", "date", "integer", "float", "datetime"):
+        elif t in ("number", "date", "integer", "float", "datetime"):
             msg = f"{issue['type'].capitalize()} must be greater than {'or equal to ' if issue['inclusive'] else ''}{issue['minimum']}"
         else:
             msg = "Invalid input"
 
     elif code == ZodIssueCode.too_big:
-        if issue["type"] == "array":
+        t = issue.get("type")
+        if t == "array":
             msg = f"Array must contain {'at most' if issue['inclusive'] else 'less than'} {issue['maximum']} element(s)"
-        elif issue["type"] == "string":
+        elif t == "string":
             msg = f"String must contain {'at most' if issue['inclusive'] else 'under'} {issue['maximum']} character(s)"
-        elif issue["type"] in ("number", "date", "integer", "float", "datetime"):
+        elif t in ("number", "date", "integer", "float", "datetime"):
             msg = f"{issue['type'].capitalize()} must must be less than {'or equal to ' if issue['inclusive'] else ''}{issue['maximum']}"
         else:
             msg = "Invalid input"
@@ -93,6 +94,6 @@ def error_map(issue, _ctx: ErrorMapContext):
     #   msg = "Number must be finite"
 
     else:
-        assert False, "Unknown error code"
+        assert False, "Unknown issue code"
 
     return {"msg": msg}

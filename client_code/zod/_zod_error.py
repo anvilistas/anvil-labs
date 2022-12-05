@@ -29,25 +29,15 @@ ZodIssueCode = util.enum(
 
 
 class FieldErrors(util.DictLike):
+    __slots__ = ["_errors", "__dict__"]
+
     def __init__(self):
         self._errors = []
 
-    def __getattr__(self, name):
-        return self[name]
-
-    def __getitem__(self, key):
-        try:
-            return self.__dict__[key]
-        except KeyError:
-            return FieldErrors()
-
     def __repr__(self):
-        if len(self.__dict__) > 1 and not self._errors:
-            d = dict(self)
-            d.pop("_errors")
-            return repr(d)
-
-        return repr(self.__dict__)
+        if self.__dict__ and not self._errors:
+            return repr(self.__dict__)
+        return repr({"_errors": self._errors, **self.__dict__})
 
 
 def _join_path(path):
@@ -74,11 +64,10 @@ class ZodError(Exception):
         self.msg = "; ".join(map(_join_messages, issues))
         Exception.__init__(self, self.msg)
 
-    def format(self, mapper=None):
+    def format(self, mapper=_mapper):
         if self._formatted:
             return self._formatted
 
-        mapper = mapper or _mapper
         self._formatted = field_errors = FieldErrors()
 
         def process_error(error: ZodError):
@@ -108,13 +97,14 @@ class ZodError(Exception):
         process_error(self)
         return field_errors
 
-    def errors(self, path=None):
-        formatted = self.format()
+    def errors(self, path=None, mapper=_mapper):
+        "returns a list of error messages at the specified path"
+        formatted = self.format(mapper)
         if path is None:
             return formatted._errors
         if type(path) is not list:
             path = [path]
 
         for p in path:
-            formatted = formatted[p]
+            formatted = formatted.get(p) or FieldErrors()
         return formatted._errors

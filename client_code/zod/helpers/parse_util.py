@@ -9,7 +9,7 @@ from .util import DictLike
 VALID = "valid"
 DIRTY = "dirty"
 ABORTED = "aborted"
-MISSING = object()  # TODO
+MISSING = object()
 
 
 class Common(DictLike):
@@ -98,6 +98,13 @@ class ErrorMapContext(DictLike):
         self.default_error = default_error
 
 
+class ParseIssue(DictLike):
+    def __init__(self, msg, path, **issue_data):
+        self.msg = msg
+        self.path = path
+        self.__dict__.update(**issue_data)
+
+
 def make_issue(issue_data, data, path, error_maps):
     full_path = [*path, *issue_data.get("path", [])]
     full_issue = {**issue_data, "path": full_path}
@@ -107,7 +114,9 @@ def make_issue(issue_data, data, path, error_maps):
         error_msg = map(
             full_issue, ErrorMapContext(data=data, default_error=error_msg)
         )["msg"]
-    return {**issue_data, "path": full_path, "msg": issue_data.get("msg") or error_msg}
+    return ParseIssue(
+        msg=issue_data.get("msg") or error_msg, path=full_path, **issue_data
+    )
 
 
 def add_issue_to_context(ctx: ParseContext, **issue_data):

@@ -55,6 +55,13 @@ def handle_result(ctx, result):
         return ParseResult(success=False, data=None, error=error)
 
 
+def _check_error_cb(rv):
+    assert (
+        type(rv) is dict and "msg" in rv
+    ), f"bad return type from error callback, expected str or {{'msg': str}}, got {rv!r}"
+    return rv
+
+
 def process_params(error_map=None, invalid_type_error=False, required_error=False):
     if not any_([error_map, invalid_type_error, required_error]):
         return {}
@@ -66,10 +73,11 @@ def process_params(error_map=None, invalid_type_error=False, required_error=Fals
     if error_map:
 
         def _error_map(issue, ctx):
-            rv = error_map(issue, ctx)
-            assert (
-                type(rv) is dict and "msg" in rv
-            ), f"bad return type from custom error_map, expected {{'msg': str}}, got {rv!r}"
+            rv = error_map(issue, ctx) or ctx.default_error
+            if type(rv) is str:
+                return {"msg": rv}
+
+            _check_error_cb(rv)
             return rv
 
         return {"error_map": _error_map}
@@ -175,16 +183,19 @@ class ZodType:
         "equivalent to z.union([a, b])"
         return ZodUnion._create([self, other])
 
-    def refine(self, check_fn, msg=None):
+    def refine(self, check_fn, msg=""):
         "add a custom check_fn(val) -> bool, msg: can be a str or a callable: (val) -> str"
 
         def get_issue_props(val):
-            if msg is None or type(msg) is str:
-                return {"msg": msg}
-            elif callable(msg):
-                return msg(val)
-            else:
-                return msg
+            rv = msg
+            if callable(rv):
+                rv = rv(val)
+
+            if type(rv) is str:
+                return {"msg": rv}
+
+            _check_error_cb(rv)
+            return rv
 
         def _refinement(val, ctx):
             if check_fn(val):
