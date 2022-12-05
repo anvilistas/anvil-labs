@@ -3,7 +3,7 @@
 
 __version__ = "0.0.1"
 
-__all__ = ["EMAIL", "UUID"]  # noqa: F822
+__all__ = ["EMAIL", "UUID", "URL"]  # noqa: F822
 
 
 _raw = {

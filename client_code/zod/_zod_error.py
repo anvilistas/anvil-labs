@@ -64,7 +64,7 @@ class ZodError(Exception):
         self.message = "; ".join(map(_join_messages, issues))
         Exception.__init__(self, self.message)
 
-    def format(self, mapper=_mapper):
+    def format(self):
         if self._formatted is not None:
             return self._formatted
 
@@ -79,7 +79,7 @@ class ZodError(Exception):
                     for issue in issue["union_issues"]:
                         process_error(ZodError(issue))
                 elif not path:
-                    field_errors._errors.append(mapper(issue))
+                    field_errors._errors.append(_mapper(issue))
 
                 else:
                     curr = field_errors
@@ -89,7 +89,7 @@ class ZodError(Exception):
                         terminal = i == len(path) - 1
                         curr[el] = curr.get(el) or FieldErrors()
                         if terminal:
-                            curr[el]._errors.append(mapper(issue))
+                            curr[el]._errors.append(_mapper(issue))
 
                         curr = curr[el]
                         i += 1
@@ -97,9 +97,9 @@ class ZodError(Exception):
         process_error(self)
         return field_errors
 
-    def errors(self, path=None, mapper=_mapper):
+    def errors(self, path=None):
         "returns a list of error messages at the specified path"
-        formatted = self.format(mapper)
+        formatted = self.format()
         if path is None:
             return formatted._errors
         if type(path) is not list:

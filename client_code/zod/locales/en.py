@@ -55,7 +55,7 @@ def error_map(issue, _ctx: ErrorMapContext):
                 assert False, issue["validation"]
 
         elif validation != "regex":
-            message = f"Invalid {issue['validation']}"
+            message = f"Invalid {validation}"
         else:
             message = "Invalid"
 

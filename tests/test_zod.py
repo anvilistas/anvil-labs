@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 import operator as op
+import re
 from datetime import date, datetime
 from functools import partial
 
@@ -372,8 +373,131 @@ def test_object_extend():
 
 
 def test_object():
-    # TODO
-    pass
+    Test = z.object(
+        {
+            "f1": z.number(),
+            "f2": z.string().optional(),
+            "f3": z.string().nullable(),
+            "f4": z.array(z.object({"t": z.union([z.string(), z.boolean()])})),
+        }
+    )
+    check_throws(Test, 42)
+    Test.parse(
+        {
+            "f1": 12,
+            "f2": "string",
+            "f3": "string",
+            "f4": [
+                {
+                    "t": "string",
+                },
+            ],
+        }
+    )
+
+    Test.parse(
+        {
+            "f1": 12,
+            "f3": None,
+            "f4": [
+                {
+                    "t": False,
+                },
+            ],
+        }
+    )
+
+    check_throws(Test, {})
+
+    data = {
+        "points": 2314,
+        "unknown": "asdf",
+    }
+    result = z.object({"points": z.number()}).parse(data)
+    # strip
+    assert result == {"points": 2314}
+    assert result is not data
+
+    val = (
+        z.object({"points": z.number()})
+        .strict()
+        .passthrough()
+        .strip()
+        .nonstrict()
+        .parse(data)
+    )
+    assert val == data
+
+    val = z.object({"points": z.number()}).strip().parse(data)
+    assert val == {"points": 2314}
+
+    check_throws(z.object({"points": z.number()}).strict(), data)
+
+    o1 = (
+        z.object(
+            {
+                "first": z.string().optional(),
+            }
+        )
+        .strict()
+        .catchall(z.number())
+    )
+
+    # // should run fine
+    # // setting a catchall overrides the unknownKeys behavior
+    o1.parse(
+        {
+            "asdf": 1234,
+        }
+    )
+
+    # // should only run catchall validation
+    # // against unknown keys
+    o1.parse(
+        {
+            "first": "asdf",
+            "asdf": 1234,
+        }
+    )
+
+    SNamedEntity = z.object(
+        {
+            "id": z.string(),
+            "set": z.string().nullable(),
+            "unset": z.string().optional(),
+        }
+    )
+
+    result = SNamedEntity.parse({"id": "asdf", "set": None})
+    assert result.keys() == {"id", "set"}
+
+    result = (
+        z.object({"name": z.string()})
+        .catchall(z.number())
+        .parse({"name": "Foo", "validExtraKey": 61})
+    )
+
+    assert result == {"name": "Foo", "validExtraKey": 61}
+
+    result2 = (
+        z.object({"name": z.string()})
+        .catchall(z.number())
+        .safe_parse({"name": "Foo", "validExtraKey": 61, "invalid": "asdf"})
+    )
+    assert not result2.success
+
+    Schema = z.union(
+        [
+            z.object({"a": z.string()}),
+            z.object({"b": z.number()}),
+        ]
+    )
+    obj = {"a": "A"}
+    assert Schema.safe_parse(obj).success
+
+    base = z.object({"name": z.string()})
+    withNewKey = base.set_key("age", z.number()).strict()
+    withNewKey.parse({"name": "asdf", "age": 1234})
 
 
 def test_optional():
@@ -507,7 +631,6 @@ def test_partials():
 
 
 def test_pick_omit():
-    # TODO
     fish = z.object(
         {
             "name": z.string(),
@@ -789,11 +912,137 @@ def test_safe_parse():
 
 
 def test_string():
-    pass
+    minFive = z.string().min(5, "min5")
+    maxFive = z.string().max(5, "max5")
+    justFive = z.string().len(5)
+    nonempty = z.string().nonempty("nonempty")
+    startsWith = z.string().startswith("startsWith")
+    endsWith = z.string().endswith("endsWith")
+
+    minFive.parse("12345")
+    minFive.parse("123456")
+    maxFive.parse("12345")
+    maxFive.parse("1234")
+    nonempty.parse("1")
+    justFive.parse("12345")
+    startsWith.parse("startsWithX")
+    endsWith.parse("XendsWith")
+
+    check_throws(minFive, "1234")
+    check_throws(maxFive, "123456")
+    check_throws(nonempty, "")
+    check_throws(justFive, "1234")
+    check_throws(justFive, "123456")
+    check_throws(startsWith, "x")
+    check_throws(endsWith, "x")
+
+    email = z.string().email()
+    email.parse("mojojojo@example.com")
+    check_throws(email, "asdf")
+    check_throws(email, "@lkjasdf.com")
+    check_throws(email, "asdf@sdf.")
+
+    data = [
+        '"josé.arrañoça"@domain.com',
+        '"сайт"@domain.com',
+        '"💩"@domain.com',
+        '"🍺🕺🎉"@domain.com',
+        "poop@💩.la",
+        '"🌮"@i❤️tacos.ws',
+    ]
+
+    email = z.string().email()
+
+    for datum in data:
+        email.parse(datum)
+
+    url = z.string().url()
+
+    url.parse("http://google.com")
+    url.parse("https://google.com/asdf?asdf=ljk3lk4&asdf=234#asdf")
+    check_throws(url, "asdf")
+    check_throws(url, "https:/")
+    check_throws(url, "asdfj@lkjsdf.com")
+
+    check_error_message(z.string().url(), "https", "Invalid url")
+    check_error_message(z.string().url("bad url"), "https", "bad url")
+
+    uuid = z.string().uuid("custom error")
+    uuid.parse("9491d710-3185-4e06-bea0-6a2f275345e0")
+    uuid.parse("00000000-0000-0000-0000-000000000000")
+    uuid.parse("b3ce60f8-e8b9-40f5-1150-172ede56ff74")
+    uuid.parse("92e76bf9-28b3-4730-cd7f-cb6bc51f8c09")
+    result = uuid.safe_parse("9491d710-3185-4e06-bea0-6a2f275345e0X")
+    assert not result.success
+    assert result.error.issues[0].message == "custom error"
+
+    z.string().regex(re.compile("^moo+$")).safe_parse("mooooo")
+    result = z.string().regex(re.compile("^moo+$")).safe_parse("booooo")
+    assert not result.success
+    assert result.error.issues[0].message == "Invalid"
+
+    schema = z.string().regex(re.compile(r"^\d+$"))
+    schema.parse("123")
+    schema.parse("123")
+    schema.parse("123")
+    schema.parse("123")
+    assert z.string().strip().min(2).parse(" 12 ") == "12"
+    # // ordering of methods is respected
+    assert z.string().min(2).strip().parse(" 1 ") == "1"
+
+    check_throws(z.string().strip().min(2), " 1 ")
+
+    dt = z.string().datetime()
+    dt.parse("1970-01-01T00:00:00.000")
+    dt.parse("2022-10-13T09:52:31.816")
+    dt.parse("2022-10-13T09:52:31.816")
+    dt.parse("1970-01-01T00:00:00")
+    dt.parse("2022-10-13T09:52:31")
+    check_throws(dt, "")
+    check_throws(dt, "foo")
+    # check_throws(dt, "2020-10-14")
+    check_throws(dt, "T18:45:12.123")
+    # check_throws(dt, "2020-10-14T17:42:29+00:00")
 
 
 def test_transformer():
-    pass
+
+    r1 = z.string().transform(len).parse("asdf")
+    assert r1 == 4
+
+    def use_never(val, ctx):
+        if not val:
+            ctx.add_issue(code="custom", message="bad")
+            return z.NEVER
+        return val
+
+    foo = z.number().nullable().transform(use_never)
+    check_error_message(foo, None, "bad")
+
+    numToString = z.number().transform(str)
+
+    data = z.object(
+        {
+            "id": numToString,
+        }
+    ).parse({"id": 5})
+
+    assert data == {"id": "5"}
+
+    data = z.string().default("asdf").parse(MISSING)
+    assert data == "asdf"
+
+    data = z.string().default(lambda: "string").parse(MISSING)
+    assert data == "string"
+
+    schema = z.string().refine(lambda v: False).transform(str.upper)
+    result = schema.safe_parse("asdf")
+    assert not result.success
+    assert result.error.issues[0].code == "custom"
+
+    result = schema.safe_parse(1234)
+    assert not result.success
+    assert result.error.issues[0].code == z._types.ZodIssueCode.invalid_type
 
 
 def test_tuple():

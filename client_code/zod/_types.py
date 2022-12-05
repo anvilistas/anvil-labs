@@ -385,7 +385,7 @@ class ZodString(ZodType):
         return self._add_check(kind="date", format=format, message=message)
 
     def regex(self, regex, message=""):
-        return self._add_check(kind="uuid", regex=regex, message=message)
+        return self._add_check(kind="regex", regex=regex, message=message)
 
     def startswith(self, value, message=""):
         return self._add_check(kind="startswith", value=value, message=message)
@@ -981,6 +981,8 @@ class ZodObject(ZodType):
     def passthrough(self):
         "ignore additional keys"
         return ZodObject({**self._def, "unknown_keys": "passthrough"})
+
+    nonstrict = passthrough
 
     def extend(self, shape):
         "create a new schema extending the shape of the object"
