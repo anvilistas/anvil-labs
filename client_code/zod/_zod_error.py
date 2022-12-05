@@ -46,23 +46,23 @@ def _join_path(path):
 
 def _join_messages(issue):
     path = issue["path"]
-    msg = issue.get("msg", "unknown")
+    message = issue.get("message", "unknown")
     if path:
-        return f"{msg} at {_join_path(path)}"
+        return f"{message} at {_join_path(path)}"
     else:
-        return msg
+        return message
 
 
 def _mapper(issue):
-    return issue.get("msg", "unknown")
+    return issue.get("message", "unknown")
 
 
 class ZodError(Exception):
     def __init__(self, issues):
         self.issues = issues
         self._formatted = None
-        self.msg = "; ".join(map(_join_messages, issues))
-        Exception.__init__(self, self.msg)
+        self.message = "; ".join(map(_join_messages, issues))
+        Exception.__init__(self, self.message)
 
     def format(self, mapper=_mapper):
         if self._formatted:

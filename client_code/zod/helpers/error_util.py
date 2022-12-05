@@ -4,7 +4,7 @@
 __version__ = "0.0.1"
 
 
-def err_to_obj(msg):
-    if type(msg) is str:
-        return {"msg": msg}
-    return msg or {"msg": ""}
+def err_to_obj(message):
+    if type(message) is str:
+        return {"message": message}
+    return message or {"message": ""}

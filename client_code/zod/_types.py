@@ -57,8 +57,8 @@ def handle_result(ctx, result):
 
 def _check_error_cb(rv):
     assert (
-        type(rv) is dict and "msg" in rv
-    ), f"bad return type from error callback, expected str or {{'msg': str}}, got {rv!r}"
+        type(rv) is dict and "message" in rv
+    ), f"bad return type from error callback, expected str or {{'message': str}}, got {rv!r}"
     return rv
 
 
@@ -75,7 +75,7 @@ def process_params(error_map=None, invalid_type_error=False, required_error=Fals
         def _error_map(issue, ctx):
             rv = error_map(issue, ctx) or ctx.default_error
             if type(rv) is str:
-                return {"msg": rv}
+                return {"message": rv}
 
             _check_error_cb(rv)
             return rv
@@ -84,10 +84,10 @@ def process_params(error_map=None, invalid_type_error=False, required_error=Fals
 
     def custom_map(issue, ctx: ErrorMapContext):
         if issue["code"] != "invalid_type":
-            return {"msg": ctx.default_error}
+            return {"message": ctx.default_error}
         if issue.get("data") is MISSING:
-            return {"msg": required_error or ctx.default_error}
-        return {"msg": invalid_type_error or ctx.default_error}
+            return {"message": required_error or ctx.default_error}
+        return {"message": invalid_type_error or ctx.default_error}
 
     return {"error_map": custom_map}
 
@@ -183,16 +183,16 @@ class ZodType:
         "equivalent to z.union([a, b])"
         return ZodUnion._create([self, other])
 
-    def refine(self, check_fn, msg=""):
-        "add a custom check_fn(val) -> bool, msg: can be a str or a callable: (val) -> str"
+    def refine(self, check_fn, message=""):
+        "add a custom check_fn(val) -> bool, message: can be a str or a callable: (val) -> str"
 
         def get_issue_props(val):
-            rv = msg
+            rv = message
             if callable(rv):
                 rv = rv(val)
 
             if type(rv) is str:
-                return {"msg": rv}
+                return {"message": rv}
 
             _check_error_cb(rv)
             return rv
@@ -242,7 +242,7 @@ class ZodString(ZodType):
                         minimum=check["value"],
                         type="string",
                         inclusive=True,
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -255,7 +255,7 @@ class ZodString(ZodType):
                         maximum=check["value"],
                         type="string",
                         inclusive=True,
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -266,7 +266,7 @@ class ZodString(ZodType):
                         ctx,
                         code=ZodIssueCode.invalid_string,
                         validation="email",
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -277,7 +277,7 @@ class ZodString(ZodType):
                         ctx,
                         code=ZodIssueCode.invalid_string,
                         validation="uuid",
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -298,7 +298,7 @@ class ZodString(ZodType):
                         ctx,
                         code=ZodIssueCode.invalid_string,
                         validation="url",
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -310,7 +310,7 @@ class ZodString(ZodType):
                         ctx,
                         code=ZodIssueCode.invalid_string,
                         validation="regex",
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -324,7 +324,7 @@ class ZodString(ZodType):
                         ctx,
                         code=ZodIssueCode.invalid_string,
                         validation={"startswith": check["value"]},
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -335,7 +335,7 @@ class ZodString(ZodType):
                         ctx,
                         code=ZodIssueCode.invalid_string,
                         validation={"endswith": check["value"]},
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -354,7 +354,7 @@ class ZodString(ZodType):
                         ctx,
                         code=ZodIssueCode.invalid_string,
                         validation=kind,
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -366,43 +366,43 @@ class ZodString(ZodType):
     def _add_check(self, **check):
         return ZodString({**self._def, "checks": [*self._def["checks"], check]})
 
-    def email(self, msg=""):
-        return self._add_check(kind="email", msg=msg)
+    def email(self, message=""):
+        return self._add_check(kind="email", message=message)
 
-    def url(self, msg=""):
-        return self._add_check(kind="url", msg=msg)
+    def url(self, message=""):
+        return self._add_check(kind="url", message=message)
 
-    def uuid(self, msg=""):
-        return self._add_check(kind="uuid", msg=msg)
+    def uuid(self, message=""):
+        return self._add_check(kind="uuid", message=message)
 
-    def datetime(self, format=None, msg=""):
+    def datetime(self, format=None, message=""):
         "default format is isoformat"
-        return self._add_check(kind="datetime", format=format, msg=msg)
+        return self._add_check(kind="datetime", format=format, message=message)
 
-    def date(self, format=None, msg=""):
+    def date(self, format=None, message=""):
         "default format is isoformat"
-        return self._add_check(kind="date", format=format, msg=msg)
+        return self._add_check(kind="date", format=format, message=message)
 
-    def regex(self, regex, msg=""):
-        return self._add_check(kind="uuid", regex=regex, msg=msg)
+    def regex(self, regex, message=""):
+        return self._add_check(kind="uuid", regex=regex, message=message)
 
-    def startswith(self, value, msg=""):
-        return self._add_check(kind="startswith", value=value, msg=msg)
+    def startswith(self, value, message=""):
+        return self._add_check(kind="startswith", value=value, message=message)
 
-    def endswith(self, value, msg=""):
-        return self._add_check(kind="endswith", value=value, msg=msg)
+    def endswith(self, value, message=""):
+        return self._add_check(kind="endswith", value=value, message=message)
 
-    def min(self, min_length: int, msg=""):
-        return self._add_check(kind="min", value=min_length, msg=msg)
+    def min(self, min_length: int, message=""):
+        return self._add_check(kind="min", value=min_length, message=message)
 
-    def max(self, min_length: int, msg=""):
-        return self._add_check(kind="max", value=min_length, msg=msg)
+    def max(self, min_length: int, message=""):
+        return self._add_check(kind="max", value=min_length, message=message)
 
-    def len(self, len: int, msg=""):
-        return self.min(len, msg).max(len, msg)
+    def len(self, len: int, message=""):
+        return self.min(len, message).max(len, message)
 
-    def nonempty(self, msg=""):
-        return self.min(1, msg)
+    def nonempty(self, message=""):
+        return self.min(1, message)
 
     def strip(self):
         "similar to z.string().transform(str.strip)"
@@ -439,7 +439,7 @@ class ZodAbstractNumber(ZodType):
                         minimum=value,
                         type=self._type_name,
                         inclusive=inclusive,
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -455,7 +455,7 @@ class ZodAbstractNumber(ZodType):
                         minimum=value,
                         type=self._type_name,
                         inclusive=inclusive,
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -476,38 +476,40 @@ class ZodInteger(ZodAbstractNumber):
     def _add_check(self, **check):
         return ZodInteger({**self._def, "checks": [*self._def["checks"], check]})
 
-    def set_limit(self, kind, value, inclusive, msg=""):
-        return self._add_check(kind=kind, value=value, inclusive=inclusive, msg=msg)
+    def set_limit(self, kind, value, inclusive, message=""):
+        return self._add_check(
+            kind=kind, value=value, inclusive=inclusive, message=message
+        )
 
-    def ge(self, value, msg=""):
-        return self.set_limit("min", value, True, msg)
+    def ge(self, value, message=""):
+        return self.set_limit("min", value, True, message)
 
-    def min(self, value, msg=""):
-        return self.set_limit("min", value, True, msg)
+    def min(self, value, message=""):
+        return self.set_limit("min", value, True, message)
 
-    def gt(self, value, msg=""):
-        return self.set_limit("min", value, False, msg)
+    def gt(self, value, message=""):
+        return self.set_limit("min", value, False, message)
 
-    def le(self, value, msg=""):
-        return self.set_limit("max", value, True, msg)
+    def le(self, value, message=""):
+        return self.set_limit("max", value, True, message)
 
-    def max(self, value, msg=""):
-        return self.set_limit("max", value, True, msg)
+    def max(self, value, message=""):
+        return self.set_limit("max", value, True, message)
 
-    def lt(self, value, msg=""):
-        return self.set_limit("max", value, False, msg)
+    def lt(self, value, message=""):
+        return self.set_limit("max", value, False, message)
 
-    def positive(self, msg=""):
-        return self.set_limit("min", 0, False, msg)
+    def positive(self, message=""):
+        return self.set_limit("min", 0, False, message)
 
-    def negative(self, msg=""):
-        return self.set_limit("max", 0, False, msg)
+    def negative(self, message=""):
+        return self.set_limit("max", 0, False, message)
 
-    def nonpositive(self, msg=""):
-        return self.set_limit("max", 0, True, msg)
+    def nonpositive(self, message=""):
+        return self.set_limit("max", 0, True, message)
 
-    def nonnegative(self, msg=""):
-        return self.set_limit("min", 0, True, msg)
+    def nonnegative(self, message=""):
+        return self.set_limit("min", 0, True, message)
 
     @classmethod
     def _create(cls, **params):
@@ -521,38 +523,40 @@ class ZodFloat(ZodAbstractNumber):
     def _add_check(self, **check):
         return ZodFloat({**self._def, "checks": [*self._def["checks"], check]})
 
-    def set_limit(self, kind, value, inclusive, msg=""):
-        return self._add_check(kind=kind, value=value, inclusive=inclusive, msg=msg)
+    def set_limit(self, kind, value, inclusive, message=""):
+        return self._add_check(
+            kind=kind, value=value, inclusive=inclusive, message=message
+        )
 
-    def ge(self, value, msg=""):
-        return self.set_limit("min", value, True, msg)
+    def ge(self, value, message=""):
+        return self.set_limit("min", value, True, message)
 
-    def min(self, value, msg=""):
-        return self.set_limit("min", value, True, msg)
+    def min(self, value, message=""):
+        return self.set_limit("min", value, True, message)
 
-    def gt(self, value, msg=""):
-        return self.set_limit("min", value, False, msg)
+    def gt(self, value, message=""):
+        return self.set_limit("min", value, False, message)
 
-    def le(self, value, msg=""):
-        return self.set_limit("max", value, True, msg)
+    def le(self, value, message=""):
+        return self.set_limit("max", value, True, message)
 
-    def max(self, value, msg=""):
-        return self.set_limit("max", value, True, msg)
+    def max(self, value, message=""):
+        return self.set_limit("max", value, True, message)
 
-    def lt(self, value, msg=""):
-        return self.set_limit("max", value, False, msg)
+    def lt(self, value, message=""):
+        return self.set_limit("max", value, False, message)
 
-    def positive(self, msg=""):
-        return self.set_limit("min", 0, False, msg)
+    def positive(self, message=""):
+        return self.set_limit("min", 0, False, message)
 
-    def negative(self, msg=""):
-        return self.set_limit("max", 0, False, msg)
+    def negative(self, message=""):
+        return self.set_limit("max", 0, False, message)
 
-    def nonpositive(self, msg=""):
-        return self.set_limit("max", 0, True, msg)
+    def nonpositive(self, message=""):
+        return self.set_limit("max", 0, True, message)
 
-    def nonnegative(self, msg=""):
-        return self.set_limit("min", 0, True, msg)
+    def nonnegative(self, message=""):
+        return self.set_limit("min", 0, True, message)
 
     @classmethod
     def _create(cls, **params):
@@ -566,38 +570,40 @@ class ZodNumber(ZodAbstractNumber):
     def _add_check(self, **check):
         return ZodNumber({**self._def, "checks": [*self._def["checks"], check]})
 
-    def set_limit(self, kind, value, inclusive, msg=""):
-        return self._add_check(kind=kind, value=value, inclusive=inclusive, msg=msg)
+    def set_limit(self, kind, value, inclusive, message=""):
+        return self._add_check(
+            kind=kind, value=value, inclusive=inclusive, message=message
+        )
 
-    def ge(self, value, msg=""):
-        return self.set_limit("min", value, True, msg)
+    def ge(self, value, message=""):
+        return self.set_limit("min", value, True, message)
 
-    def min(self, value, msg=""):
-        return self.set_limit("min", value, True, msg)
+    def min(self, value, message=""):
+        return self.set_limit("min", value, True, message)
 
-    def gt(self, value, msg=""):
-        return self.set_limit("min", value, False, msg)
+    def gt(self, value, message=""):
+        return self.set_limit("min", value, False, message)
 
-    def le(self, value, msg=""):
-        return self.set_limit("max", value, True, msg)
+    def le(self, value, message=""):
+        return self.set_limit("max", value, True, message)
 
-    def max(self, value, msg=""):
-        return self.set_limit("max", value, True, msg)
+    def max(self, value, message=""):
+        return self.set_limit("max", value, True, message)
 
-    def lt(self, value, msg=""):
-        return self.set_limit("max", value, False, msg)
+    def lt(self, value, message=""):
+        return self.set_limit("max", value, False, message)
 
-    def positive(self, msg=""):
-        return self.set_limit("min", 0, False, msg)
+    def positive(self, message=""):
+        return self.set_limit("min", 0, False, message)
 
-    def negative(self, msg=""):
-        return self.set_limit("max", 0, False, msg)
+    def negative(self, message=""):
+        return self.set_limit("max", 0, False, message)
 
-    def nonpositive(self, msg=""):
-        return self.set_limit("max", 0, True, msg)
+    def nonpositive(self, message=""):
+        return self.set_limit("max", 0, True, message)
 
-    def nonnegative(self, msg=""):
-        return self.set_limit("min", 0, True, msg)
+    def nonnegative(self, message=""):
+        return self.set_limit("min", 0, True, message)
 
     @classmethod
     def _create(cls, **params):
@@ -626,7 +632,7 @@ class ZodDateTime(ZodType):
                         minimum=check["value"].isoformat(),
                         type=self._type_name,
                         inclusive=True,
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -639,7 +645,7 @@ class ZodDateTime(ZodType):
                         maximum=check["value"].isoformat(),
                         type=self._type_name,
                         inclusive=True,
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -651,11 +657,11 @@ class ZodDateTime(ZodType):
     def _add_check(self, **check):
         return ZodDateTime({**self._def, "checks": [*self._def["checks"], check]})
 
-    def min(self, min_date: int, msg=""):
-        return self._add_check(kind="min", value=min_date, msg=msg)
+    def min(self, min_date: int, message=""):
+        return self._add_check(kind="min", value=min_date, message=message)
 
-    def max(self, max_date: int, msg=""):
-        return self._add_check(kind="max", value=max_date, msg=msg)
+    def max(self, max_date: int, message=""):
+        return self._add_check(kind="max", value=max_date, message=message)
 
     @classmethod
     def _create(cls, **params):
@@ -669,11 +675,11 @@ class ZodDate(ZodDateTime):
     def _add_check(self, **check):
         return ZodDate({**self._def, "checks": [*self._def["checks"], check]})
 
-    def min(self, min_date: int, msg=""):
-        return self._add_check(kind="min", value=min_date, msg=msg)
+    def min(self, min_date: int, message=""):
+        return self._add_check(kind="min", value=min_date, message=message)
 
-    def max(self, max_date: int, msg=""):
-        return self._add_check(kind="max", value=max_date, msg=msg)
+    def max(self, max_date: int, message=""):
+        return self._add_check(kind="max", value=max_date, message=message)
 
 
 class ZodBoolean(ZodType):
@@ -746,7 +752,7 @@ class ZodArray(ZodType):
                         minimum=check["value"],
                         type="array",
                         inclusive=True,
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -758,7 +764,7 @@ class ZodArray(ZodType):
                         maximum=check["value"],
                         type="array",
                         inclusive=True,
-                        msg=check["msg"],
+                        message=check["message"],
                     )
                     status.dirty()
 
@@ -778,17 +784,17 @@ class ZodArray(ZodType):
     def _add_check(self, **check):
         return ZodArray({**self._def, "checks": [*self._def["checks"], check]})
 
-    def min(self, min_length, msg=""):
-        return self._add_check(kind="min", value=min_length, msg=msg)
+    def min(self, min_length, message=""):
+        return self._add_check(kind="min", value=min_length, message=message)
 
-    def max(self, max_length, msg=""):
-        return self._add_check(kind="max", value=max_length, msg=msg)
+    def max(self, max_length, message=""):
+        return self._add_check(kind="max", value=max_length, message=message)
 
-    def len(self, len, msg=""):
-        return self.min(len, msg).max(len, msg)
+    def len(self, len, message=""):
+        return self.min(len, message).max(len, message)
 
-    def nonempty(self, msg=""):
-        return self.min(1, msg)
+    def nonempty(self, message=""):
+        return self.min(1, message)
 
     @classmethod
     def _create(cls, schema, **params):
@@ -913,19 +919,19 @@ class ZodObject(ZodType):
     def shape(self):
         return self._def["shape"]
 
-    def strict(self, msg=""):
+    def strict(self, message=""):
         "reject if theere are extra keys"
         _def = {**self._def, "unknown_keys": "strict"}
-        if msg:
+        if message:
 
             def error_map(issue, ctx):
                 try:
-                    default_error = self._def["error_map"](issue, ctx)["msg"]
+                    default_error = self._def["error_map"](issue, ctx)["message"]
                 except TypeError:
                     default_error = ctx.default_error
                 if issue.code == "unrecognized_keys":
-                    return {"msg": msg or default_error}
-                return {"msg": default_error}
+                    return {"message": message or default_error}
+                return {"message": default_error}
 
             _def["error_map"] = error_map
         return ZodObject(_def)
@@ -1309,9 +1315,9 @@ def custom(check=None, fatal=False, **params):
     return ZodAny._create()
 
 
-def isinstance(cls, msg=""):
-    msg = msg or f"Input not instance of {cls.__name__}"
-    return custom(lambda data: isinstance_(data, cls), fatal=True, msg=msg)
+def isinstance(cls, message=""):
+    message = message or f"Input not instance of {cls.__name__}"
+    return custom(lambda data: isinstance_(data, cls), fatal=True, message=message)
 
 
 string = ZodString._create

@@ -99,8 +99,8 @@ class ErrorMapContext(DictLike):
 
 
 class ParseIssue(DictLike):
-    def __init__(self, msg, path, **issue_data):
-        self.msg = msg
+    def __init__(self, message, path, **issue_data):
+        self.message = message
         self.path = path
         self.__dict__.update(**issue_data)
 
@@ -108,14 +108,14 @@ class ParseIssue(DictLike):
 def make_issue(issue_data, data, path, error_maps):
     full_path = [*path, *issue_data.get("path", [])]
     full_issue = {**issue_data, "path": full_path}
-    error_msg = ""
+    error_message = ""
     maps = reversed(list(filter(None, error_maps)))
     for map in maps:
-        error_msg = map(
-            full_issue, ErrorMapContext(data=data, default_error=error_msg)
-        )["msg"]
+        error_message = map(
+            full_issue, ErrorMapContext(data=data, default_error=error_message)
+        )["message"]
     return ParseIssue(
-        msg=issue_data.get("msg") or error_msg, path=full_path, **issue_data
+        message=issue_data.get("message") or error_message, path=full_path, **issue_data
     )
 
 

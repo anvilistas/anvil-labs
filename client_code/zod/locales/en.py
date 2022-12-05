@@ -12,88 +12,88 @@ __version__ = "0.0.1"
 
 
 def error_map(issue, _ctx: ErrorMapContext):
-    msg = ""
+    message = ""
     code = issue.get("code")
     if code == ZodIssueCode.invalid_type:
         if issue["received"] == ZodParsedType.missing:
-            msg = "Required"
+            message = "Required"
         else:
-            msg = f"Expected {issue['expected']}, received {issue['received']}"
+            message = f"Expected {issue['expected']}, received {issue['received']}"
 
     elif code == ZodIssueCode.invalid_literal:
-        msg = f"Invalid literal value, expected {issue['expected']!r}"
+        message = f"Invalid literal value, expected {issue['expected']!r}"
 
     elif code == ZodIssueCode.unrecognized_keys:
-        msg = f"Unrecognized key(s) in object: {join(issue['keys'], ', ')}"
+        message = f"Unrecognized key(s) in object: {join(issue['keys'], ', ')}"
 
     elif code == ZodIssueCode.invalid_union:
-        msg = "Invalid input"
+        message = "Invalid input"
 
     # elif code == ZodIssueCode.invalid_union_discriminator:
-    #     msg = f"Invalid discriminator value. Expected {join(issue['options'])}"
+    #     message = f"Invalid discriminator value. Expected {join(issue['options'])}"
 
     elif code == ZodIssueCode.invalid_enum_value:
-        msg = f"Invalid enum value. Expected {join(issue['options'])}, received {issue['received']!r}"
+        message = f"Invalid enum value. Expected {join(issue['options'])}, received {issue['received']!r}"
 
     # elif code == ZodIssueCode.invalid_arguments:
-    #     msg = "Invalid function arguments"
+    #     message = "Invalid function arguments"
 
     # elif code == ZodIssueCode.invalid_return_type:
-    #     msg = "Invalid function return type"
+    #     message = "Invalid function return type"
 
     elif code == ZodIssueCode.invalid_date:
-        msg = "Invalid date"
+        message = "Invalid date"
 
     elif code == ZodIssueCode.invalid_string:
         validation = issue.get("validation")
         if type(validation) is dict:
             if "startswith" in validation:
-                msg = f"Invalid input: must start with {validation['startswith']!r}"
+                message = f"Invalid input: must start with {validation['startswith']!r}"
             elif "endswith" in validation:
-                msg = f"Invalid input: must end with {validation['endswith']!r}"
+                message = f"Invalid input: must end with {validation['endswith']!r}"
             else:
                 assert False, issue["validation"]
 
         elif validation != "regex":
-            msg = f"Invalid {issue['validation']}"
+            message = f"Invalid {issue['validation']}"
         else:
-            msg = "Invalid"
+            message = "Invalid"
 
     elif code == ZodIssueCode.too_small:
         t = issue.get("type")
         if t == "array":
-            msg = f"Array must contain {'at least' if issue['inclusive'] else 'more than'} {issue['minimum']} element(s)"
+            message = f"Array must contain {'at least' if issue['inclusive'] else 'more than'} {issue['minimum']} element(s)"
         elif t == "string":
-            msg = f"String must contain {'at least' if issue['inclusive'] else 'over'} {issue['minimum']} character(s)"
+            message = f"String must contain {'at least' if issue['inclusive'] else 'over'} {issue['minimum']} character(s)"
         elif t in ("number", "date", "integer", "float", "datetime"):
-            msg = f"{issue['type'].capitalize()} must be greater than {'or equal to ' if issue['inclusive'] else ''}{issue['minimum']}"
+            message = f"{issue['type'].capitalize()} must be greater than {'or equal to ' if issue['inclusive'] else ''}{issue['minimum']}"
         else:
-            msg = "Invalid input"
+            message = "Invalid input"
 
     elif code == ZodIssueCode.too_big:
         t = issue.get("type")
         if t == "array":
-            msg = f"Array must contain {'at most' if issue['inclusive'] else 'less than'} {issue['maximum']} element(s)"
+            message = f"Array must contain {'at most' if issue['inclusive'] else 'less than'} {issue['maximum']} element(s)"
         elif t == "string":
-            msg = f"String must contain {'at most' if issue['inclusive'] else 'under'} {issue['maximum']} character(s)"
+            message = f"String must contain {'at most' if issue['inclusive'] else 'under'} {issue['maximum']} character(s)"
         elif t in ("number", "date", "integer", "float", "datetime"):
-            msg = f"{issue['type'].capitalize()} must must be less than {'or equal to ' if issue['inclusive'] else ''}{issue['maximum']}"
+            message = f"{issue['type'].capitalize()} must must be less than {'or equal to ' if issue['inclusive'] else ''}{issue['maximum']}"
         else:
-            msg = "Invalid input"
+            message = "Invalid input"
 
     elif code == ZodIssueCode.custom:
-        msg = "Invalid input"
+        message = "Invalid input"
 
     # elif code == ZodIssueCode.invalid_intersection_types:
-    #   msg = f"Intersection results could not be merged"
+    #   message = f"Intersection results could not be merged"
 
     # elif code == ZodIssueCode.not_multiple_of:
-    #   msg = f"Number must be a multiple of {issue['multipleOf']}"
+    #   message = f"Number must be a multiple of {issue['multipleOf']}"
 
     # elif code == ZodIssueCode.not_finite:
-    #   msg = "Number must be finite"
+    #   message = "Number must be finite"
 
     else:
         assert False, "Unknown issue code"
 
-    return {"msg": msg}
+    return {"message": message}
