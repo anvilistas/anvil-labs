@@ -77,7 +77,7 @@ def error_map(issue, _ctx: ErrorMapContext):
         elif t == "string":
             message = f"String must contain {'at most' if issue['inclusive'] else 'under'} {issue['maximum']} character(s)"
         elif t in ("number", "date", "integer", "float", "datetime"):
-            message = f"{issue['type'].capitalize()} must must be less than {'or equal to ' if issue['inclusive'] else ''}{issue['maximum']}"
+            message = f"{issue['type'].capitalize()} must be less than {'or equal to ' if issue['inclusive'] else ''}{issue['maximum']}"
         else:
             message = "Invalid input"
 

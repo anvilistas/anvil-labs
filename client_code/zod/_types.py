@@ -85,7 +85,7 @@ def process_params(error_map=None, invalid_type_error=False, required_error=Fals
     def custom_map(issue, ctx: ErrorMapContext):
         if issue["code"] != "invalid_type":
             return {"message": ctx.default_error}
-        if issue.get("data") is MISSING:
+        if issue.get("data", MISSING) is MISSING:
             return {"message": required_error or ctx.default_error}
         return {"message": invalid_type_error or ctx.default_error}
 
@@ -201,10 +201,10 @@ class ZodType:
             if check_fn(val):
                 return True
             else:
-                ctx.add_issue(code=ZodIssueCode.cusom, **get_issue_props(val))
+                ctx.add_issue(code=ZodIssueCode.custom, **get_issue_props(val))
                 return False
 
-        self._refinement(_refinement)
+        return self._refinement(_refinement)
 
     def _refinement(self, refinement):
         return ZodEffects._create(
@@ -452,7 +452,7 @@ class ZodAbstractNumber(ZodType):
                     add_issue_to_context(
                         ctx,
                         code=ZodIssueCode.too_big,
-                        minimum=value,
+                        maximum=value,
                         type=self._type_name,
                         inclusive=inclusive,
                         message=check["message"],
@@ -657,10 +657,10 @@ class ZodDateTime(ZodType):
     def _add_check(self, **check):
         return ZodDateTime({**self._def, "checks": [*self._def["checks"], check]})
 
-    def min(self, min_date: int, message=""):
+    def min(self, min_date: _datetime, message=""):
         return self._add_check(kind="min", value=min_date, message=message)
 
-    def max(self, max_date: int, message=""):
+    def max(self, max_date: _datetime, message=""):
         return self._add_check(kind="max", value=max_date, message=message)
 
     @classmethod
@@ -675,10 +675,10 @@ class ZodDate(ZodDateTime):
     def _add_check(self, **check):
         return ZodDate({**self._def, "checks": [*self._def["checks"], check]})
 
-    def min(self, min_date: int, message=""):
+    def min(self, min_date: _date, message=""):
         return self._add_check(kind="min", value=min_date, message=message)
 
-    def max(self, max_date: int, message=""):
+    def max(self, max_date: _date, message=""):
         return self._add_check(kind="max", value=max_date, message=message)
 
 
@@ -917,7 +917,7 @@ class ZodObject(ZodType):
 
     @property
     def shape(self):
-        return self._def["shape"]
+        return self._def["shape"]()
 
     def strict(self, message=""):
         "reject if theere are extra keys"
@@ -1060,6 +1060,7 @@ class ZodTuple(ZodType):
                 zip_longest(ctx.data, items, fillvalue=rest)
             )
         ]
+
         return ParseStatus.merge_list(status, results)
 
     @property
@@ -1170,6 +1171,16 @@ class CheckContext:
         return self.ctx.path
 
 
+def one_or_two_argument_call(fn, a, b):
+    # in skulpt we can't do much better than this
+    try:
+        return fn(a)  # common case
+    except TypeError as e:
+        if "argument" in str(e):
+            return fn(a, b)
+        raise e
+
+
 class ZodEffects(ZodType):
     def _parse(self, input):
         status, ctx = self._process_input_params(input)
@@ -1190,7 +1201,9 @@ class ZodEffects(ZodType):
             if not is_valid(base):
                 return base
 
-            result = effect["transform"](base.value, check_ctx)
+            result = one_or_two_argument_call(
+                effect["transform"], base.value, check_ctx
+            )
             return ParseReturn(status.value, result)
 
         assert False, "unnkown effect"
@@ -1248,7 +1261,9 @@ class ZodDefault(ZodDefaultAbstract):
         data = ctx.data
         if ctx.parsed_type is ZodParsedType.missing:
             data = self._def["default"]()
-        return self._def["inner_type"]._parse(data, path=ctx.path, parent=ctx)
+        return self._def["inner_type"]._parse(
+            ParseInput(data, path=ctx.path, parent=ctx)
+        )
 
 
 class ZodCatch(ZodDefaultAbstract):
@@ -1307,11 +1322,11 @@ class ZodUnion(ZodType):
 def custom(check=None, fatal=False, **params):
     if check is not None:
 
-        def cusom_check(data, ctx):
+        def custom_check(data, ctx):
             if not check(data):
                 ctx.add_issue(code=ZodIssueCode.custom, fatal=fatal, **params)
 
-        return ZodAny._create().super_refine(cusom_check)
+        return ZodAny._create().super_refine(custom_check)
     return ZodAny._create()
 
 
