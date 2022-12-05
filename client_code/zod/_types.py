@@ -55,27 +55,33 @@ def handle_result(ctx, result):
         return ParseResult(success=False, data=None, error=error)
 
 
-def process_params(
-    error_map=None, invalid_type_error=False, required_error=False, **extra
-):
+def process_params(error_map=None, invalid_type_error=False, required_error=False):
     if not any_([error_map, invalid_type_error, required_error]):
-        return extra
+        return {}
     if error_map and (invalid_type_error or required_error):
         raise Exception(
             'Can\'t use "invalid_type_error" or "required_error" in conjunction with custom error'
         )
 
     if error_map:
-        return {"error_map": error_map, **extra}
+
+        def _error_map(issue, ctx):
+            rv = error_map(issue, ctx)
+            assert (
+                type(rv) is dict and "msg" in rv
+            ), f"bad return type from custom error_map, expected {{'msg': str}}, got {rv!r}"
+            return rv
+
+        return {"error_map": _error_map}
 
     def custom_map(issue, ctx: ErrorMapContext):
         if issue["code"] != "invalid_type":
             return {"msg": ctx.default_error}
-        if issue["data"] is MISSING:
+        if issue.get("data") is MISSING:
             return {"msg": required_error or ctx.default_error}
         return {"msg": invalid_type_error or ctx.default_error}
 
-    return {"error_map": custom_map, **extra}
+    return {"error_map": custom_map}
 
 
 class ZodType:
@@ -83,15 +89,11 @@ class ZodType:
     _type_name = None
 
     @classmethod
-    def create(cls, **params):
+    def _create(cls, **params):
         return cls(process_params(**params))
 
     def __init__(self, _def: dict):
         self._def = _def
-
-    @property
-    def description(self):
-        return self._def["description"]
 
     def _check_invalid_type(self, input):
         parsed_type = self._get_type(input)
@@ -127,11 +129,6 @@ class ZodType:
     def _process_input_params(self, input: ParseInput):
         return ParseStatus(), self._get_or_return_ctx(input)
 
-    def _add_check(self, **check):
-        return type(self)({**self._def, "checks": [*self._def["checks"], check]})
-
-    _parse_sync = _parse
-
     def parse(self, data, **params):
         result = self.safe_parse(data, **params)
         if result.success:
@@ -152,24 +149,35 @@ class ZodType:
         return handle_result(ctx, result)
 
     def array(self):
-        return ZodArray.create(self)
+        return ZodArray._create(self)
 
     def optional(self):
-        return ZodOptional.create(self)
+        "might not exist"
+        return ZodOptional._create(self)
 
     def nullable(self):
-        return ZodNullable.create(self)
+        "can be None"
+        return ZodNullable._create(self)
+
+    def nullish(self):
+        "optional and nullable"
+        return self.optional().nullable()
 
     def default(self, value):
-        return ZodDefault.create(self, value)
+        "replace missing values with"
+        return ZodDefault._create(self, value)
 
     def catch(self, value):
-        return ZodCaatch.create(self, value)
+        "if the parse fails - replace with value"
+        return ZodCatch._create(self, value)
 
     def or_(self, other):
-        return ZodUnion.create([self, other])
+        "equivalent to z.union([a, b])"
+        return ZodUnion._create([self, other])
 
-    def refine(self, check, msg=None):
+    def refine(self, check_fn, msg=None):
+        "add a custom check_fn(val) -> bool, msg: can be a str or a callable: (val) -> str"
+
         def get_issue_props(val):
             if msg is None or type(msg) is str:
                 return {"msg": msg}
@@ -179,7 +187,7 @@ class ZodType:
                 return msg
 
         def _refinement(val, ctx):
-            if check(val):
+            if check_fn(val):
                 return True
             else:
                 ctx.add_issue(code=ZodIssueCode.cusom, **get_issue_props(val))
@@ -188,15 +196,16 @@ class ZodType:
         self._refinement(_refinement)
 
     def _refinement(self, refinement):
-        return ZodEffects.create(
+        return ZodEffects._create(
             schema=self, effect={"type": "refinment", "refinement": refinement}
         )
 
     super_refine = _refinement
 
-    def transform(self, transform):
-        return ZodEffects.create(
-            schema=self, effect={"type": "transform", "transform": transform}
+    def transform(self, transform_fn):
+        "transform the input with a custom transform function"
+        return ZodEffects._create(
+            schema=self, effect={"type": "transform", "transform": transform_fn}
         )
 
 
@@ -343,6 +352,9 @@ class ZodString(ZodType):
 
         return ParseReturn(status=status.value, value=input.data)
 
+    def _add_check(self, **check):
+        return ZodString({**self._def, "checks": [*self._def["checks"], check]})
+
     def email(self, msg=""):
         return self._add_check(kind="email", msg=msg)
 
@@ -353,9 +365,11 @@ class ZodString(ZodType):
         return self._add_check(kind="uuid", msg=msg)
 
     def datetime(self, format=None, msg=""):
+        "default format is isoformat"
         return self._add_check(kind="datetime", format=format, msg=msg)
 
     def date(self, format=None, msg=""):
+        "default format is isoformat"
         return self._add_check(kind="date", format=format, msg=msg)
 
     def regex(self, regex, msg=""):
@@ -380,10 +394,11 @@ class ZodString(ZodType):
         return self.min(1, msg)
 
     def strip(self):
+        "similar to z.string().transform(str.strip)"
         return self._add_check(kind="strip")
 
     @classmethod
-    def create(cls, **params):
+    def _create(cls, **params):
         return cls(dict(checks=[], **process_params(**params)))
 
 
@@ -438,8 +453,17 @@ class ZodAbstractNumber(ZodType):
 
         return ParseReturn(status=status.value, value=input.data)
 
+    @classmethod
+    def _create(cls, **params):
+        return cls(dict(checks=[], **process_params(**params)))
+
+
+class ZodInteger(ZodAbstractNumber):
+    _type = ZodParsedType.integer
+    _type_name = _type
+
     def _add_check(self, **check):
-        return type(self)({**self._def, "checks": [*self._def["checks"], check]})
+        return ZodInteger({**self._def, "checks": [*self._def["checks"], check]})
 
     def set_limit(self, kind, value, inclusive, msg=""):
         return self._add_check(kind=kind, value=value, inclusive=inclusive, msg=msg)
@@ -475,23 +499,98 @@ class ZodAbstractNumber(ZodType):
         return self.set_limit("min", 0, True, msg)
 
     @classmethod
-    def create(cls, **params):
+    def _create(cls, **params):
         return cls(dict(checks=[], **process_params(**params)))
-
-
-class ZodInteger(ZodAbstractNumber):
-    _type = ZodParsedType.integer
-    _type_name = _type
 
 
 class ZodFloat(ZodAbstractNumber):
     _type = ZodParsedType.float
     _type_name = _type
 
+    def _add_check(self, **check):
+        return ZodFloat({**self._def, "checks": [*self._def["checks"], check]})
+
+    def set_limit(self, kind, value, inclusive, msg=""):
+        return self._add_check(kind=kind, value=value, inclusive=inclusive, msg=msg)
+
+    def ge(self, value, msg=""):
+        return self.set_limit("min", value, True, msg)
+
+    def min(self, value, msg=""):
+        return self.set_limit("min", value, True, msg)
+
+    def gt(self, value, msg=""):
+        return self.set_limit("min", value, False, msg)
+
+    def le(self, value, msg=""):
+        return self.set_limit("max", value, True, msg)
+
+    def max(self, value, msg=""):
+        return self.set_limit("max", value, True, msg)
+
+    def lt(self, value, msg=""):
+        return self.set_limit("max", value, False, msg)
+
+    def positive(self, msg=""):
+        return self.set_limit("min", 0, False, msg)
+
+    def negative(self, msg=""):
+        return self.set_limit("max", 0, False, msg)
+
+    def nonpositive(self, msg=""):
+        return self.set_limit("max", 0, True, msg)
+
+    def nonnegative(self, msg=""):
+        return self.set_limit("min", 0, True, msg)
+
+    @classmethod
+    def _create(cls, **params):
+        return cls(dict(checks=[], **process_params(**params)))
+
 
 class ZodNumber(ZodAbstractNumber):
     _type = [ZodParsedType.integer, ZodParsedType.float]
     _type_name = ZodParsedType.number
+
+    def _add_check(self, **check):
+        return ZodNumber({**self._def, "checks": [*self._def["checks"], check]})
+
+    def set_limit(self, kind, value, inclusive, msg=""):
+        return self._add_check(kind=kind, value=value, inclusive=inclusive, msg=msg)
+
+    def ge(self, value, msg=""):
+        return self.set_limit("min", value, True, msg)
+
+    def min(self, value, msg=""):
+        return self.set_limit("min", value, True, msg)
+
+    def gt(self, value, msg=""):
+        return self.set_limit("min", value, False, msg)
+
+    def le(self, value, msg=""):
+        return self.set_limit("max", value, True, msg)
+
+    def max(self, value, msg=""):
+        return self.set_limit("max", value, True, msg)
+
+    def lt(self, value, msg=""):
+        return self.set_limit("max", value, False, msg)
+
+    def positive(self, msg=""):
+        return self.set_limit("min", 0, False, msg)
+
+    def negative(self, msg=""):
+        return self.set_limit("max", 0, False, msg)
+
+    def nonpositive(self, msg=""):
+        return self.set_limit("max", 0, True, msg)
+
+    def nonnegative(self, msg=""):
+        return self.set_limit("min", 0, True, msg)
+
+    @classmethod
+    def _create(cls, **params):
+        return cls(dict(checks=[], **process_params(**params)))
 
 
 class ZodDateTime(ZodType):
@@ -514,7 +613,7 @@ class ZodDateTime(ZodType):
                         ctx,
                         code=ZodIssueCode.too_small,
                         minimum=check["value"].isoformat(),
-                        type=self._type,
+                        type=self._type_name,
                         inclusive=True,
                         msg=check["msg"],
                     )
@@ -527,7 +626,7 @@ class ZodDateTime(ZodType):
                         ctx,
                         code=ZodIssueCode.too_big,
                         maximum=check["value"].isoformat(),
-                        type=self._type,
+                        type=self._type_name,
                         inclusive=True,
                         msg=check["msg"],
                     )
@@ -538,6 +637,9 @@ class ZodDateTime(ZodType):
 
         return ParseReturn(status=status.value, value=input.data)
 
+    def _add_check(self, **check):
+        return ZodDateTime({**self._def, "checks": [*self._def["checks"], check]})
+
     def min(self, min_date: int, msg=""):
         return self._add_check(kind="min", value=min_date, msg=msg)
 
@@ -545,13 +647,22 @@ class ZodDateTime(ZodType):
         return self._add_check(kind="max", value=max_date, msg=msg)
 
     @classmethod
-    def create(cls, **params):
+    def _create(cls, **params):
         return cls(dict(checks=[], **process_params(**params)))
 
 
 class ZodDate(ZodDateTime):
     _type = ZodParsedType.date
     _type_name = _type
+
+    def _add_check(self, **check):
+        return ZodDate({**self._def, "checks": [*self._def["checks"], check]})
+
+    def min(self, min_date: int, msg=""):
+        return self._add_check(kind="min", value=min_date, msg=msg)
+
+    def max(self, max_date: int, msg=""):
+        return self._add_check(kind="max", value=max_date, msg=msg)
 
 
 class ZodBoolean(ZodType):
@@ -653,6 +764,9 @@ class ZodArray(ZodType):
     def element(self):
         return self._def["type"]
 
+    def _add_check(self, **check):
+        return ZodArray({**self._def, "checks": [*self._def["checks"], check]})
+
     def min(self, min_length, msg=""):
         return self._add_check(kind="min", value=min_length, msg=msg)
 
@@ -666,7 +780,7 @@ class ZodArray(ZodType):
         return self.min(1, msg)
 
     @classmethod
-    def create(cls, schema, **params):
+    def _create(cls, schema, **params):
         return cls(dict(type=schema, checks=[], **process_params(**params)))
 
 
@@ -693,7 +807,7 @@ class ZodEnum(ZodType):
         return util.enum("ENUM", self.options)
 
     @classmethod
-    def create(cls, options, **params):
+    def _create(cls, options, **params):
         return cls(dict(values=list(options), **process_params(**params)))
 
 
@@ -789,6 +903,7 @@ class ZodObject(ZodType):
         return self._def["shape"]
 
     def strict(self, msg=""):
+        "reject if theere are extra keys"
         _def = {**self._def, "unknown_keys": "strict"}
         if msg:
 
@@ -805,27 +920,31 @@ class ZodObject(ZodType):
         return ZodObject(_def)
 
     def strip(self):
+        "return the data without additional keys"
         return ZodObject({**self._def, "unknown_keys": "strip"})
 
     def passthrough(self):
+        "ignore additional keys"
         return ZodObject({**self._def, "unknown_keys": "passthrough"})
 
-    def augment(self, shape):
+    def extend(self, shape):
+        "create a new schema extending the shape of the object"
         return ZodObject(
             {**self._def, "shape": lambda: merge_shapes(self.shape, shape)}
         )
 
-    extend = augment
-
     def set_key(self, key, schema):
-        return self.augment({key: schema})
+        "returns a new schema with the additional key"
+        return self.extend({key: schema})
 
-    def merge(self, merging):
+    def merge(self, merge_with):
+        "merge two object schemas"
+        assert type(merge_with) is ZodObject, "expected a zod object schema"
         merged = {
-            "unknown_keys": merging._def["unknown_keys"],
-            "catchall": merging._def["catchall"],
+            "unknown_keys": merge_with._def["unknown_keys"],
+            "catchall": merge_with._def["catchall"],
             "shape": lambda: merge_shapes(
-                self._def["shape"](), merging._def["shape"]()
+                self._def["shape"](), merge_with._def["shape"]()
             ),
         }
         return ZodObject(merged)
@@ -834,16 +953,19 @@ class ZodObject(ZodType):
         return ZodObject({**self._def, "catchall": index})
 
     def pick(self, mask):
+        "mask should be an iterable of keys, retuns a new schema with only those keys"
         this_shape = self.shape
         shape = {k: this_shape[k] for k in mask if k in this_shape}
         return ZodObject({**self._def, "shape": lambda: shape})
 
     def omit(self, mask):
+        "mask should be an iterable of keys, retuns a new schema without those keys"
         this_shape = self.shape
         shape = {k: v for k, v in this_shape.items() if k not in mask}
         return ZodObject({**self._def, "shape": lambda: shape})
 
     def partial(self, mask=None):
+        "returns a new schema where values are optional. If a mask is provided, only those keys will become optional"
         if mask:
             shape = {
                 k: (v.optional() if k in mask else v) for k, v in self.shape.items()
@@ -853,6 +975,8 @@ class ZodObject(ZodType):
         return ZodObject({**self._def, "shape": lambda: shape})
 
     def required(self, mask=None):
+        "returns a new schema where values are required. If a mask is provided, only those keys will become required"
+
         def unwrap(field):
             while isinstance_(field, ZodOptional):
                 field = field._def["inner_type"]
@@ -864,10 +988,11 @@ class ZodObject(ZodType):
         return ZodObject({**self._def, "shape": lambda: shape})
 
     def keyof(self):
-        return ZodEnum.create(self.shape.keys())
+        "get the schema value for a key"
+        return ZodEnum._create(self.shape.keys())
 
     @classmethod
-    def create(cls, shape, **params):
+    def _create(cls, shape, **params):
         return cls(
             dict(
                 shape=lambda: shape,
@@ -928,7 +1053,7 @@ class ZodTuple(ZodType):
         return ZodTuple({**self._def, "rest": rest})
 
     @classmethod
-    def create(cls, schemas, **params):
+    def _create(cls, schemas, **params):
         return cls(dict(items=schemas, rest=None, **process_params(**params)))
 
 
@@ -970,8 +1095,8 @@ class ZodRecord(ZodType):
     element = value_schema
 
     @classmethod
-    def create(cls, *, keys=None, values=None, **params):
-        keys = keys or ZodString.create()
+    def _create(cls, *, keys=None, values=None, **params):
+        keys = keys or ZodString._create()
         if values is None:
             raise TypeError("record needs a value type")
         return cls(dict(keys_type=keys, value_type=values, **process_params(**params)))
@@ -987,7 +1112,7 @@ class ZodLazy(ZodType):
         return self._def["getter"]()
 
     @classmethod
-    def create(cls, getter, **params):
+    def _create(cls, getter, **params):
         return cls(dict(getter=getter, **process_params(**params)))
 
 
@@ -1007,7 +1132,7 @@ class ZodLiteral(ZodType):
         return self._def["value"]
 
     @classmethod
-    def create(cls, value, **params):
+    def _create(cls, value, **params):
         return cls(dict(value=value, **process_params(**params)))
 
 
@@ -1054,7 +1179,7 @@ class ZodEffects(ZodType):
         assert False, "unnkown effect"
 
     @classmethod
-    def create(cls, schema, effect, **params):
+    def _create(cls, schema, effect, **params):
         return cls(dict(schema=schema, effect=effect, **process_params(**params)))
 
 
@@ -1072,7 +1197,7 @@ class ZodWraps(ZodType):
         return self._def["inner_type"]
 
     @classmethod
-    def create(cls, type, **params):
+    def _create(cls, type, **params):
         return cls(dict(inner_type=type, **process_params(**params)))
 
 
@@ -1093,7 +1218,7 @@ class ZodDefaultAbstract(ZodType):
         return self._def["inner_type"]
 
     @classmethod
-    def create(cls, type, default, **params):
+    def _create(cls, type, default, **params):
         default_ = default
         if not callable(default):
             default_ = lambda: default  # noqa E731
@@ -1109,7 +1234,7 @@ class ZodDefault(ZodDefaultAbstract):
         return self._def["inner_type"]._parse(data, path=ctx.path, parent=ctx)
 
 
-class ZodCaatch(ZodDefaultAbstract):
+class ZodCatch(ZodDefaultAbstract):
     def _parse(self, input):
         ctx = self._get_or_return_ctx(input)
         result = self._def["inner_type"]._parse(ParseInput(ctx.data, ctx.path, ctx))
@@ -1158,7 +1283,7 @@ class ZodUnion(ZodType):
         return self._def["options"]
 
     @classmethod
-    def create(cls, types, **params):
+    def _create(cls, types, **params):
         return cls(dict(options=types, **process_params(**params)))
 
 
@@ -1169,34 +1294,34 @@ def custom(check=None, fatal=False, **params):
             if not check(data):
                 ctx.add_issue(code=ZodIssueCode.custom, fatal=fatal, **params)
 
-        return ZodAny.create().super_refine(cusom_check)
-    return ZodAny.create()
+        return ZodAny._create().super_refine(cusom_check)
+    return ZodAny._create()
 
 
 def isinstance(cls, msg=""):
     msg = msg or f"Input not instance of {cls.__name__}"
-    return custom(lambda data: isinstance(data, cls), fatal=True, msg=msg)
+    return custom(lambda data: isinstance_(data, cls), fatal=True, msg=msg)
 
 
-string = ZodString.create
-boolean = ZodBoolean.create
-none = ZodNone.create
-any = ZodAny.create
-unknown = ZodUnknown.create
-never = ZodNever.create
-literal = ZodLiteral.create
-optional = ZodOptional.create
-nullable = ZodNullable.create
-date = ZodDate.create
-datetime = ZodDateTime.create
-integer = ZodInteger.create
-float = ZodFloat.create
-number = ZodNumber.create
-union = ZodUnion.create
-object = ZodObject.create
-array = ZodArray.create
-enum = ZodEnum.create
-tuple = ZodTuple.create
-record = ZodRecord.create
-lazy = ZodLazy.create
+string = ZodString._create
+boolean = ZodBoolean._create
+none = ZodNone._create
+any = ZodAny._create
+unknown = ZodUnknown._create
+never = ZodNever._create
+literal = ZodLiteral._create
+optional = ZodOptional._create
+nullable = ZodNullable._create
+date = ZodDate._create
+datetime = ZodDateTime._create
+integer = ZodInteger._create
+float = ZodFloat._create
+number = ZodNumber._create
+union = ZodUnion._create
+object = ZodObject._create
+array = ZodArray._create
+enum = ZodEnum._create
+tuple = ZodTuple._create
+record = ZodRecord._create
+lazy = ZodLazy._create
 NEVER = INVALID
