@@ -31,6 +31,7 @@ __version__ = "0.0.1"
 
 any_ = any
 isinstance_ = isinstance
+float_ = float
 
 
 class ParseInputLazyPath:
@@ -183,7 +184,7 @@ class ZodType:
         "equivalent to z.union([a, b])"
         return ZodUnion._create([self, other])
 
-    def refine(self, check_fn, message=""):
+    def refine(self, check_fn, message="", **issue_params):
         "add a custom check_fn(val) -> bool, message: can be a str or a callable: (val) -> str"
 
         def get_issue_props(val):
@@ -192,10 +193,10 @@ class ZodType:
                 rv = rv(val)
 
             if type(rv) is str:
-                return {"message": rv}
+                return {"message": rv, **issue_params}
 
-            _check_error_cb(rv)
-            return rv
+            rv = _check_error_cb(rv)
+            return {**rv, **issue_params}
 
         def _refinement(val, ctx):
             if check_fn(val):
@@ -427,7 +428,20 @@ class ZodAbstractNumber(ZodType):
         for check in self._def["checks"]:
             kind = check["kind"]
 
-            if kind == "min":
+            if kind == "int":
+                data = input.data
+                if type(data) is float_ and not data.is_integer():
+                    ctx = self._get_or_return_ctx(input, ctx)
+                    add_issue_to_context(
+                        ctx,
+                        code=ZodIssueCode.invalid_type,
+                        expected="integer",
+                        received="float",
+                        message=check["message"],
+                    )
+                    status.dirty()
+
+            elif kind == "min":
                 value = check["value"]
                 inclusive = check["inclusive"]
                 too_small = input.data < value if inclusive else input.data <= value
@@ -528,6 +542,9 @@ class ZodFloat(ZodAbstractNumber):
             kind=kind, value=value, inclusive=inclusive, message=message
         )
 
+    def int(self, message=""):
+        return self._add_check(kind="int", message=message)
+
     def ge(self, value, message=""):
         return self.set_limit("min", value, True, message)
 
@@ -574,6 +591,9 @@ class ZodNumber(ZodAbstractNumber):
         return self._add_check(
             kind=kind, value=value, inclusive=inclusive, message=message
         )
+
+    def int(self, message=""):
+        return self._add_check(kind="int", message=message)
 
     def ge(self, value, message=""):
         return self.set_limit("min", value, True, message)
@@ -828,6 +848,24 @@ class ZodEnum(ZodType):
         return cls(dict(values=list(options), **process_params(**params)))
 
 
+def deep_partialify(schema):
+    t = type(schema)
+    if t is ZodObject:
+        new_shape = {
+            k: ZodOptional._create(deep_partialify(v)) for k, v in schema.shape.items()
+        }
+        return ZodObject({**schema._def, "shape": lambda: new_shape})
+    if t is ZodArray:
+        return ZodArray._create(deep_partialify(schema.element))
+    if t is ZodOptional:
+        return ZodOptional._create(deep_partialify(schema.unwrap()))
+    if t is ZodNullable:
+        return ZodNullable._create(deep_partialify(schema.unwrap()))
+    if t is ZodTuple:
+        return ZodTuple._create([deep_partialify(item) for item in schema.items])
+    return schema
+
+
 class ZodObject(ZodType):
     _type = ZodParsedType.mapping
     _type_name = _type
@@ -991,12 +1029,16 @@ class ZodObject(ZodType):
             shape = {k: v.optional() for k, v in self.shape.items()}
         return ZodObject({**self._def, "shape": lambda: shape})
 
+    def deep_partial(self):
+        return deep_partialify(self)
+
     def required(self, mask=None):
         "returns a new schema where values are required. If a mask is provided, only those keys will become required"
 
         def unwrap(field):
             while isinstance_(field, ZodOptional):
                 field = field._def["inner_type"]
+            return field
 
         if mask:
             shape = {k: (unwrap(v) if k in mask else v) for k, v in self.shape.items()}
@@ -1113,11 +1155,13 @@ class ZodRecord(ZodType):
     element = value_schema
 
     @classmethod
-    def _create(cls, *, keys=None, values=None, **params):
-        keys = keys or ZodString._create()
-        if values is None:
-            raise TypeError("record needs a value type")
-        return cls(dict(keys_type=keys, value_type=values, **process_params(**params)))
+    def _create(cls, _keys=MISSING, _vals=MISSING, **params):
+        if _vals is MISSING and _keys is MISSING:
+            raise TypeError("must define either values, or keys and values")
+        if _vals is MISSING:
+            _vals = _keys
+            _keys = ZodString._create()
+        return cls(dict(key_type=_keys, value_type=_vals, **process_params(**params)))
 
 
 class ZodLazy(ZodType):

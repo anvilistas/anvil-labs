@@ -193,7 +193,7 @@ def test_crazy_schema():
     )
 
 
-def date_test():
+def test_date():
 
     before = date(2022, 10, 4)
     dt = date(2022, 10, 5)
@@ -327,7 +327,7 @@ def test_number():
     gteFive = z.number().ge(5)
     ltFive = z.number().lt(5)
     lteFive = z.number().le(5)
-    # intNum = z.number().int()
+    intNum = z.number().int()
     # multipleOfFive = z.number().multipleOf(5)
     # finite = z.number().finite()
     # stepPointOne = z.number().step(0.1)
@@ -344,7 +344,8 @@ def test_number():
     gteFive.parse(5)
     ltFive.parse(4)
     lteFive.parse(5)
-    # intNum.parse(4)
+    intNum.parse(4.0)
+    intNum.parse(4)
     # multipleOfFive.parse(15)
     # finite.parse(123)
     # stepPointOne.parse(6)
@@ -357,6 +358,7 @@ def test_number():
     check_throws(lteFive, 6)
     check_throws(gtFive, 5)
     check_throws(gteFive, 4)
+    check_throws(intNum, 3.14)
 
 
 def test_object_extend():
@@ -420,33 +422,370 @@ def test_parser():
 
 
 def test_partials():
-    # TODO
-    pass
+    nested = z.object(
+        {
+            "name": z.string(),
+            "age": z.number(),
+            "outer": z.object(
+                {
+                    "inner": z.string(),
+                }
+            ),
+            "array": z.array(z.object({"asdf": z.string()})),
+        }
+    )
+    shallow = nested.partial()
+    shallow.parse({})
+    shallow.parse(
+        {
+            "name": "asdf",
+            "age": 23143,
+        }
+    )
+
+    deep = nested.deep_partial()
+    assert isinstance(deep.shape["name"], z._types.ZodOptional)
+    assert isinstance(deep.shape["outer"], z._types.ZodOptional)
+
+    deep.parse({})
+    deep.parse(
+        {
+            "outer": {},
+        }
+    )
+    deep.parse(
+        {
+            "name": "asdf",
+            "age": 23143,
+            "outer": {
+                "inner": "adsf",
+            },
+        }
+    )
+
+    schema = z.object(
+        {
+            "name": z.string().optional(),
+            "age": z.number().nullable(),
+        }
+    ).deep_partial()
+
+    assert isinstance(schema.shape["name"].unwrap(), z._types.ZodOptional)
+    assert isinstance(schema.shape["age"].unwrap(), z._types.ZodNullable)
+
+    object = z.object(
+        {
+            "name": z.string(),
+            "age": z.number().optional(),
+            "field": z.string().optional().default("asdf"),
+        }
+    )
+
+    masked = object.partial(
+        [
+            "name",
+            "age",
+            "field",
+        ]
+    ).strict()
+    masked.parse({})
+
+    object = z.object(
+        {
+            "name": z.string(),
+            "age": z.number().optional(),
+            "field": z.string().optional().default("asdf"),
+            "country": z.string().optional(),
+        }
+    )
+
+    requiredObject = object.required(["age"])
+    assert isinstance(requiredObject.shape["name"], z._types.ZodString)
+    assert isinstance(requiredObject.shape["age"], z._types.ZodNumber)
+    assert isinstance(requiredObject.shape["field"], z._types.ZodDefault)
+    assert isinstance(requiredObject.shape["country"], z._types.ZodOptional)
 
 
 def test_pick_omit():
     # TODO
-    pass
+    fish = z.object(
+        {
+            "name": z.string(),
+            "age": z.number(),
+            "nested": z.object({}),
+        }
+    )
+    nameonlyFish = fish.pick(["name"])
+    nameonlyFish.parse({"name": "bob"})
 
+    fish.pick({"name": True}).parse({"name": "12"})
+    fish.pick({"name": True}).parse({"name": "bob", "age": 12})
+    fish.pick({"age": True}).parse({"age": 12})
 
-def test_primitive():
-    pass
+    nameonlyFish = fish.pick({"name": True}).strict()
+
+    check_throws(nameonlyFish, ({"name": 12}))
+    check_throws(nameonlyFish, ({"name": "bob", "age": 12}))
+    check_throws(nameonlyFish, ({"age": 12}))
+
+    nonameFish = fish.omit({"name": True})
+    nonameFish.parse({"age": 12, "nested": {}})
+    check_throws(nonameFish, {"name": 12})
+    check_throws(nonameFish, {"age": 12})
+    check_throws(nonameFish, {})
+
+    laxfish = fish.passthrough().pick(["name"])
+    check_throws(laxfish, {"whatever": "foo"})
+    schema = z.object(
+        {
+            "a": z.string(),
+            "b": z.number(),
+        }
+    )
+
+    pickedSchema = schema.pick(["a", "doesentexist"])
+
+    pickedSchema.parse(
+        {
+            "a": "value",
+        }
+    )
 
 
 def test_record():
-    pass
+    booleanRecord = z.record(z.boolean())
+    booleanRecord.parse({"abc": True, "foo": False})
+    check_throws(booleanRecord, {"abcd": 123})
+    check_throws(booleanRecord, {"abcd": {}})
+    check_throws(booleanRecord, {"abcd": []})
+
+    recordWithEnumKeys = z.record(z.enum(["Tuna", "Salmon"]), z.number())
+    recordWithLiteralKeys = z.record(
+        z.union([z.literal("Tuna"), z.literal("Salmon")]), z.number()
+    )
+    r1 = {"Tuna": 42, "Salmon": 44}
+    assert recordWithEnumKeys.parse(r1) == r1
+    assert recordWithLiteralKeys.parse(r1) == r1
+
+    r2 = {"Tuna": 42}
+    assert recordWithEnumKeys.parse(r2) == r2
+    assert recordWithLiteralKeys.parse(r2) == r2
+
+    check_throws(recordWithEnumKeys, {"Tuna": 42, "Trout": 33})
+    check_throws(recordWithLiteralKeys, {"Tuna": 42, "Trout": 33})
 
 
 def test_recursive():
-    pass
+    testCategory = {
+        "name": "I",
+        "subcategories": [
+            {
+                "name": "A",
+                "subcategories": [
+                    {
+                        "name": "1",
+                        "subcategories": [
+                            {
+                                "name": "a",
+                                "subcategories": [],
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    }
+    Category = z.lazy(
+        lambda: z.object({"name": z.string(), "subcategories": z.array(Category)})
+    )
+    assert Category.parse(testCategory) == testCategory
+
+    z.lazy(lambda: z.string()).schema.parse("asdf")
+    linkedListExample = {
+        "value": 1,
+        "next": {
+            "value": 2,
+            "next": {
+                "value": 3,
+                "next": {
+                    "value": 4,
+                    "next": None,
+                },
+            },
+        },
+    }
+
+    LinkedListSchema = z.lazy(
+        lambda: z.union(
+            [
+                z.none(),
+                z.object(
+                    {
+                        "value": z.number(),
+                        "next": LinkedListSchema,
+                    }
+                ),
+            ]
+        )
+    )
+
+    assert LinkedListSchema.parse(linkedListExample) == linkedListExample
 
 
 def test_refine():
-    pass
+    obj1 = z.object(
+        {
+            "first": z.string(),
+            "second": z.string(),
+        }
+    )
+    obj2 = obj1.partial().strict()
+    obj3 = obj2.refine(
+        lambda data: data.get("first") or data.get("second"),
+        "Either first or second should be filled in.",
+    )
+    assert obj1 is not obj2
+    assert obj2 is not obj3
+    check_throws(obj1, {})
+    check_throws(obj2, {"third": "foo"})
+    check_throws(obj3, {})
+
+    obj3.parse({"first": "a"})
+    obj3.parse({"second": "a"})
+    obj3.parse({"first": "a", "second": "a"})
+
+    validation_schema = z.object(
+        {
+            "email": z.string().email(),
+            "password": z.string(),
+            "confirmPassword": z.string(),
+        }
+    ).refine(
+        lambda data: data["password"] == data["confirmPassword"],
+        "Both password and confirmation must match",
+    )
+    check_throws(
+        validation_schema,
+        {
+            "email": "aaaa@gmail.com",
+            "password": "aaaaaaaa",
+            "confirmPassword": "bbbbbbbb",
+        },
+    )
+
+    result = (
+        z.object(
+            {
+                "password": z.string(),
+                "confirm": z.string(),
+            }
+        )
+        .refine(lambda data: data["confirm"] == data["password"], path=["confirm"])
+        .safe_parse({"password": "a", "confirm": "b"})
+    )
+    assert not result.success
+    assert result.error.issues[0].path == ["confirm"]
+
+    def _refinement(_val, ctx):
+        if len(ctx.path):
+            ctx.add_issue(
+                code="custom",
+                message=f"schema cannot be nested. path: {'.'.join(ctx.path)}",
+            )
+            return False
+        else:
+            return True
+
+    noNested = z.string()._refinement(_refinement)
+    data = z.object({"foo": noNested})
+    t1 = noNested.safe_parse("asdf")
+    t2 = data.safe_parse({"foo": "asdf"})
+
+    assert t1.success
+    assert not t2.success
+    assert t2.error.issues[0].message == "schema cannot be nested. path: foo"
+
+    def super_refine(val, ctx):
+        if len(val) > 3:
+            ctx.add_issue(
+                code=z._types.ZodIssueCode.too_big,
+                maximum=3,
+                type="array",
+                inclusive=True,
+                message="Too many items 😡",
+            )
+        if len(val) != len(set(val)):
+            ctx.add_issue(
+                code=z._types.ZodIssueCode.custom,
+                message="No duplicates allowed.",
+            )
+
+    Strings = z.array(z.string()).super_refine(super_refine)
+
+    result = Strings.safe_parse(["asdf"] * 4)
+    assert not result.success
+    assert len(result.error.issues) == 2
+    Strings.safe_parse(["abc", "def"])
+
+    # z.string().refine(lambda v: True).inner_type().parse('abcd')
+
+    objectSchema = (
+        z.object(
+            {
+                "length": z.number(),
+                "size": z.number(),
+            }
+        )
+        .refine(
+            lambda val: val["length"] > 5,
+            path=["length"],
+            message="length greater than 5",
+        )
+        .refine(
+            lambda val: val["size"] > 7,
+            path=["size"],
+            message="size greater than 7",
+        )
+    )
+    r1 = objectSchema.safe_parse(
+        {
+            "length": 4,
+            "size": 9,
+        }
+    )
+    assert not r1.success
+    assert len(r1.error.issues) == 1
+
+    r2 = objectSchema.safe_parse(
+        {
+            "length": 4,
+            "size": 3,
+        }
+    )
+    assert not r2.success
+    assert len(r2.error.issues) == 2
+
+    # fatal
+    def super_refine_1(val, ctx):
+        if val == "":
+            ctx.add_issue(code="custom", message="foo", fatal=True)
+
+    def super_refine_2(val, ctx):
+        if val != " ":
+            ctx.add_issue(code="custom", message="bar")
+
+    Strings = z.string().super_refine(super_refine_1).super_refine(super_refine_2)
+    result = Strings.safe_parse("")
+    assert not result.success
+    assert len(result.error.issues) == 1
 
 
 def test_safe_parse():
-    pass
+    def do_raise(val):
+        raise ValueError(val)
+
+    with pytest.raises(ValueError):
+        z.string().refine(do_raise).safe_parse("12")
 
 
 def test_string():
