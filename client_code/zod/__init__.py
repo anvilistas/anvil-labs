@@ -18,6 +18,7 @@ from ._types import (
     none,
     number,
     object,
+    preprocess,
     record,
     string,
     tuple,

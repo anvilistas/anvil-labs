@@ -1237,7 +1237,13 @@ class ZodEffects(ZodType):
 
         effect = self._def["effect"]
         check_ctx = CheckContext(status, ctx)
-        if effect["type"] == "refinment":
+        effect_type = effect["type"]
+
+        if effect_type == "preprocess":
+            processed = effect["transform"](ctx.data)
+            return self._def["schema"]._parse(ParseInput(processed, ctx.path, ctx))
+
+        if effect_type == "refinment":
             inner = self._def["schema"]._parse(ParseInput(ctx.data, ctx.path, ctx))
             if inner.status is ABORTED:
                 return INVALID
@@ -1246,7 +1252,7 @@ class ZodEffects(ZodType):
             effect["refinement"](inner.value, check_ctx)
             return ParseReturn(status.value, inner.value)
 
-        if effect["type"] == "transform":
+        if effect_type == "transform":
             base = self._def["schema"]._parse(ParseInput(ctx.data, ctx.path, ctx))
             if not is_valid(base):
                 return base
@@ -1259,6 +1265,17 @@ class ZodEffects(ZodType):
     @classmethod
     def _create(cls, schema, effect, **params):
         return cls(dict(schema=schema, effect=effect, **process_params(**params)))
+
+    @classmethod
+    def _preprocess(cls, preprocess, schema, **params):
+        "transform the data before parsing it"
+        return cls(
+            dict(
+                schema=schema,
+                effect={"type": "preprocess", "transform": preprocess},
+                **process_params(**params),
+            )
+        )
 
 
 class ZodWraps(ZodType):
@@ -1399,6 +1416,7 @@ float = ZodFloat._create
 number = ZodNumber._create
 union = ZodUnion._create
 object = ZodObject._create
+preprocess = ZodEffects._preprocess
 array = ZodArray._create
 enum = ZodEnum._create
 tuple = ZodTuple._create

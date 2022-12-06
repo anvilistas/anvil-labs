@@ -1044,6 +1044,10 @@ def test_transformer():
     assert not result.success
     assert result.error.issues[0].code == z._types.ZodIssueCode.invalid_type
 
+    schema = z.preprocess(lambda data: [data], z.string().array())
+    value = schema.parse("asdf")
+    assert value == ["asdf"]
+
 
 def test_tuple():
     testTuple = z.tuple(
