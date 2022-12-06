@@ -205,11 +205,11 @@ class ZodType:
             rv = _check_error_cb(rv)
             return {"fatal": fatal, **issue_params, **rv}
 
-        def _refinement(val, ctx):
+        def _refinement(val, ctx: CheckContext):
             if check_fn(val):
                 return True
             else:
-                ctx.add_issue(code=ZodIssueCode.custom, **get_issue_props(val))
+                ctx.add_issue(**get_issue_props(val))
                 return False
 
         return self.super_refine(_refinement)
@@ -220,10 +220,13 @@ class ZodType:
         )
 
     def transform(self, transform_fn):
-        "transform the input with a custom transform function"
+        "transform the input with a custom transform function, to prevent any further checks/transforms return z.NEVER"
 
-        def _transform(val, ctx):
-            return transform_fn(val)
+        def _transform(val, ctx: CheckContext):
+            rv = transform_fn(val)
+            if rv is INVALID:
+                ctx.add_issue(fatal=True)
+            return rv
 
         return self.super_transform(_transform)
 
@@ -1212,9 +1215,13 @@ class CheckContext:
         self.status = status
         self.ctx = ctx
 
-    def add_issue(self, **issue_data):
-        add_issue_to_context(self.ctx, **issue_data)
-        if issue_data.get("fatal"):
+    def add_issue(
+        self, code=ZodIssueCode.custom, fatal=False, message="", **issue_data
+    ):
+        add_issue_to_context(
+            self.ctx, code=code, fatal=fatal, message=message, **issue_data
+        )
+        if fatal:
             self.status.abort()
         else:
             self.status.dirty()
@@ -1363,9 +1370,9 @@ class ZodUnion(ZodType):
 def custom(check=None, fatal=False, **params):
     if check is not None:
 
-        def custom_check(data, ctx):
+        def custom_check(data, ctx: CheckContext):
             if not check(data):
-                ctx.add_issue(code=ZodIssueCode.custom, fatal=fatal, **params)
+                ctx.add_issue(fatal=fatal, **params)
 
         return ZodAny._create().super_refine(custom_check)
     return ZodAny._create()
