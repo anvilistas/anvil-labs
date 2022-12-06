@@ -1054,7 +1054,7 @@ class ZodObject(ZodType):
         return ZodObject({**self._def, "shape": lambda: shape})
 
     def keyof(self):
-        "get the schema value for a key"
+        "get the keys of this object as an enum schema"
         return ZodEnum._create(self.shape.keys())
 
     @classmethod
