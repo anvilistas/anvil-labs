@@ -189,8 +189,10 @@ class ZodType:
             schema=self, effect={"type": "refinment", "refinement": refinement}
         )
 
-    def refine(self, check_fn, message="", **issue_params):
-        "add a custom check_fn(val) -> bool, message: can be a str or a callable: (val) -> str"
+    def refine(self, check_fn, message="", fatal=False, **issue_params):
+        """add a custom check_fn(val) -> bool, message: can be a str or a callable: (val) -> str
+        if fatal is True, no further checks for this schema will be considered
+        """
 
         def get_issue_props(val):
             rv = message
@@ -198,10 +200,10 @@ class ZodType:
                 rv = rv(val)
 
             if type(rv) is str:
-                return {**issue_params, "message": rv}
+                return {"fatal": fatal, **issue_params, "message": rv}
 
             rv = _check_error_cb(rv)
-            return {**issue_params, **rv}
+            return {"fatal": fatal, **issue_params, **rv}
 
         def _refinement(val, ctx):
             if check_fn(val):
