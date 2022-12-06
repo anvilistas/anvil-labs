@@ -184,6 +184,11 @@ class ZodType:
         "equivalent to z.union([a, b])"
         return ZodUnion._create([self, other])
 
+    def super_refine(self, refinement):
+        return ZodEffects._create(
+            schema=self, effect={"type": "refinment", "refinement": refinement}
+        )
+
     def refine(self, check_fn, message="", **issue_params):
         "add a custom check_fn(val) -> bool, message: can be a str or a callable: (val) -> str"
 
@@ -193,10 +198,10 @@ class ZodType:
                 rv = rv(val)
 
             if type(rv) is str:
-                return {"message": rv, **issue_params}
+                return {**issue_params, "message": rv}
 
             rv = _check_error_cb(rv)
-            return {**rv, **issue_params}
+            return {**issue_params, **rv}
 
         def _refinement(val, ctx):
             if check_fn(val):
@@ -205,20 +210,20 @@ class ZodType:
                 ctx.add_issue(code=ZodIssueCode.custom, **get_issue_props(val))
                 return False
 
-        return self._refinement(_refinement)
+        return self.super_refine(_refinement)
 
-    def _refinement(self, refinement):
-        return ZodEffects._create(
-            schema=self, effect={"type": "refinment", "refinement": refinement}
-        )
-
-    super_refine = _refinement
-
-    def transform(self, transform_fn):
-        "transform the input with a custom transform function"
+    def super_transform(self, transform_fn):
         return ZodEffects._create(
             schema=self, effect={"type": "transform", "transform": transform_fn}
         )
+
+    def transform(self, transform_fn):
+        "transform the input with a custom transform function"
+
+        def _transform(val, ctx):
+            return transform_fn(val)
+
+        return self.super_transform(_transform)
 
 
 class ZodString(ZodType):
@@ -1217,16 +1222,6 @@ class CheckContext:
         return self.ctx.path
 
 
-def one_or_two_argument_call(fn, a, b):
-    # in skulpt we can't do much better than this
-    try:
-        return fn(a)  # common case
-    except TypeError as e:
-        if "argument" in str(e):
-            return fn(a, b)
-        raise e
-
-
 class ZodEffects(ZodType):
     def _parse(self, input):
         status, ctx = self._process_input_params(input)
@@ -1247,9 +1242,7 @@ class ZodEffects(ZodType):
             if not is_valid(base):
                 return base
 
-            result = one_or_two_argument_call(
-                effect["transform"], base.value, check_ctx
-            )
+            result = effect["transform"](base.value, check_ctx)
             return ParseReturn(status.value, result)
 
         assert False, "unnkown effect"

@@ -125,7 +125,7 @@ def test_catch():
     complex = (
         z.string()
         .catch("asdf")
-        .transform(lambda s, _: s + "!")
+        .transform(lambda s: s + "!")
         .transform(str.upper)
         .catch("qwer")
         .remove_default()
@@ -819,7 +819,7 @@ def test_refine():
         else:
             return True
 
-    noNested = z.string()._refinement(_refinement)
+    noNested = z.string().super_refine(_refinement)
     data = z.object({"foo": noNested})
     t1 = noNested.safe_parse("asdf")
     t2 = data.safe_parse({"foo": "asdf"})
@@ -1016,7 +1016,7 @@ def test_transformer():
             return z.NEVER
         return val
 
-    foo = z.number().nullable().transform(use_never)
+    foo = z.number().nullable().super_transform(use_never)
     check_error_message(foo, None, "bad")
 
     numToString = z.number().transform(str)
