@@ -86,7 +86,7 @@ def process_params(error_map=None, invalid_type_error=False, required_error=Fals
     def custom_map(issue, ctx: ErrorMapContext):
         if issue["code"] != "invalid_type":
             return {"message": ctx.default_error}
-        if issue.get("data", MISSING) is MISSING:
+        if ctx.data is MISSING:
             return {"message": required_error or ctx.default_error}
         return {"message": invalid_type_error or ctx.default_error}
 
