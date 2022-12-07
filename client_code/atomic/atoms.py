@@ -158,7 +158,7 @@ class DictAtom(dict):
             request(self, key)
             request(self, VALUES)
             request(self, ITEMS)
-            if val is SENTINEL:
+            if current is SENTINEL:
                 request(self, KEYS)
 
     def __delitem__(self, key):
