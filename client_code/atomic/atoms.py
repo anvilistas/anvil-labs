@@ -171,7 +171,7 @@ class DictAtom(dict):
 
     @action
     def clear(self):
-        for k in dict.keys(self):
+        for k in list(dict.keys(self)):
             self.pop(k)
 
     def pop(self, key, default=SENTINEL):
