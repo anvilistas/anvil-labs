@@ -30,6 +30,7 @@ def writeback(component, prop, atom_or_selector, attr_or_action=None, events=())
     elif callable(atom):
         getter = atom
         setter = attr
+        assert callable(attr), "a selector must be combined with a callable action"
     else:
         assert attr is not None, "if an atom is provided the attr must be a str"
         getter = partial(getattr, atom, attr)
