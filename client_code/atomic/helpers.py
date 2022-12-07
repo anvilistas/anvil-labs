@@ -3,6 +3,7 @@
 
 from functools import partial
 
+from .constants import SENTINEL
 from .decorators import autorun
 from .rendering import log
 
@@ -30,6 +31,7 @@ def writeback(component, prop, atom_or_selector, attr_or_action=None, events=())
     elif callable(atom):
         getter = atom
         setter = attr
+        assert callable(attr), "a selector must be combined with a callable action"
     else:
         assert attr is not None, "if an atom is provided the attr must be a str"
         getter = partial(getattr, atom, attr)
@@ -51,9 +53,14 @@ def writeback(component, prop, atom_or_selector, attr_or_action=None, events=())
     autorun(render_component, bound=component)
 
 
-def bind(component, prop, atom_or_selector, attr=None):
+def _noop():
+    return None
+
+
+def bind(component, prop, atom_or_selector, attr=SENTINEL):
     """create a data-binding between an component property and an atom and its attribute (or a selector)"""
     # we could support methods here but it's better to be explicit and call selectors inside render methods
     # accessing an atom property necessarily creates a depenedency on the current render context
     # so better not to encourage accessing a selector outside of the desired render context
+    attr = _noop if attr is SENTINEL else attr
     return writeback(component, prop, atom_or_selector, attr)
