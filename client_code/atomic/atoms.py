@@ -164,6 +164,10 @@ class DictAtom(dict):
     def __delitem__(self, key):
         self.pop(key)
 
+    def __contains__(self, key):
+        register(self, key)
+        return dict.__contains__(self, key)
+
     @action
     def update(self, *args, **kws):
         for k, v in dict(*args, **kws).items():
