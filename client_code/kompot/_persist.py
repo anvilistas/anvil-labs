@@ -113,7 +113,6 @@ class LinkedAttribute:
 
 
 class ServerFunction:
-
     def __init__(self, name, with_kompot=False):
         self.name = name
         self.with_kompot = with_kompot
@@ -171,7 +170,9 @@ class RowBackedStore:
 
     def update(self):
         """Save changes made to the parent object to the data tables row"""
-        result = self._server_functions["updater"](changes=serialize(self._dispatcher), row=self._row)
+        result = self._server_functions["updater"](
+            changes=serialize(self._dispatcher), row=self._row
+        )
         self._dispatcher.clear()
         return result
 
@@ -197,10 +198,12 @@ def _get_value(self, key):
 
 def _set_value(self, key, value):
     is_private = key.startswith("_")
-    is_linked_attribute = hasattr(self.__class__, key) and isinstance(getattr(self.__class__, key), LinkedAttribute)
+    is_linked_attribute = hasattr(self.__class__, key) and isinstance(
+        getattr(self.__class__, key), LinkedAttribute
+    )
     if is_private or is_linked_attribute:
         object.__setattr__(self, key, value)
-    else:   
+    else:
         try:
             setattr(self._store, key, value)
         except AttributeError:
@@ -256,7 +259,11 @@ def _server_functions(self):
         "updater": ServerFunction(name=f"update_{class_name}", with_kompot=True),
         "deleter": ServerFunction(name=f"delete_{class_name}"),
     }
-    members = {k: v for k, v in self.__class__.__dict__.items() if isinstance(v, ServerFunction)}
+    members = {
+        k: v
+        for k, v in self.__class__.__dict__.items()
+        if isinstance(v, ServerFunction)
+    }
     return dict(defaults, **members)
 
 
