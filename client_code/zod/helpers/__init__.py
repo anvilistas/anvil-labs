@@ -9,35 +9,34 @@ __version__ = "0.0.1"
 
 
 # Adjusted for python
-ZodParsedType = enum(
-    "ZodParsedType",
-    [
-        "string",
-        # "nan",
-        "number",
-        "integer",
-        "float",
-        "boolean",
-        "date",
-        "datetime",
-        # "bigint",
-        # "symbol",
-        "function",
-        # "undefined",
-        "missing",
-        "none",  # skulpt doesn't like null
-        "array",
-        "tuple",
-        # "object",
-        "mapping",
-        "unknown",
-        # "promise",
-        # "void",
-        "never",
-        "map",
-        "set",
-    ],
-)
+class ZodParsedType_:
+    string = "string"
+    # nan = "nan"
+    number = "number"
+    integer = "integer"
+    float = "float"
+    boolean = "boolean"
+    date = "date"
+    datetime = "datetime"
+    # bigint = "bigint"
+    # symbol = "symbol"
+    function = "function"
+    # undefined = "undefined"
+    missing = "missing"
+    none = "none"  # TODO skulpt doesn't like null
+    array = "array"
+    tuple = "tuple"
+    # object = "object"
+    mapping = "mapping"
+    unknown = "unknown"
+    # promise = "promise"
+    # void = "void"
+    never = "never"
+    map = "map"
+    set = "set"
+
+
+ZodParsedType = ZodParsedType_()
 
 FuncType = type(lambda: None)
 NoneType = type(None)

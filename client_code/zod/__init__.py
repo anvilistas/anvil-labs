@@ -14,6 +14,7 @@ from ._types import (
     isinstance,
     lazy,
     literal,
+    mapping,
     never,
     none,
     number,
@@ -25,9 +26,11 @@ from ._types import (
     union,
     unknown,
 )
-from ._zod_error import ZodError
+from ._zod_error import ZodError, ZodIssueCode
 
 ParseError = ZodError
-
+IssueCode = ZodIssueCode
 
 __version__ = "0.0.1"
+
+__all__ = []  # it would be dangerous to do import *

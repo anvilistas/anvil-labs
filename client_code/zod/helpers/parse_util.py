@@ -4,12 +4,22 @@
 __version__ = "0.0.1"
 
 from ..errors import get_default_error_map, get_error_map
-from .util import DictLike
+from .dict_util import DictLike
 
 VALID = "valid"
 DIRTY = "dirty"
 ABORTED = "aborted"
-MISSING = object()
+
+
+class _MissingType:
+    def __bool__(self):
+        return False
+
+    def __repr__(self):
+        return "<zod.MISSING>"
+
+
+MISSING = _MissingType()
 
 
 class Common(DictLike):
