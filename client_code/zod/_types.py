@@ -180,9 +180,11 @@ class ZodType:
         "if the parse fails - replace with value"
         return ZodCatch._create(self, value)
 
-    def or_(self, other):
+    def union(self, other):
         "equivalent to z.union([a, b])"
         return ZodUnion._create([self, other])
+
+    or_ = union
 
     def super_refine(self, refinement):
         return ZodEffects._create(
