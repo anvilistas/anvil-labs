@@ -178,7 +178,7 @@ class RowBackedStore:
 
     def delete(self):
         """Delete the data tables row"""
-        result = self._server_functions[action](row=self._row)
+        result = self._server_functions["deleter"](row=self._row)
         self._dispatcher.clear()
         return result
 
