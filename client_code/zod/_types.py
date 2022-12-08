@@ -8,7 +8,7 @@ from anvil import is_server_side
 
 from ._zod_error import ZodError, ZodIssueCode
 from .helpers import ZodParsedType, get_parsed_type, regex, util
-from .helpers.object_util import getitem, merge_shapes
+from .helpers.dict_util import getitem, merge_shapes
 from .helpers.parse_util import (
     ABORTED,
     DIRTY,
@@ -860,11 +860,11 @@ class ZodEnum(ZodType):
 
 def deep_partialify(schema):
     t = type(schema)
-    if t is ZodObject:
+    if t is ZodMapping:
         new_shape = {
             k: ZodOptional._create(deep_partialify(v)) for k, v in schema.shape.items()
         }
-        return ZodObject({**schema._def, "shape": lambda: new_shape})
+        return ZodMapping({**schema._def, "shape": lambda: new_shape})
     if t is ZodArray:
         return ZodArray._create(deep_partialify(schema.element))
     if t is ZodOptional:
@@ -876,7 +876,7 @@ def deep_partialify(schema):
     return schema
 
 
-class ZodObject(ZodType):
+class ZodMapping(ZodType):
     _type = ZodParsedType.mapping
     _type_name = _type
 
@@ -884,30 +884,20 @@ class ZodObject(ZodType):
         super().__init__(_def)
         self._cached = None
 
-    def _get_cached(self):
-        if self._cached is not None:
-            return self._cached
-
-        shape = self._def["shape"]()
-        keys = shape.keys()
-
-        self._cached = (shape, keys)
-
-        return self._cached
-
     def _parse(self, input):
         if self._check_invalid_type(input):
             return INVALID
 
         status, ctx = self._process_input_params(input)
-        shape, shape_keys = self._get_cached()
+        shape = self.shape
+        shape_keys = shape.keys()
         extra_keys = set()
 
         if not (
             type(self._def["catchall"]) is ZodNever
             and self._def["unknown_keys"] == "strip"
         ):
-            for key in ctx.data:
+            for key in ctx.data.keys():
                 if key not in shape_keys:
                     extra_keys.add(key)
 
@@ -982,21 +972,21 @@ class ZodObject(ZodType):
                 return {"message": default_error}
 
             _def["error_map"] = error_map
-        return ZodObject(_def)
+        return ZodMapping(_def)
 
     def strip(self):
         "return the data without additional keys"
-        return ZodObject({**self._def, "unknown_keys": "strip"})
+        return ZodMapping({**self._def, "unknown_keys": "strip"})
 
     def passthrough(self):
         "ignore additional keys"
-        return ZodObject({**self._def, "unknown_keys": "passthrough"})
+        return ZodMapping({**self._def, "unknown_keys": "passthrough"})
 
     nonstrict = passthrough
 
     def extend(self, shape):
-        "create a new schema extending the shape of the object"
-        return ZodObject(
+        "create a new schema extending the current shape"
+        return ZodMapping(
             {**self._def, "shape": lambda: merge_shapes(self.shape, shape)}
         )
 
@@ -1005,8 +995,8 @@ class ZodObject(ZodType):
         return self.extend({key: schema})
 
     def merge(self, merge_with):
-        "merge two object schemas"
-        assert type(merge_with) is ZodObject, "expected a zod object schema"
+        "merge two mapping schemas"
+        assert type(merge_with) is ZodMapping, "expected a zod mapping schema"
         merged = {
             "unknown_keys": merge_with._def["unknown_keys"],
             "catchall": merge_with._def["catchall"],
@@ -1014,22 +1004,22 @@ class ZodObject(ZodType):
                 self._def["shape"](), merge_with._def["shape"]()
             ),
         }
-        return ZodObject(merged)
+        return ZodMapping(merged)
 
     def catchall(self, index):
-        return ZodObject({**self._def, "catchall": index})
+        return ZodMapping({**self._def, "catchall": index})
 
     def pick(self, mask):
         "mask should be an iterable of keys, retuns a new schema with only those keys"
         this_shape = self.shape
         shape = {k: this_shape[k] for k in mask if k in this_shape}
-        return ZodObject({**self._def, "shape": lambda: shape})
+        return ZodMapping({**self._def, "shape": lambda: shape})
 
     def omit(self, mask):
         "mask should be an iterable of keys, retuns a new schema without those keys"
         this_shape = self.shape
         shape = {k: v for k, v in this_shape.items() if k not in mask}
-        return ZodObject({**self._def, "shape": lambda: shape})
+        return ZodMapping({**self._def, "shape": lambda: shape})
 
     def partial(self, mask=None):
         "returns a new schema where values are optional. If a mask is provided, only those keys will become optional"
@@ -1039,7 +1029,7 @@ class ZodObject(ZodType):
             }
         else:
             shape = {k: v.optional() for k, v in self.shape.items()}
-        return ZodObject({**self._def, "shape": lambda: shape})
+        return ZodMapping({**self._def, "shape": lambda: shape})
 
     def deep_partial(self):
         return deep_partialify(self)
@@ -1056,10 +1046,10 @@ class ZodObject(ZodType):
             shape = {k: (unwrap(v) if k in mask else v) for k, v in self.shape.items()}
         else:
             shape = {k: unwrap(v) for k, v in self.shape.items()}
-        return ZodObject({**self._def, "shape": lambda: shape})
+        return ZodMapping({**self._def, "shape": lambda: shape})
 
     def keyof(self):
-        "get the keys of this object as an enum schema"
+        "get the keys of this mapping schema as an enum schema"
         return ZodEnum._create(self.shape.keys())
 
     @classmethod
@@ -1415,7 +1405,8 @@ integer = ZodInteger._create
 float = ZodFloat._create
 number = ZodNumber._create
 union = ZodUnion._create
-object = ZodObject._create
+object = ZodMapping._create
+mapping = ZodMapping._create
 preprocess = ZodEffects._preprocess
 array = ZodArray._create
 enum = ZodEnum._create

@@ -24,7 +24,7 @@ def error_map(issue, _ctx: ErrorMapContext):
         message = f"Invalid literal value, expected {issue['expected']!r}"
 
     elif code == ZodIssueCode.unrecognized_keys:
-        message = f"Unrecognized key(s) in object: {join(issue['keys'], ', ')}"
+        message = f"Unrecognized key(s) in mapping: {join(issue['keys'], ', ')}"
 
     elif code == ZodIssueCode.invalid_union:
         message = "Invalid input"

@@ -1,34 +1,34 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
-from .helpers import util
+from .helpers import dict_util
 
 __version__ = "0.0.1"
 
-ZodIssueCode = util.enum(
-    "ZodIssueCode",
-    [
-        "invalid_type",
-        "invalid_literal",
-        "custom",
-        "invalid_union",
-        # "invalid_union_discriminator",
-        "invalid_enum_value",
-        "unrecognized_keys",
-        # "invalid_arguments",
-        # "invalid_return_type",
-        "invalid_date",
-        "invalid_string",
-        "too_small",
-        "too_big",
-        # "invalid_intersection_types",
-        # "not_multiple_of",
-        # "not_finite",
-    ],
-)
+
+class ZodIssueCode_:
+    invalid_type = "invalid_type"
+    invalid_literal = "invalid_literal"
+    custom = "custom"
+    invalid_union = "invalid_union"
+    # "invalid_union_discriminator"
+    invalid_enum_value = "invalid_enum_value"
+    unrecognized_keys = "unrecognized_keys"
+    # "invalid_arguments",
+    # "invalid_return_type",
+    invalid_date = "invalid_date"
+    invalid_string = "invalid_string"
+    too_small = "too_small"
+    too_big = "too_big"
+    # "invalid_intersection_types",
+    # "not_multiple_of",
+    # "not_finite",
 
 
-class FieldErrors(util.DictLike):
+ZodIssueCode = ZodIssueCode_()
+
+
+class FieldErrors(dict_util.DictLike):
     __slots__ = ["_errors"]
 
     def __init__(self):
