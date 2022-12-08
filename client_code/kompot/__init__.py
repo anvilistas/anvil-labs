@@ -5,6 +5,7 @@ from ._batcher import batch_call  # noqa F401
 from ._persist import (  # noqa F401
     LinkedAttribute,
     RowBackedStore,
+    ServerFunction,
     persisted_class,
     row_backed_class,
 )

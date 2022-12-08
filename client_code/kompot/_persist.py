@@ -7,16 +7,11 @@ e.g.
 
 For a class named 'Book', we might have a data table named 'book' where each row
 corresponds to instance of the Book class. We might also have server functions to
-add new row or to update existing entries:
+add a new row or to update existing entries:
 
 @row_backed_class
 class Book:
-    server_functions = {
-        "create": "add_book",
-        "get": "get_book",
-        "update": "update_book",
-        "delete": "delete_book",
-    }
+    pass
 
 Create a new Book instance and fetch its row from the db:
 
@@ -37,6 +32,7 @@ import anvil.server
 
 from ._register import register
 from ._rpc import call
+from ._serialize import serialize
 
 __version__ = "0.0.1"
 
@@ -102,29 +98,41 @@ class LinkedAttribute:
         if instance is None:
             return self
 
-        if instance._row and instance._dispatcher.synced:
-            return instance._row[self._linked_table][self._linked_attr]
+        store = instance._store
+        dispatcher = store._dispatcher
+        if not dispatcher.synced:
+            try:
+                return getattr(dispatcher, self._linked_attr)
+            except AttributeError:
+                return store._row[self._linked_table][self._linked_attr]
         else:
-            return getattr(instance._dispatcher, self._linked_attr, None)
+            return store._row[self._linked_table][self._linked_attr]
 
     def __set__(self, instance, value):
-        instance._set_value(self._name, value)
+        setattr(instance._store._dispatcher, self._name, value)
+
+
+class ServerFunction:
+
+    def __init__(self, name, with_kompot=False):
+        self.name = name
+        self.with_kompot = with_kompot
+
+    def __call__(self, *args, **kwargs):
+        caller = call if self.with_kompot else anvil.server.call
+        return caller(self.name, *args, **kwargs)
 
 
 class RowBackedStore:
     """A class to hold a data tables row as the persistence mechanism for an object"""
 
-    def __init__(self, server_functions, linked_attributes, row=None, dispatcher=None):
+    def __init__(self, server_functions, row=None, dispatcher=None):
         """
         Parameters
         ----------
         server_functions: dict
-            mapping the keys 'create', 'get', 'update' and 'delete' to the name of the
+            mapping the keys 'creator', 'getter', 'updater' and 'deleter' to the name of the
             relevant server function for that action
-        linked_attributes: dict
-            mapping the name of a linked column to a further dict which then maps the
-            required name for the dynamically created attribute to the name of the
-            relevant column in the linked table
         row: anvil.tables.Row
         dispatcher: any
             A portable class suitable for sending changes from client to server
@@ -133,20 +141,16 @@ class RowBackedStore:
         self._row = row
         self._dispatcher = dispatcher or Dispatcher()
         self._server_functions = server_functions
-        for linked_table, attributes in linked_attributes.items():
-            for attr, linked_attr in attributes.items():
-                setattr(
-                    self.__class__,
-                    attr,
-                    LinkedAttribute(attr, linked_table, linked_attr),
-                )
         self._initialised = True
 
     def __getattr__(self, name):
-        if self._row and self._dispatcher.synced:
-            return self._row[name]
+        if not self._dispatcher.synced:
+            try:
+                return getattr(self._dispatcher, name)
+            except AttributeError:
+                return self._row[name]
         else:
-            return getattr(self._dispatcher, name, None)
+            return self._row[name]
 
     def __setattr__(self, name, value):
         if name.startswith("_") or not self._initialised:
@@ -154,28 +158,31 @@ class RowBackedStore:
         else:
             setattr(self._dispatcher, name, value)
 
-    def _despatch(self, action):
-        result = call(self._server_functions[action], self._dispatcher.serialize())
-        self._dispatcher.clear()
-        return result
-
     def get(self, *args, **kwargs):
         "Fetch a data tables row and make it available to the parent object"
-        self._row = anvil.server.call(self._server_functions["get"], *args, **kwargs)
+        self._row = self._server_functions["getter"](*args, **kwargs)
         self._dispatcher.clear()
 
     def create(self):
         """Create a new data tables row from the parent object"""
-        return self._despatch("create")
+        result = self._server_functions["creator"](changes=serialize(self._dispatcher))
+        self._dispatcher.clear()
+        return result
 
-    def save(self):
+    def update(self):
         """Save changes made to the parent object to the data tables row"""
-        action = "update" if self._row else "create"
-        return self._despatch(action)
+        result = self._server_functions["updater"](changes=serialize(self._dispatcher), row=self._row)
+        self._dispatcher.clear()
+        return result
 
     def delete(self):
         """Delete the data tables row"""
-        return self._despatch("delete")
+        result = self._server_functions[action](row=self._row)
+        self._dispatcher.clear()
+        return result
+
+    def reset(self):
+        self._dispatcher.clear()
 
 
 def _get_value(self, key):
@@ -189,9 +196,11 @@ def _get_value(self, key):
 
 
 def _set_value(self, key, value):
-    if key.startswith("_"):
+    is_private = key.startswith("_")
+    is_linked_attribute = hasattr(self.__class__, key) and isinstance(getattr(self.__class__, key), LinkedAttribute)
+    if is_private or is_linked_attribute:
         object.__setattr__(self, key, value)
-    else:
+    else:   
         try:
             setattr(self._store, key, value)
         except AttributeError:
@@ -216,6 +225,10 @@ def _delete(self):
     return self._store.delete()
 
 
+def _reset(self):
+    self._store.reset()
+
+
 MEMBERS = {
     "__getattr__": _get_value,
     "__getitem__": _get_value,
@@ -225,6 +238,7 @@ MEMBERS = {
     "create": _create,
     "save": _save,
     "delete": _delete,
+    "reset": _reset,
 }
 
 
@@ -233,12 +247,26 @@ def persisted_class(cls):
     return type(cls.__name__, (object,), dict(cls.__dict__, **MEMBERS))
 
 
+@property
+def _server_functions(self):
+    class_name = self.__class__.__name__.lower()
+    defaults = {
+        "getter": ServerFunction(name=f"get_{class_name}"),
+        "creator": ServerFunction(name=f"create_{class_name}", with_kompot=True),
+        "updater": ServerFunction(name=f"update_{class_name}", with_kompot=True),
+        "deleter": ServerFunction(name=f"delete_{class_name}"),
+    }
+    members = {k: v for k, v in self.__class__.__dict__.items() if isinstance(v, ServerFunction)}
+    return dict(defaults, **members)
+
+
 def _row_backed_init(self, row=None):
-    self._store = RowBackedStore(self.server_functions, self.linked_attributes, row)
+    self._store = RowBackedStore(self._server_functions, row)
 
 
 def row_backed_class(cls):
     """A decorator for a class persisted by a data tables row"""
     _cls = persisted_class(cls)
+    setattr(_cls, "_server_functions", _server_functions)
     setattr(_cls, "__init__", _row_backed_init)
     return _cls
