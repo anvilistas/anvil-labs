@@ -39,7 +39,7 @@ def customised_book():
         get = ps.ServerFunction(target=None)
 
         def save(self):
-            pass
+            return "customised save"
 
     return Book.create()
 
@@ -67,11 +67,11 @@ def test_persisted_class_attributes(persisted_book, book_store):
 
 def test_default_server_functions(persisted_book):
     for key in ["get", "save", "delete"]:
-        assert isinstance(getattr(persisted_book, key), ps.ServerFunction)
+        assert hasattr(persisted_book, key)
 
 
 def test_customised_book(customised_book):
-    for key in ["get", "delete"]:
-        assert isinstance(getattr(customised_book, key), ps.ServerFunction)
+    for key in ["get", "save", "delete"]:
+        assert hasattr(customised_book, key)
 
-    assert not isinstance(customised_book.save, ps.ServerFunction)
+    assert customised_book.save() == "customised save"

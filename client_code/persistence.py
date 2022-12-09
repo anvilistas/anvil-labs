@@ -77,16 +77,7 @@ def _set_value(self, key, value):
         self._delta[key] = value
 
 
-MEMBERS = {
-    "create": _create,
-    "__getattr__": _get_value,
-    "__getitem__": _get_value,
-    "__setattr__": _set_value,
-    "__setitem__": _set_value,
-}
-
-
-def _members(cls):
+def _server_functions(cls):
     class_name = cls.__name__.lower()
     keys = ["get", "save", "delete"]
     default_server_functions = {
@@ -97,9 +88,43 @@ def _members(cls):
     user_defined_server_functions = {
         k: v for k, v in cls.__dict__.items() if isinstance(v, ServerFunction)
     }
-    return dict(MEMBERS, **default_server_functions, **user_defined_server_functions)
+    return dict(default_server_functions, **user_defined_server_functions)
+
+
+def _crud_methods(cls):
+    server_functions = _server_functions(cls)
+
+    def _get(self, *args, **kwargs):
+        self._store = server_functions["get"](*args, **kwargs)
+        self._delta.clear()
+
+    def _save(self):
+        server_functions["save"](self._store, self._delta)
+        self._delta.clear()
+
+    def _delete(self):
+        server_functions["delete"](self._store)
+        self._delta.clear()
+
+    return {"get": _get, "save": _save, "delete": _delete}
+
+
+MEMBERS = {
+    "create": _create,
+    "__getattr__": _get_value,
+    "__getitem__": _get_value,
+    "__setattr__": _set_value,
+    "__setitem__": _set_value,
+}
 
 
 def persisted_class(cls):
     """A decorator for a class with a persistence mechanism"""
-    return type(cls.__name__, (object,), dict(cls.__dict__, **_members(cls)))
+    user_defined_members = {
+        k: v for k, v in cls.__dict__.items() if not isinstance(v, ServerFunction)
+    }
+    _cls = type(cls.__name__, (object,), dict(user_defined_members, **MEMBERS))
+    for name, method in _crud_methods(_cls).items():
+        if name not in _cls.__dict__:
+            setattr(_cls, name, method)
+    return _cls
