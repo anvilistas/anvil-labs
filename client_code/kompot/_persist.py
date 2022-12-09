@@ -269,6 +269,6 @@ def _row_backed_init(self, row=None):
 def row_backed_class(cls):
     """A decorator for a class persisted by a data tables row"""
     _cls = persisted_class(cls)
-    setattr(_cls, "_server_functions", _combine_server_functions())
+    setattr(_cls, "_server_functions", _combine_server_functions(cls))
     setattr(_cls, "__init__", _row_backed_init)
     return _cls
