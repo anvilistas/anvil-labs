@@ -33,7 +33,7 @@ export function defer<T = any>() {
 export const UNRESOLVED_MODULES: Map<string, Deferred<string | null>> = new Map();
 
 export function fetchModule(filename: string) {
-    const id = crypto.randomUUID();
+    const id = Math.random().toString(36).substring(6);
     self.postMessage({ type: "IMPORT", id, filename });
     const deferred = defer();
     UNRESOLVED_MODULES.set(id, deferred);

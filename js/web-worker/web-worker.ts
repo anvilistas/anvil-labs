@@ -82,7 +82,7 @@ export function initWorkerRPC(target: CustomWorker) {
     const unresolvedModules: Map<string, Deferred<string | null>> = new Map();
 
     target.fetchModule = (filename: string) => {
-        const id = crypto.randomUUID();
+        const id = Math.random().toString(36).substring(6);
         target.postMessage({ type: "IMPORT", id, filename });
         const deferred = defer();
         unresolvedModules.set(id, deferred)

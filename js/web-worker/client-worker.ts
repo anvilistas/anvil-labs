@@ -84,7 +84,7 @@ export function initWorkerRPC(target: CustomWorker) {
     target.stateHandler = () => {};
 
     target.launchTask = (fn, args, kws) => {
-        const id = crypto.randomUUID();
+        const id = Math.random().toString(36).substring(6);
         target.currentTask = { fn, id };
 
         target.postMessage({ type: "CALL", id, fn, args, kws });
