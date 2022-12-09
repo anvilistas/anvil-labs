@@ -78,21 +78,21 @@ class LinkedAttribute:
     linked table items as attributes to the parent object.
     """
 
-    def __init__(self, name, linked_table, linked_attr):
+    def __init__(self, linked_column, linked_attr):
         """
         Parameters
         ----------
-        name: str
-            The name which should be used for the dynamic attribute which is added
-        linked_table: str
+        linked_column: str
             The name of the column in the row object which links to another table
         linked_attr: str
             The name of the column in the linked table which contains the required
             value
         """
-        self._name = name
-        self._linked_table = linked_table
+        self._linked_column = linked_column
         self._linked_attr = linked_attr
+
+    def __set_name(self, owner, name):
+        self._name = name
 
     def __get__(self, instance, objtype=None):
         if instance is None:
@@ -102,11 +102,11 @@ class LinkedAttribute:
         dispatcher = store._dispatcher
         if not dispatcher.synced:
             try:
-                return getattr(dispatcher, self._linked_attr)
+                return getattr(dispatcher, self._name)
             except AttributeError:
-                return store._row[self._linked_table][self._linked_attr]
+                return store._row[self._linked_column][self._linked_attr]
         else:
-            return store._row[self._linked_table][self._linked_attr]
+            return store._row[self._linked_column][self._linked_attr]
 
     def __set__(self, instance, value):
         setattr(instance._store._dispatcher, self._name, value)
@@ -130,8 +130,8 @@ class RowBackedStore:
         Parameters
         ----------
         server_functions: dict
-            mapping the keys 'creator', 'getter', 'updater' and 'deleter' to the name of the
-            relevant server function for that action
+            mapping the keys 'creator', 'getter', 'updater' and 'deleter' to the name
+            of the relevant server function for that action
         row: anvil.tables.Row
         dispatcher: any
             A portable class suitable for sending changes from client to server
