@@ -250,9 +250,8 @@ def persisted_class(cls):
     return type(cls.__name__, (object,), dict(cls.__dict__, **MEMBERS))
 
 
-@property
-def _server_functions(self):
-    class_name = self.__class__.__name__.lower()
+def _combine_server_functions(cls):
+    class_name = cls.__name__.lower()
     defaults = {
         "getter": ServerFunction(name=f"get_{class_name}"),
         "creator": ServerFunction(name=f"create_{class_name}", with_kompot=True),
@@ -261,7 +260,7 @@ def _server_functions(self):
     }
     members = {
         k: v
-        for k, v in self.__class__.__dict__.items()
+        for k, v in cls.__dict__.items()
         if isinstance(v, ServerFunction)
     }
     return dict(defaults, **members)
@@ -274,6 +273,6 @@ def _row_backed_init(self, row=None):
 def row_backed_class(cls):
     """A decorator for a class persisted by a data tables row"""
     _cls = persisted_class(cls)
-    setattr(_cls, "_server_functions", _server_functions)
+    setattr(_cls, "_server_functions", _combine_server_functions())
     setattr(_cls, "__init__", _row_backed_init)
     return _cls
