@@ -91,7 +91,7 @@ class LinkedAttribute:
         self._linked_column = linked_column
         self._linked_attr = linked_attr
 
-    def __set_name(self, owner, name):
+    def __set_name__(self, owner, name):
         self._name = name
 
     def __get__(self, instance, objtype=None):
