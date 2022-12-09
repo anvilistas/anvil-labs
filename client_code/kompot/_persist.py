@@ -258,11 +258,7 @@ def _combine_server_functions(cls):
         "updater": ServerFunction(name=f"update_{class_name}", with_kompot=True),
         "deleter": ServerFunction(name=f"delete_{class_name}"),
     }
-    members = {
-        k: v
-        for k, v in cls.__dict__.items()
-        if isinstance(v, ServerFunction)
-    }
+    members = {k: v for k, v in cls.__dict__.items() if isinstance(v, ServerFunction)}
     return dict(defaults, **members)
 
 
