@@ -13,6 +13,7 @@ from ._types import (
     integer,
     isinstance,
     lazy,
+    list,
     literal,
     mapping,
     never,

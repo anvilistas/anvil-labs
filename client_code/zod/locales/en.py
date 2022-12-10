@@ -61,7 +61,7 @@ def error_map(issue, _ctx: ErrorMapContext):
 
     elif code == ZodIssueCode.too_small:
         t = issue.get("type")
-        if t == "array":
+        if t == "list":
             message = f"Array must contain {'at least' if issue['inclusive'] else 'more than'} {issue['minimum']} element(s)"
         elif t == "string":
             message = f"String must contain {'at least' if issue['inclusive'] else 'over'} {issue['minimum']} character(s)"
@@ -72,7 +72,7 @@ def error_map(issue, _ctx: ErrorMapContext):
 
     elif code == ZodIssueCode.too_big:
         t = issue.get("type")
-        if t == "array":
+        if t == "list":
             message = f"Array must contain {'at most' if issue['inclusive'] else 'less than'} {issue['maximum']} element(s)"
         elif t == "string":
             message = f"String must contain {'at most' if issue['inclusive'] else 'under'} {issue['maximum']} character(s)"
