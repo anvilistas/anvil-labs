@@ -108,3 +108,6 @@ class ZodError(Exception):
         for p in path:
             formatted = formatted.get(p) or FieldErrors()
         return formatted._errors
+
+
+ZodError.__name__ = "ParseError"

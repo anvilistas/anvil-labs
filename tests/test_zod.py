@@ -676,7 +676,7 @@ def test_pick_omit():
 
 
 def test_record():
-    booleanRecord = z.record(z.boolean())
+    booleanRecord = z.record(z.string(), z.boolean())
     booleanRecord.parse({"abc": True, "foo": False})
     check_throws(booleanRecord, {"abcd": 123})
     check_throws(booleanRecord, {"abcd": {}})
@@ -1120,3 +1120,25 @@ def test_unions():
     union = z.union([z.string(), z.number()])
     union.options[0].parse("asdf")
     union.options[1].parse(1234)
+
+
+def test_coercion():
+    schema = z.coerce.string()
+    assert schema.parse("sup") == "sup"
+    assert schema.parse(12) == "12"
+    assert schema.parse(True) == "True"
+    assert schema.parse(15) == "15"
+
+    schema = z.coerce.integer()
+    assert schema.parse("12") == 12
+    assert schema.parse(12) == 12
+    assert schema.parse(True) == 1
+    assert schema.parse(3.14) == 3
+    check_throws(schema, "abc")
+
+    schema = z.coerce.boolean()
+    assert schema.parse("") is False
+    assert schema.parse("12") is True
+    assert schema.parse(0) is False
+    assert schema.parse(12) is True
+    assert schema.parse(True) is True

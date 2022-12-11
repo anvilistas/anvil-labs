@@ -237,6 +237,9 @@ class ZodString(ZodType):
     _type_name = _type
 
     def _parse(self, input: ParseInput):
+        if self._def["coerce"]:
+            input.data = str(input.data)
+
         if self._check_invalid_type(input):
             return INVALID
 
@@ -421,8 +424,8 @@ class ZodString(ZodType):
         return self._add_check(kind="strip")
 
     @classmethod
-    def _create(cls, **params):
-        return cls(dict(checks=[], **process_params(**params)))
+    def _create(cls, *, coerce=False, **params):
+        return cls(dict(checks=[], coerce=coerce, **process_params(**params)))
 
 
 class ZodAbstractNumber(ZodType):
@@ -430,6 +433,16 @@ class ZodAbstractNumber(ZodType):
     _type_name = _type
 
     def _parse(self, input):
+
+        if self._def["coerce"]:
+            try:
+                if self._type == ZodParsedType.integer:
+                    input.data = int(input.data)
+                elif self._type == ZodParsedType.float:
+                    input.data = float_(input.data)
+            except Exception:
+                pass
+
         if self._check_invalid_type(input):
             return INVALID
 
@@ -491,7 +504,7 @@ class ZodAbstractNumber(ZodType):
 
     @classmethod
     def _create(cls, **params):
-        return cls(dict(checks=[], **process_params(**params)))
+        return cls(dict(checks=[], coerce=False, **process_params(**params)))
 
 
 class ZodInteger(ZodAbstractNumber):
@@ -537,8 +550,8 @@ class ZodInteger(ZodAbstractNumber):
         return self.set_limit("min", 0, True, message)
 
     @classmethod
-    def _create(cls, **params):
-        return cls(dict(checks=[], **process_params(**params)))
+    def _create(cls, *, coerce=False, **params):
+        return cls(dict(checks=[], coerce=coerce, **process_params(**params)))
 
 
 class ZodFloat(ZodAbstractNumber):
@@ -587,8 +600,8 @@ class ZodFloat(ZodAbstractNumber):
         return self.set_limit("min", 0, True, message)
 
     @classmethod
-    def _create(cls, **params):
-        return cls(dict(checks=[], **process_params(**params)))
+    def _create(cls, *, coerce=False, **params):
+        return cls(dict(checks=[], coerce=coerce, **process_params(**params)))
 
 
 class ZodNumber(ZodAbstractNumber):
@@ -638,7 +651,7 @@ class ZodNumber(ZodAbstractNumber):
 
     @classmethod
     def _create(cls, **params):
-        return cls(dict(checks=[], **process_params(**params)))
+        return cls(dict(checks=[], coerce=False, **process_params(**params)))
 
 
 class ZodDateTime(ZodType):
@@ -718,9 +731,15 @@ class ZodBoolean(ZodType):
     _type_name = _type
 
     def _parse(self, input: ParseInput):
+        if self._def["coerce"]:
+            input.data = bool(input.data)
         if self._check_invalid_type(input):
             return INVALID
         return OK(input.data)
+
+    @classmethod
+    def _create(cls, *, coerce=False, **params):
+        return cls(dict(coerce=coerce, **process_params(**params)))
 
 
 class ZodNone(ZodType):
@@ -1159,13 +1178,11 @@ class ZodMapping(ZodType):
     element = value_schema
 
     @classmethod
-    def _create(cls, _keys=MISSING, _vals=MISSING, **params):
-        if _vals is MISSING and _keys is MISSING:
-            raise TypeError("must define either values, or keys and values")
-        if _vals is MISSING:
-            _vals = _keys
-            _keys = ZodString._create()
-        return cls(dict(key_type=_keys, value_type=_vals, **process_params(**params)))
+    def _create(cls, keys, vals, **params):
+        assert isinstance_(keys, ZodType) and isinstance_(
+            keys, ZodType
+        ), "expected schemas"
+        return cls(dict(key_type=keys, value_type=vals, **process_params(**params)))
 
 
 class ZodLazy(ZodType):
@@ -1409,7 +1426,7 @@ float = ZodFloat._create
 number = ZodNumber._create
 union = ZodUnion._create
 object = ZodTypedDict._create
-typedict = ZodTypedDict._create
+typeddict = ZodTypedDict._create
 preprocess = ZodEffects._preprocess
 list = ZodList._create
 enum = ZodEnum._create
@@ -1418,3 +1435,24 @@ mapping = ZodMapping._create
 record = ZodMapping._create
 lazy = ZodLazy._create
 NEVER = INVALID
+
+
+class ZodCoercion:
+    @staticmethod
+    def string(**params):
+        return string(coerce=True, **params)
+
+    @staticmethod
+    def integer(**params):
+        return integer(coerce=True, **params)
+
+    @staticmethod
+    def float(**params):
+        return float(coerce=True, **params)
+
+    @staticmethod
+    def boolean(**params):
+        return boolean(coerce=True, **params)
+
+
+coerce = ZodCoercion()

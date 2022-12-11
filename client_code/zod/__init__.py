@@ -6,6 +6,7 @@ from ._types import (
     any,
     array,
     boolean,
+    coerce,
     date,
     datetime,
     enum,
