@@ -1409,32 +1409,33 @@ def isinstance(cls, message=""):
     return custom(lambda data: isinstance_(data, cls), fatal=True, message=message)
 
 
-string = ZodString._create
-boolean = ZodBoolean._create
-none = ZodNone._create
+NEVER = INVALID
+
 any = ZodAny._create
 array = ZodList._create
-unknown = ZodUnknown._create
-never = ZodNever._create
-literal = ZodLiteral._create
-notrequired = ZodNotRequired._create
-optional = ZodOptional._create
+boolean = ZodBoolean._create
 date = ZodDate._create
 datetime = ZodDateTime._create
-integer = ZodInteger._create
-float = ZodFloat._create
-number = ZodNumber._create
-union = ZodUnion._create
-object = ZodTypedDict._create
-typeddict = ZodTypedDict._create
-preprocess = ZodEffects._preprocess
-list = ZodList._create
 enum = ZodEnum._create
-tuple = ZodTuple._create
-mapping = ZodMapping._create
-record = ZodMapping._create
+float = ZodFloat._create
+integer = ZodInteger._create
 lazy = ZodLazy._create
-NEVER = INVALID
+list = ZodList._create
+literal = ZodLiteral._create
+mapping = ZodMapping._create
+never = ZodNever._create
+none = ZodNone._create
+notrequired = ZodNotRequired._create
+number = ZodNumber._create
+object = ZodTypedDict._create
+optional = ZodOptional._create
+preprocess = ZodEffects._preprocess
+record = ZodMapping._create
+string = ZodString._create
+tuple = ZodTuple._create
+typeddict = ZodTypedDict._create
+unknown = ZodUnknown._create
+union = ZodUnion._create
 
 
 class ZodCoercion:
