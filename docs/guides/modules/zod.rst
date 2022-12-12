@@ -40,7 +40,7 @@ Creating a simple string schema
     result.success # False
 
 
-Creating a typeddict schema
+Creating a typed_dict schema
 
 
 .. code-block:: python
@@ -48,7 +48,7 @@ Creating a typeddict schema
     from anvil_labs import zod as z
 
     # create a schema
-    user = z.typeddict({
+    user = z.typed_dict({
         "username": z.string()
     })
 
@@ -364,7 +364,7 @@ TypedDict
 ---------
 
 This is equivalent to Zod TypeScript's ``object`` schema.
-We chose ``typeddict`` since it matches Python's ``typing.TypedDict``.
+We chose ``typed_dict`` since it matches Python's ``typing.TypedDict``.
 (``z.object`` is also available for convenience)
 
 
@@ -373,7 +373,7 @@ We chose ``typeddict`` since it matches Python's ``typing.TypedDict``.
     from anvil_labs.zod import z
 
     # all properties are required by default
-    Dog = z.typeddict({
+    Dog = z.typed_dict({
         "name": z.string(),
         "age": z.number()
     })
@@ -395,7 +395,7 @@ API
 
     .. method:: keyof
 
-        Use ``.keyof`` to create a ZodEnum schema from the keys of a typeddict schema.
+        Use ``.keyof`` to create a ZodEnum schema from the keys of a typed_dict schema.
 
         .. code-block:: python
 
@@ -408,14 +408,14 @@ API
 
     .. method:: extend
 
-        You can add additional fields to a typeddict schema with the .extend method.
+        You can add additional fields to a typed_dict schema with the .extend method.
 
         .. code-block:: python
 
             from anvil_labs.zod import z
 
             # all properties are required by default
-            Dog = z.typeddict({
+            Dog = z.typed_dict({
                 "name": z.string(),
                 "age": z.number()
             })
@@ -435,11 +435,11 @@ API
 
         .. code-block:: python
 
-            BaseTeacher = z.typeddict({
+            BaseTeacher = z.typed_dict({
                 "students": z.list(z.string())
             })
 
-            HasID = z.typeddict({
+            HasID = z.typed_dict({
                 "id": z.string()
             })
 
@@ -454,14 +454,14 @@ API
 
     .. method:: pick(keys=None)
 
-        Returns a modified version of the typeddict schema that only includes the keys specified in the ``keys`` argument.
+        Returns a modified version of the typed_dict schema that only includes the keys specified in the ``keys`` argument.
         (This method is inspired by TypeScript's built-in ``Pick`` utility type).
 
         .. code-block:: python
 
             from anvil_labs.zod import z
 
-            Recipe = z.typeddict({
+            Recipe = z.typed_dict({
                 "id": z.string(),
                 "name": z.string(),
                 "ingredients": z.list(z.string()),
@@ -476,14 +476,14 @@ API
 
     .. method:: omit(keys=None)
 
-        Returns a modified version of the typeddict schema that excludes the keys specified in the ``keys`` argument.
+        Returns a modified version of the typed_dict schema that excludes the keys specified in the ``keys`` argument.
         (This method is inspired by TypeScript's built-in ``Omit`` utility type).
 
         .. code-block:: python
 
             from anvil_labs.zod import z
 
-            Recipe = z.typeddict({
+            Recipe = z.typed_dict({
                 "id": z.string(),
                 "name": z.string(),
                 "ingredients": z.list(z.string()),
@@ -500,7 +500,7 @@ API
 
     .. method:: partial(keys=None)
 
-        :returns: a modified version of the typeddict schema in which all properties are made optional. This method is inspired by the built-in TypeScript utility type `Partial`.
+        :returns: a modified version of the typed_dict schema in which all properties are made optional. This method is inspired by the built-in TypeScript utility type `Partial`.
 
         :param keys: Optional argument that specifies which properties to make optional. If not provided, all properties are made optional.
         :type keys: iterable
@@ -509,7 +509,7 @@ API
 
             from anvil_labs.zod import z
 
-            User = z.typeddict({
+            User = z.typed_dict({
                 "email": z.string(),
                 "username": z.string(),
             })
@@ -527,8 +527,8 @@ API
         .. code-block:: python
 
             {
-                "email": z.string().notrequired(),
-                "username": z.string().notrequired(),
+                "email": z.string().not_required(),
+                "username": z.string().not_required(),
             }
 
         In other words the parsed dictionary may or may not include the ``"email"`` and ``"username"`` key.
@@ -543,7 +543,7 @@ API
 
             # the type of the `OptionalEmail` variable is equivalent to:
             # {
-            #     "email": z.string().notrequired(),
+            #     "email": z.string().not_required(),
             #     "username": z.string(),
             # }
 
@@ -551,7 +551,7 @@ API
 
     .. method:: required(keys=None)
 
-        Returns a modified version of the typeddict schema in which all properties are made required.
+        Returns a modified version of the typed_dict schema in which all properties are made required.
         This method is the opposite of the ``.partial`` method, which makes all properties optional.
 
         :param keys: Optional argument that specifies which properties to make required. If not provided, all properties are made required.
@@ -561,7 +561,7 @@ API
 
             from anvil_labs.zod import z
 
-            User = z.typeddict({
+            User = z.typed_dict({
                 "email": z.string(),
                 "username": z.string(),
             }).partial()
@@ -580,20 +580,20 @@ API
             # the type of the `RequiredEmail` variable is equivalent to:
             # {
             #     "email": z.string(),
-            #     "username": z.string().notrequired(),
+            #     "username": z.string().not_required(),
             # }
 
 
     .. method:: passthrough()
 
-        Returns a modified version of the typeddict schema that enables ``"passthrough"`` mode.
+        Returns a modified version of the typed_dict schema that enables ``"passthrough"`` mode.
         In passthrough mode, unrecognized keys are not stripped out during parsing.
 
         .. code-block:: python
 
             from anvil_labs.zod import z
 
-            Person = z.typeddict({
+            Person = z.typed_dict({
                 "name": z.string(),
             })
 
@@ -633,14 +633,14 @@ API
 
     .. method:: strict()
 
-        Returns a modified version of the typeddict schema that disallows unknown keys during parsing.
+        Returns a modified version of the typed_dict schema that disallows unknown keys during parsing.
         If the input to ``.parse()`` contains any unknown keys, a ``ParseError`` will be thrown.
 
         .. code-block:: python
 
             from anvil_labs.zod import z
 
-            Person = z.typeddict({
+            Person = z.typed_dict({
                 "name": z.string(),
             })
 
@@ -662,14 +662,14 @@ API
 
     .. method:: strip()
 
-        Returns a modified version of the typeddict schema that strips out unrecognized keys during parsing.
+        Returns a modified version of the typed_dict schema that strips out unrecognized keys during parsing.
         This is the default behavior of ZodTypedDict schemas.
 
 
 
     .. method:: catchall(schema: ZodAny) -> ZodTypedDict
 
-        You can pass a ``"catchall"`` schema into a typeddict schema.
+        You can pass a ``"catchall"`` schema into a typed_dict schema.
         All unknown keys will be validated against it.
 
         :param schema: A Zod schema for validating unknown keys.
@@ -683,7 +683,7 @@ API
             from zod import z
 
             # Create a person schema with `name` field
-            person = z.typeddict({
+            person = z.typed_dict({
                 "name": z.string()
             })
 
@@ -710,7 +710,7 @@ API
 NotRequired
 -----------
 
-The ``.notrequired()`` method can be used in conjunction with typeddict schemas.
+The ``.not_required()`` method can be used in conjunction with typed_dict schemas.
 This means the key value pair can be missing. See the :meth:`ZodTypedDict.partial` method.
 
 
@@ -865,7 +865,7 @@ This is particularly useful for storing or caching items by ID
 
 .. code-block:: python
 
-    user_schema = z.typeddict({"name": z.string()})
+    user_schema = z.typed_dict({"name": z.string()})
     user_cache_schema = z.mapping(z.string().uuid(), user_schema)
 
     user_store = {}
@@ -888,7 +888,7 @@ Recursive types
     from anvil_labs import zod as z
 
     Category = z.lazy(lambda:
-        z.typeddict({
+        z.typed_dict({
             'name': z.string(),
             'subcategories': z.list(Category),
         })

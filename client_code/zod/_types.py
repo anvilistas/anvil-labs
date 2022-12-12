@@ -163,7 +163,7 @@ class ZodType:
 
     array = list
 
-    def notrequired(self):
+    def not_required(self):
         "might not exist"
         return ZodNotRequired._create(self)
 
@@ -1043,13 +1043,13 @@ class ZodTypedDict(ZodType):
         return ZodTypedDict({**self._def, "shape": lambda: shape})
 
     def partial(self, mask=None):
-        "returns a new schema where values are notrequired. If a mask is provided, only those keys will become notrequired"
+        "returns a new schema where values are not required. If a mask is provided, only those keys will become not required"
         if mask:
             shape = {
-                k: (v.notrequired() if k in mask else v) for k, v in self.shape.items()
+                k: (v.not_required() if k in mask else v) for k, v in self.shape.items()
             }
         else:
-            shape = {k: v.notrequired() for k, v in self.shape.items()}
+            shape = {k: v.not_required() for k, v in self.shape.items()}
         return ZodTypedDict({**self._def, "shape": lambda: shape})
 
     def deep_partial(self):
@@ -1425,7 +1425,7 @@ literal = ZodLiteral._create
 mapping = ZodMapping._create
 never = ZodNever._create
 none = ZodNone._create
-notrequired = ZodNotRequired._create
+not_required = ZodNotRequired._create
 number = ZodNumber._create
 object = ZodTypedDict._create
 optional = ZodOptional._create
@@ -1433,7 +1433,7 @@ preprocess = ZodEffects._preprocess
 record = ZodMapping._create
 string = ZodString._create
 tuple = ZodTuple._create
-typeddict = ZodTypedDict._create
+typed_dict = ZodTypedDict._create
 unknown = ZodUnknown._create
 union = ZodUnion._create
 
