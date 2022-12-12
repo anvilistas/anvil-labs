@@ -61,7 +61,7 @@ class ParseResult(DictLike):
 
     def __repr__(self):
         key = "data" if self.success else "error"
-        return f"PareError(success={self.success}, {key}={self[key]})"
+        return f"ParseResult(success={self.success}, {key}={self[key]})"
 
 
 class ParseStatus:
