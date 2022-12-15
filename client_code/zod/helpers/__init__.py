@@ -24,7 +24,7 @@ class ZodParsedType_:
     # undefined = "undefined"
     missing = "missing"
     none = "none"  # TODO skulpt doesn't like null
-    array = "array"
+    list = "list"
     tuple = "tuple"
     # object = "object"
     mapping = "mapping"
@@ -63,7 +63,7 @@ def get_parsed_type(data):
         return ZodParsedType.float
 
     if t is list:
-        return ZodParsedType.array
+        return ZodParsedType.list
 
     if t is tuple:
         return ZodParsedType.tuple

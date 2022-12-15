@@ -32,6 +32,7 @@ __version__ = "0.0.1"
 any_ = any
 isinstance_ = isinstance
 float_ = float
+list_ = list
 
 
 class ParseInputLazyPath:
@@ -107,7 +108,7 @@ class ZodType:
     def _check_invalid_type(self, input):
         parsed_type = self._get_type(input)
 
-        types = self._type if type(self._type) is list else [self._type]
+        types = self._type if type(self._type) is list_ else [self._type]
 
         if parsed_type not in types:
             ctx = self._get_or_return_ctx(input)
@@ -157,20 +158,18 @@ class ZodType:
         result = self._parse(input)
         return handle_result(ctx, result)
 
-    def array(self):
-        return ZodArray._create(self)
+    def list(self):
+        return ZodList._create(self)
+
+    array = list
+
+    def not_required(self):
+        "might not exist"
+        return ZodNotRequired._create(self)
 
     def optional(self):
-        "might not exist"
-        return ZodOptional._create(self)
-
-    def nullable(self):
         "can be None"
-        return ZodNullable._create(self)
-
-    def nullish(self):
-        "optional and nullable"
-        return self.optional().nullable()
+        return ZodOptional._create(self)
 
     def default(self, value):
         "replace missing values with"
@@ -238,6 +237,9 @@ class ZodString(ZodType):
     _type_name = _type
 
     def _parse(self, input: ParseInput):
+        if self._def["coerce"]:
+            input.data = str(input.data)
+
         if self._check_invalid_type(input):
             return INVALID
 
@@ -422,8 +424,8 @@ class ZodString(ZodType):
         return self._add_check(kind="strip")
 
     @classmethod
-    def _create(cls, **params):
-        return cls(dict(checks=[], **process_params(**params)))
+    def _create(cls, *, coerce=False, **params):
+        return cls(dict(checks=[], coerce=coerce, **process_params(**params)))
 
 
 class ZodAbstractNumber(ZodType):
@@ -431,6 +433,16 @@ class ZodAbstractNumber(ZodType):
     _type_name = _type
 
     def _parse(self, input):
+
+        if self._def["coerce"]:
+            try:
+                if self._type == ZodParsedType.integer:
+                    input.data = int(input.data)
+                elif self._type == ZodParsedType.float:
+                    input.data = float_(input.data)
+            except Exception:
+                pass
+
         if self._check_invalid_type(input):
             return INVALID
 
@@ -492,7 +504,7 @@ class ZodAbstractNumber(ZodType):
 
     @classmethod
     def _create(cls, **params):
-        return cls(dict(checks=[], **process_params(**params)))
+        return cls(dict(checks=[], coerce=False, **process_params(**params)))
 
 
 class ZodInteger(ZodAbstractNumber):
@@ -538,8 +550,8 @@ class ZodInteger(ZodAbstractNumber):
         return self.set_limit("min", 0, True, message)
 
     @classmethod
-    def _create(cls, **params):
-        return cls(dict(checks=[], **process_params(**params)))
+    def _create(cls, *, coerce=False, **params):
+        return cls(dict(checks=[], coerce=coerce, **process_params(**params)))
 
 
 class ZodFloat(ZodAbstractNumber):
@@ -588,8 +600,8 @@ class ZodFloat(ZodAbstractNumber):
         return self.set_limit("min", 0, True, message)
 
     @classmethod
-    def _create(cls, **params):
-        return cls(dict(checks=[], **process_params(**params)))
+    def _create(cls, *, coerce=False, **params):
+        return cls(dict(checks=[], coerce=coerce, **process_params(**params)))
 
 
 class ZodNumber(ZodAbstractNumber):
@@ -639,7 +651,7 @@ class ZodNumber(ZodAbstractNumber):
 
     @classmethod
     def _create(cls, **params):
-        return cls(dict(checks=[], **process_params(**params)))
+        return cls(dict(checks=[], coerce=False, **process_params(**params)))
 
 
 class ZodDateTime(ZodType):
@@ -719,9 +731,15 @@ class ZodBoolean(ZodType):
     _type_name = _type
 
     def _parse(self, input: ParseInput):
+        if self._def["coerce"]:
+            input.data = bool(input.data)
         if self._check_invalid_type(input):
             return INVALID
         return OK(input.data)
+
+    @classmethod
+    def _create(cls, *, coerce=False, **params):
+        return cls(dict(coerce=coerce, **process_params(**params)))
 
 
 class ZodNone(ZodType):
@@ -763,9 +781,9 @@ class ZodNever(ZodType):
         return INVALID
 
 
-class ZodArray(ZodType):
-    _type = [ZodParsedType.array, ZodParsedType.tuple]
-    _type_name = "array"
+class ZodList(ZodType):
+    _type = [ZodParsedType.list, ZodParsedType.tuple]
+    _type_name = "list"
 
     def _parse(self, input):
         status, ctx = self._process_input_params(input)
@@ -782,7 +800,7 @@ class ZodArray(ZodType):
                         ctx,
                         code=ZodIssueCode.too_small,
                         minimum=check["value"],
-                        type="array",
+                        type="list",
                         inclusive=True,
                         message=check["message"],
                     )
@@ -794,7 +812,7 @@ class ZodArray(ZodType):
                         ctx,
                         code=ZodIssueCode.too_big,
                         maximum=check["value"],
-                        type="array",
+                        type="list",
                         inclusive=True,
                         message=check["message"],
                     )
@@ -814,7 +832,7 @@ class ZodArray(ZodType):
         return self._def["type"]
 
     def _add_check(self, **check):
-        return ZodArray({**self._def, "checks": [*self._def["checks"], check]})
+        return ZodList({**self._def, "checks": [*self._def["checks"], check]})
 
     def min(self, min_length, message=""):
         return self._add_check(kind="min", value=min_length, message=message)
@@ -857,28 +875,29 @@ class ZodEnum(ZodType):
 
     @classmethod
     def _create(cls, options, **params):
-        return cls(dict(values=list(options), **process_params(**params)))
+        return cls(dict(values=list_(options), **process_params(**params)))
 
 
 def deep_partialify(schema):
     t = type(schema)
-    if t is ZodMapping:
+    if t is ZodTypedDict:
         new_shape = {
-            k: ZodOptional._create(deep_partialify(v)) for k, v in schema.shape.items()
+            k: ZodNotRequired._create(deep_partialify(v))
+            for k, v in schema.shape.items()
         }
-        return ZodMapping({**schema._def, "shape": lambda: new_shape})
-    if t is ZodArray:
-        return ZodArray._create(deep_partialify(schema.element))
+        return ZodTypedDict({**schema._def, "shape": lambda: new_shape})
+    if t is ZodList:
+        return ZodList._create(deep_partialify(schema.element))
+    if t is ZodNotRequired:
+        return ZodNotRequired._create(deep_partialify(schema.unwrap()))
     if t is ZodOptional:
         return ZodOptional._create(deep_partialify(schema.unwrap()))
-    if t is ZodNullable:
-        return ZodNullable._create(deep_partialify(schema.unwrap()))
     if t is ZodTuple:
         return ZodTuple._create([deep_partialify(item) for item in schema.items])
     return schema
 
 
-class ZodMapping(ZodType):
+class ZodTypedDict(ZodType):
     _type = ZodParsedType.mapping
     _type_name = _type
 
@@ -974,21 +993,21 @@ class ZodMapping(ZodType):
                 return {"message": default_error}
 
             _def["error_map"] = error_map
-        return ZodMapping(_def)
+        return ZodTypedDict(_def)
 
     def strip(self):
         "return the data without additional keys"
-        return ZodMapping({**self._def, "unknown_keys": "strip"})
+        return ZodTypedDict({**self._def, "unknown_keys": "strip"})
 
     def passthrough(self):
         "ignore additional keys"
-        return ZodMapping({**self._def, "unknown_keys": "passthrough"})
+        return ZodTypedDict({**self._def, "unknown_keys": "passthrough"})
 
     nonstrict = passthrough
 
     def extend(self, shape):
         "create a new schema extending the current shape"
-        return ZodMapping(
+        return ZodTypedDict(
             {**self._def, "shape": lambda: merge_shapes(self.shape, shape)}
         )
 
@@ -998,7 +1017,7 @@ class ZodMapping(ZodType):
 
     def merge(self, merge_with):
         "merge two mapping schemas"
-        assert type(merge_with) is ZodMapping, "expected a zod mapping schema"
+        assert type(merge_with) is ZodTypedDict, "expected a zod mapping schema"
         merged = {
             "unknown_keys": merge_with._def["unknown_keys"],
             "catchall": merge_with._def["catchall"],
@@ -1006,32 +1025,32 @@ class ZodMapping(ZodType):
                 self._def["shape"](), merge_with._def["shape"]()
             ),
         }
-        return ZodMapping(merged)
+        return ZodTypedDict(merged)
 
     def catchall(self, index):
-        return ZodMapping({**self._def, "catchall": index})
+        return ZodTypedDict({**self._def, "catchall": index})
 
     def pick(self, mask):
         "mask should be an iterable of keys, retuns a new schema with only those keys"
         this_shape = self.shape
         shape = {k: this_shape[k] for k in mask if k in this_shape}
-        return ZodMapping({**self._def, "shape": lambda: shape})
+        return ZodTypedDict({**self._def, "shape": lambda: shape})
 
     def omit(self, mask):
         "mask should be an iterable of keys, retuns a new schema without those keys"
         this_shape = self.shape
         shape = {k: v for k, v in this_shape.items() if k not in mask}
-        return ZodMapping({**self._def, "shape": lambda: shape})
+        return ZodTypedDict({**self._def, "shape": lambda: shape})
 
     def partial(self, mask=None):
-        "returns a new schema where values are optional. If a mask is provided, only those keys will become optional"
+        "returns a new schema where values are not required. If a mask is provided, only those keys will become not required"
         if mask:
             shape = {
-                k: (v.optional() if k in mask else v) for k, v in self.shape.items()
+                k: (v.not_required() if k in mask else v) for k, v in self.shape.items()
             }
         else:
-            shape = {k: v.optional() for k, v in self.shape.items()}
-        return ZodMapping({**self._def, "shape": lambda: shape})
+            shape = {k: v.not_required() for k, v in self.shape.items()}
+        return ZodTypedDict({**self._def, "shape": lambda: shape})
 
     def deep_partial(self):
         return deep_partialify(self)
@@ -1040,7 +1059,7 @@ class ZodMapping(ZodType):
         "returns a new schema where values are required. If a mask is provided, only those keys will become required"
 
         def unwrap(field):
-            while isinstance_(field, ZodOptional):
+            while isinstance_(field, ZodNotRequired):
                 field = field._def["inner_type"]
             return field
 
@@ -1048,7 +1067,7 @@ class ZodMapping(ZodType):
             shape = {k: (unwrap(v) if k in mask else v) for k, v in self.shape.items()}
         else:
             shape = {k: unwrap(v) for k, v in self.shape.items()}
-        return ZodMapping({**self._def, "shape": lambda: shape})
+        return ZodTypedDict({**self._def, "shape": lambda: shape})
 
     def keyof(self):
         "get the keys of this mapping schema as an enum schema"
@@ -1067,7 +1086,7 @@ class ZodMapping(ZodType):
 
 
 class ZodTuple(ZodType):
-    _type = [ZodParsedType.array, ZodParsedType.tuple]
+    _type = [ZodParsedType.list, ZodParsedType.tuple]
     _type_name = _type
 
     def _parse(self, input):
@@ -1084,7 +1103,7 @@ class ZodTuple(ZodType):
                 code=ZodIssueCode.too_small,
                 minimum=len(items),
                 inclusive=True,
-                type="array",
+                type="list",
             )
             return INVALID
 
@@ -1094,7 +1113,7 @@ class ZodTuple(ZodType):
                 code=ZodIssueCode.too_big,
                 maximum=len(items),
                 inclusive=True,
-                type="array",
+                type="list",
             )
             return INVALID
 
@@ -1121,7 +1140,7 @@ class ZodTuple(ZodType):
         return cls(dict(items=schemas, rest=None, **process_params(**params)))
 
 
-class ZodRecord(ZodType):
+class ZodMapping(ZodType):
     _type = ZodParsedType.mapping
     _type_name = _type
 
@@ -1159,13 +1178,11 @@ class ZodRecord(ZodType):
     element = value_schema
 
     @classmethod
-    def _create(cls, _keys=MISSING, _vals=MISSING, **params):
-        if _vals is MISSING and _keys is MISSING:
-            raise TypeError("must define either values, or keys and values")
-        if _vals is MISSING:
-            _vals = _keys
-            _keys = ZodString._create()
-        return cls(dict(key_type=_keys, value_type=_vals, **process_params(**params)))
+    def _create(cls, keys, vals, **params):
+        assert isinstance_(keys, ZodType) and isinstance_(
+            keys, ZodType
+        ), "expected schemas"
+        return cls(dict(key_type=keys, value_type=vals, **process_params(**params)))
 
 
 class ZodLazy(ZodType):
@@ -1288,13 +1305,13 @@ class ZodWraps(ZodType):
         return cls(dict(inner_type=type, **process_params(**params)))
 
 
-class ZodOptional(ZodWraps):
+class ZodNotRequired(ZodWraps):
     _wraps = MISSING
     _type = ZodParsedType.missing
     _type_name = _type
 
 
-class ZodNullable(ZodWraps):
+class ZodOptional(ZodWraps):
     _wraps = None
     _type = ZodParsedType.none
     _type_name = _type
@@ -1392,27 +1409,51 @@ def isinstance(cls, message=""):
     return custom(lambda data: isinstance_(data, cls), fatal=True, message=message)
 
 
-string = ZodString._create
-boolean = ZodBoolean._create
-none = ZodNone._create
+NEVER = INVALID
+
 any = ZodAny._create
-unknown = ZodUnknown._create
-never = ZodNever._create
-literal = ZodLiteral._create
-optional = ZodOptional._create
-nullable = ZodNullable._create
+array = ZodList._create
+boolean = ZodBoolean._create
 date = ZodDate._create
 datetime = ZodDateTime._create
-integer = ZodInteger._create
-float = ZodFloat._create
-number = ZodNumber._create
-union = ZodUnion._create
-object = ZodMapping._create
-mapping = ZodMapping._create
-preprocess = ZodEffects._preprocess
-array = ZodArray._create
 enum = ZodEnum._create
-tuple = ZodTuple._create
-record = ZodRecord._create
+float = ZodFloat._create
+integer = ZodInteger._create
 lazy = ZodLazy._create
-NEVER = INVALID
+list = ZodList._create
+literal = ZodLiteral._create
+mapping = ZodMapping._create
+never = ZodNever._create
+none = ZodNone._create
+not_required = ZodNotRequired._create
+number = ZodNumber._create
+object = ZodTypedDict._create
+optional = ZodOptional._create
+preprocess = ZodEffects._preprocess
+record = ZodMapping._create
+string = ZodString._create
+tuple = ZodTuple._create
+typed_dict = ZodTypedDict._create
+unknown = ZodUnknown._create
+union = ZodUnion._create
+
+
+class ZodCoercion:
+    @staticmethod
+    def string(**params):
+        return string(coerce=True, **params)
+
+    @staticmethod
+    def integer(**params):
+        return integer(coerce=True, **params)
+
+    @staticmethod
+    def float(**params):
+        return float(coerce=True, **params)
+
+    @staticmethod
+    def boolean(**params):
+        return boolean(coerce=True, **params)
+
+
+coerce = ZodCoercion()

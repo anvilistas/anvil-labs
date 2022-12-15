@@ -117,10 +117,10 @@ def test_catch():
     assert string_with_default.parse(42) == "default"
     assert isinstance(string_with_default._def["inner_type"], z._types.ZodEffects)
 
-    string_with_default = z.string().optional().catch("asdf")
+    string_with_default = z.string().not_required().catch("asdf")
     assert string_with_default.parse(None) == "asdf"
     assert string_with_default.parse(42) == "asdf"
-    assert isinstance(string_with_default._def["inner_type"], z._types.ZodOptional)
+    assert isinstance(string_with_default._def["inner_type"], z._types.ZodNotRequired)
 
     complex = (
         z.string()
@@ -129,7 +129,7 @@ def test_catch():
         .transform(str.upper)
         .catch("qwer")
         .remove_default()
-        .optional()
+        .not_required()
         .catch("asdfasdf")
     )
 
@@ -161,18 +161,18 @@ def test_crazy_schema():
         {
             "tuple": z.tuple(
                 [
-                    z.string().nullable().optional(),
-                    z.number().nullable().optional(),
-                    z.boolean().nullable().optional(),
-                    z.none().nullable().optional(),
-                    z.literal("1234").nullable().optional(),
+                    z.string().optional().not_required(),
+                    z.number().optional().not_required(),
+                    z.boolean().optional().not_required(),
+                    z.none().optional().not_required(),
+                    z.literal("1234").optional().not_required(),
                 ]
             ),
             "merged": z.object(
                 {
-                    "k1": z.string().optional(),
+                    "k1": z.string().not_required(),
                 }
-            ).merge(z.object({"k1": z.string().nullable(), "k2": z.number()})),
+            ).merge(z.object({"k1": z.string().optional(), "k2": z.number()})),
             "union": z.array(z.union([z.literal("asdf"), z.literal(12)])).nonempty(),
             "array": z.array(z.number()),
             "sumMinLength": z.array(z.number()).refine(lambda arg: len(arg) > 5),
@@ -221,9 +221,9 @@ def test_default():
     assert string_with_default.parse(MISSING) == "DEFAULT"
     assert isinstance(string_with_default._def["inner_type"], z._types.ZodEffects)
 
-    string_with_default = z.string().optional().default("asdf")
+    string_with_default = z.string().not_required().default("asdf")
     assert string_with_default.parse(MISSING) == "asdf"
-    assert isinstance(string_with_default._def["inner_type"], z._types.ZodOptional)
+    assert isinstance(string_with_default._def["inner_type"], z._types.ZodNotRequired)
 
     complex = (
         z.string()
@@ -231,7 +231,7 @@ def test_default():
         .transform(str.upper)
         .default("qwer")
         .remove_default()
-        .optional()
+        .not_required()
         .default("asdfasdf")
     )
 
@@ -288,7 +288,7 @@ def test_isinstance():
     assert not res.success
 
 
-def test_nullable():
+def test_optional():
     def check_errors(a, bad):
         expected = None
         try:
@@ -299,28 +299,28 @@ def test_nullable():
             pytest.fail()
 
         try:
-            a.nullable().parse(bad)
+            a.optional().parse(bad)
         except z.ParseError as e:
             assert e.message == expected
         else:
             pytest.fail()
 
     check_errors(z.string().min(2), 1)
-    z.string().min(2).nullable().parse(None)
+    z.string().min(2).optional().parse(None)
     check_errors(z.number().ge(2), 1)
-    z.number().ge(2).nullable().parse(None)
+    z.number().ge(2).optional().parse(None)
     check_errors(z.boolean(), "")
-    z.boolean().nullable().parse(None)
+    z.boolean().optional().parse(None)
     check_errors(z.none(), {})
-    z.none().nullable().parse(None)
+    z.none().optional().parse(None)
     check_errors(z.none(), {})
-    z.none().nullable().parse(None)
+    z.none().optional().parse(None)
     check_errors(z.object({}), 1)
-    z.object({}).nullable().parse(None)
+    z.object({}).optional().parse(None)
     check_errors(z.tuple([]), 1)
-    z.tuple([]).nullable().parse(None)
+    z.tuple([]).optional().parse(None)
     # check_errors(z.unknown(), 1)
-    z.unknown().nullable().parse(None)
+    z.unknown().optional().parse(None)
 
 
 def test_number():
@@ -376,8 +376,8 @@ def test_object():
     Test = z.object(
         {
             "f1": z.number(),
-            "f2": z.string().optional(),
-            "f3": z.string().nullable(),
+            "f2": z.string().not_required(),
+            "f3": z.string().optional(),
             "f4": z.array(z.object({"t": z.union([z.string(), z.boolean()])})),
         }
     )
@@ -436,7 +436,7 @@ def test_object():
     o1 = (
         z.object(
             {
-                "first": z.string().optional(),
+                "first": z.string().not_required(),
             }
         )
         .strict()
@@ -463,8 +463,8 @@ def test_object():
     SNamedEntity = z.object(
         {
             "id": z.string(),
-            "set": z.string().nullable(),
-            "unset": z.string().optional(),
+            "set": z.string().optional(),
+            "unset": z.string().not_required(),
         }
     )
 
@@ -500,7 +500,7 @@ def test_object():
     withNewKey.parse({"name": "asdf", "age": 1234})
 
 
-def test_optional():
+def test_not_required():
     def check_errors(a, bad):
         expected = None
         try:
@@ -511,28 +511,28 @@ def test_optional():
             pytest.fail()
 
         try:
-            a.optional().parse(bad)
+            a.not_required().parse(bad)
         except z.ParseError as e:
             assert e.message == expected
         else:
             pytest.fail()
 
     check_errors(z.string().min(2), 1)
-    z.string().min(2).optional().parse(MISSING)
+    z.string().min(2).not_required().parse(MISSING)
     check_errors(z.number().ge(2), 1)
-    z.number().ge(2).optional().parse(MISSING)
+    z.number().ge(2).not_required().parse(MISSING)
     check_errors(z.boolean(), "")
-    z.boolean().optional().parse(MISSING)
+    z.boolean().not_required().parse(MISSING)
     check_errors(z.none(), {})
-    z.none().optional().parse(MISSING)
+    z.none().not_required().parse(MISSING)
     check_errors(z.none(), {})
-    z.none().optional().parse(MISSING)
+    z.none().not_required().parse(MISSING)
     check_errors(z.object({}), 1)
-    z.object({}).optional().parse(MISSING)
+    z.object({}).not_required().parse(MISSING)
     check_errors(z.tuple([]), 1)
-    z.tuple([]).optional().parse(MISSING)
+    z.tuple([]).not_required().parse(MISSING)
     # check_errors(z.unknown(), 1)
-    z.unknown().optional().parse(MISSING)
+    z.unknown().not_required().parse(MISSING)
 
 
 def test_parser():
@@ -568,8 +568,8 @@ def test_partials():
     )
 
     deep = nested.deep_partial()
-    assert isinstance(deep.shape["name"], z._types.ZodOptional)
-    assert isinstance(deep.shape["outer"], z._types.ZodOptional)
+    assert isinstance(deep.shape["name"], z._types.ZodNotRequired)
+    assert isinstance(deep.shape["outer"], z._types.ZodNotRequired)
 
     deep.parse({})
     deep.parse(
@@ -589,19 +589,19 @@ def test_partials():
 
     schema = z.object(
         {
-            "name": z.string().optional(),
-            "age": z.number().nullable(),
+            "name": z.string().not_required(),
+            "age": z.number().optional(),
         }
     ).deep_partial()
 
-    assert isinstance(schema.shape["name"].unwrap(), z._types.ZodOptional)
-    assert isinstance(schema.shape["age"].unwrap(), z._types.ZodNullable)
+    assert isinstance(schema.shape["name"].unwrap(), z._types.ZodNotRequired)
+    assert isinstance(schema.shape["age"].unwrap(), z._types.ZodOptional)
 
     object = z.object(
         {
             "name": z.string(),
-            "age": z.number().optional(),
-            "field": z.string().optional().default("asdf"),
+            "age": z.number().not_required(),
+            "field": z.string().not_required().default("asdf"),
         }
     )
 
@@ -617,9 +617,9 @@ def test_partials():
     object = z.object(
         {
             "name": z.string(),
-            "age": z.number().optional(),
-            "field": z.string().optional().default("asdf"),
-            "country": z.string().optional(),
+            "age": z.number().not_required(),
+            "field": z.string().not_required().default("asdf"),
+            "country": z.string().not_required(),
         }
     )
 
@@ -627,7 +627,7 @@ def test_partials():
     assert isinstance(requiredObject.shape["name"], z._types.ZodString)
     assert isinstance(requiredObject.shape["age"], z._types.ZodNumber)
     assert isinstance(requiredObject.shape["field"], z._types.ZodDefault)
-    assert isinstance(requiredObject.shape["country"], z._types.ZodOptional)
+    assert isinstance(requiredObject.shape["country"], z._types.ZodNotRequired)
 
 
 def test_pick_omit():
@@ -676,7 +676,7 @@ def test_pick_omit():
 
 
 def test_record():
-    booleanRecord = z.record(z.boolean())
+    booleanRecord = z.record(z.string(), z.boolean())
     booleanRecord.parse({"abc": True, "foo": False})
     check_throws(booleanRecord, {"abcd": 123})
     check_throws(booleanRecord, {"abcd": {}})
@@ -1016,7 +1016,7 @@ def test_transformer():
             return z.NEVER
         return val
 
-    foo = z.number().nullable().super_transform(use_never)
+    foo = z.number().optional().super_transform(use_never)
     check_error_message(foo, None, "bad")
 
     numToString = z.number().transform(str)
@@ -1120,3 +1120,25 @@ def test_unions():
     union = z.union([z.string(), z.number()])
     union.options[0].parse("asdf")
     union.options[1].parse(1234)
+
+
+def test_coercion():
+    schema = z.coerce.string()
+    assert schema.parse("sup") == "sup"
+    assert schema.parse(12) == "12"
+    assert schema.parse(True) == "True"
+    assert schema.parse(15) == "15"
+
+    schema = z.coerce.integer()
+    assert schema.parse("12") == 12
+    assert schema.parse(12) == 12
+    assert schema.parse(True) == 1
+    assert schema.parse(3.14) == 3
+    check_throws(schema, "abc")
+
+    schema = z.coerce.boolean()
+    assert schema.parse("") is False
+    assert schema.parse("12") is True
+    assert schema.parse(0) is False
+    assert schema.parse(12) is True
+    assert schema.parse(True) is True
