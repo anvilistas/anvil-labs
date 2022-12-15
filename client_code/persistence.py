@@ -57,7 +57,7 @@ def _get_value(self, key):
     if self._delta and key in self._delta:
         return self._delta[key]
 
-    return self._store.get(key, None)
+    return dict(self._store).get(key, None)
 
 
 def _set_value(self, key, value):
