@@ -80,8 +80,14 @@ def _get(self, *args, **kwargs):
     self._delta.clear()
 
 
-def _save(self):
-    anvil.server.call(f"save_{_class_name(self)}", self._store, self._delta)
+def _add(self):
+    result = anvil.server.call(f"add_{_class_name(self)}", self._delta)
+    self._store = result
+    self._delta.clear()
+
+
+def _update(self):
+    anvil.server.call(f"update_{_class_name(self)}", self._store, self._delta)
     self._delta.clear()
 
 
@@ -97,7 +103,8 @@ MEMBERS = {
     "__setattr__": _set_value,
     "__setitem__": _set_value,
     "get": _get,
-    "save": _save,
+    "add": _add,
+    "update": _update,
     "delete": _delete,
 }
 
