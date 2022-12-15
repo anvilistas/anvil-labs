@@ -36,19 +36,13 @@ class LinkedAttribute:
         if instance._delta:
             return instance._delta[self._name]
 
+        if not instance._store:
+            return None
+
         return instance._store[self._linked_column][self._linked_attr]
 
     def __set__(self, instance, value):
         instance._delta[self._name] = value
-
-
-class ServerFunction:
-    def __init__(self, target, caller=None):
-        self.target = target
-        self.caller = caller or anvil.server.call
-
-    def __call__(self, *args, **kwargs):
-        return self.caller(self.target, *args, **kwargs)
 
 
 @classmethod
@@ -63,7 +57,7 @@ def _get_value(self, key):
     if self._delta and key in self._delta:
         return self._delta[key]
 
-    return self._store[key]
+    return self._store.get(key, None)
 
 
 def _set_value(self, key, value):
@@ -77,36 +71,23 @@ def _set_value(self, key, value):
         self._delta[key] = value
 
 
-def _server_functions(cls):
-    class_name = cls.__name__.lower()
-    keys = ["get", "save", "delete"]
-    default_server_functions = {
-        key: ServerFunction(target=f"{key}_{class_name}")
-        for key in keys
-        if key not in cls.__dict__
-    }
-    user_defined_server_functions = {
-        k: v for k, v in cls.__dict__.items() if isinstance(v, ServerFunction)
-    }
-    return dict(default_server_functions, **user_defined_server_functions)
+def _class_name(instance):
+    return instance.__class__.__name__.lower()
 
 
-def _crud_methods(cls):
-    server_functions = _server_functions(cls)
+def _get(self, *args, **kwargs):
+    self._store = anvil.server.call(f"get_{_class_name(self)}", *args, **kwargs)
+    self._delta.clear()
 
-    def _get(self, *args, **kwargs):
-        self._store = server_functions["get"](*args, **kwargs)
-        self._delta.clear()
 
-    def _save(self):
-        server_functions["save"](self._store, self._delta)
-        self._delta.clear()
+def _save(self):
+    anvil.server.call(f"save_{_class_name(self)}", self._store, self._delta)
+    self._delta.clear()
 
-    def _delete(self):
-        server_functions["delete"](self._store)
-        self._delta.clear()
 
-    return {"get": _get, "save": _save, "delete": _delete}
+def _delete(self):
+    anvil.server.call(f"delete_{_class_name(self)}", self._store)
+    self._delta.clear()
 
 
 MEMBERS = {
@@ -115,16 +96,12 @@ MEMBERS = {
     "__getitem__": _get_value,
     "__setattr__": _set_value,
     "__setitem__": _set_value,
+    "get": _get,
+    "save": _save,
+    "delete": _delete,
 }
 
 
 def persisted_class(cls):
     """A decorator for a class with a persistence mechanism"""
-    user_defined_members = {
-        k: v for k, v in cls.__dict__.items() if not isinstance(v, ServerFunction)
-    }
-    _cls = type(cls.__name__, (object,), dict(user_defined_members, **MEMBERS))
-    for name, method in _crud_methods(_cls).items():
-        if name not in _cls.__dict__:
-            setattr(_cls, name, method)
-    return _cls
+    return type(cls.__name__, (object,), dict(MEMBERS, **cls.__dict__))
