@@ -15,6 +15,7 @@ def book_store():
 @pytest.fixture
 def book(book_store):
     """A class that behaves like a persisted class without actually being one"""
+
     class Book:
         _store = book_store
         _delta = {}
@@ -26,6 +27,7 @@ def book(book_store):
 @pytest.fixture
 def persisted_book():
     """An ordinary persisted class"""
+
     @ps.persisted_class
     class Book:
         author_name = ps.LinkedAttribute(linked_column="author", linked_attr="name")
@@ -36,6 +38,7 @@ def persisted_book():
 @pytest.fixture
 def customised_book():
     """A persisted class with a standard crud method overridden"""
+
     @ps.persisted_class
     class Book:
         author_name = ps.LinkedAttribute(linked_column="author", linked_attr="name")
@@ -54,8 +57,6 @@ def test_linked_attribute(book, book_store):
     assert book._store == book_store
     assert book.author_name == "Luciano"
 
-
-def test_new_instance(persisted_book):
     """Test that new instances without a store defined have the expected attributes"""
     assert persisted_book.title is None
     assert persisted_book.author_name is None
