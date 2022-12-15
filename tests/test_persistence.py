@@ -57,6 +57,8 @@ def test_linked_attribute(book, book_store):
     assert book._store == book_store
     assert book.author_name == "Luciano"
 
+
+def test_new_instance(persisted_book):
     """Test that new instances without a store defined have the expected attributes"""
     assert persisted_book.title is None
     assert persisted_book.author_name is None
