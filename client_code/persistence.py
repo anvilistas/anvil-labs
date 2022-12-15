@@ -81,8 +81,7 @@ def _get(self, *args, **kwargs):
 
 
 def _add(self):
-    result = anvil.server.call(f"add_{_class_name(self)}", self._delta)
-    self._store = result
+    self._store = anvil.server.call(f"add_{_class_name(self)}", self._delta)
     self._delta.clear()
 
 
