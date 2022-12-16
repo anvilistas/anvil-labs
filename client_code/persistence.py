@@ -68,10 +68,10 @@ def _get_value(self, key):
 
 def _set_value(self, key, value):
     is_private = key.startswith("_")
-    is_linked_attribute = hasattr(self.__class__, key) and isinstance(
-        getattr(self.__class__, key), LinkedAttribute
+    is_descriptor = hasattr(self.__class__, key) and hasattr(
+        getattr(self.__class__, key), "__set__"
     )
-    if is_private or is_linked_attribute:
+    if is_private or is_descriptor:
         object.__setattr__(self, key, value)
     else:
         self._delta[key] = value
