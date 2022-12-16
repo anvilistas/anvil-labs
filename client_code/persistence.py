@@ -46,6 +46,12 @@ class LinkedAttribute:
 
 
 @classmethod
+def _search(cls, *args, **kwargs):
+    rows = anvil.server.call(f"search_{cls.__name__.lower()}", *args, **kwargs)
+    return (cls.create(store=row) for row in rows)
+
+
+@classmethod
 def _create(cls, store=None, delta=None, *args, **kwargs):
     instance = cls(*args, **kwargs)
     instance._store = store or {}
@@ -96,6 +102,7 @@ def _delete(self):
 
 
 MEMBERS = {
+    "search": _search,
     "create": _create,
     "__getattr__": _get_value,
     "__getitem__": _get_value,
