@@ -59,11 +59,15 @@ def _create(cls, store=None, delta=None, *args, **kwargs):
     return instance
 
 
-def _get_value(self, key):
+def _getattr(self, key):
     if self._delta and key in self._delta:
         return self._delta[key]
 
     return dict(self._store).get(key, None)
+
+
+def _getitem(self, key):
+    return getattr(self, key)
 
 
 def _set_value(self, key, value):
@@ -108,8 +112,8 @@ def _delete(self, *args, **kwargs):
 MEMBERS = {
     "search": _search,
     "create": _create,
-    "__getattr__": _get_value,
-    "__getitem__": _get_value,
+    "__getattr__": _getattr,
+    "__getitem__": _getitem,
     "__setattr__": _set_value,
     "__setitem__": _set_value,
     "get": _get,

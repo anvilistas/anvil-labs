@@ -78,6 +78,20 @@ def test_persisted_class_attributes(persisted_book, book_store):
     assert persisted_book.author_name == "Luciano"
 
 
+def test_persisted_class_indexing(persisted_book, book_store):
+    """Test that persisted class also works with index access"""
+    persisted_book._store = book_store
+    assert persisted_book["title"] == "Fluent Python"
+    assert persisted_book["author_name"] == "Luciano Ramalho"
+    persisted_book["title"] = "Changed Title"
+    persisted_book["author_name"] = "Luciano"
+    assert persisted_book._delta["title"] == "Changed Title"
+    assert persisted_book._delta["author_name"] == "Luciano"
+    assert persisted_book._store == book_store
+    assert persisted_book["title"] == "Changed Title"
+    assert persisted_book["author_name"] == "Luciano"
+
+
 def test_default_server_functions(persisted_book):
     """Test that crud methods are added to a persisted class"""
     for key in ["get", "save", "delete"]:
