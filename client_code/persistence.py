@@ -27,6 +27,10 @@ class LinkedAttribute:
         self._linked_attr = linked_attr
 
     def __set_name__(self, owner, name):
+        if name == self._linked_column:
+            raise ValueError(
+                "Attribute name cannot be the same as the linked column name"
+            )
         self._name = name
 
     def __get__(self, instance, objtype=None):
