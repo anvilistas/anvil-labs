@@ -58,6 +58,15 @@ def test_linked_attribute(book, book_store):
     assert book.author_name == "Luciano"
 
 
+def test_linked_attribute_name_clash():
+    with pytest.raises(RuntimeError) as excinfo:
+
+        class Book:
+            author = ps.LinkedAttribute(linked_column="author", linked_attr="name")
+
+    assert "Error calling __set_name__" in str(excinfo.value)
+
+
 def test_new_instance(persisted_book):
     """Test that new instances without a store defined have the expected attributes"""
     assert persisted_book.title is None
