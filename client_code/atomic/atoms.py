@@ -204,10 +204,7 @@ class DictAtom(dict):
         return self[key]
 
     def __iter__(self):
-        # prevents dict(self) using the fast internal dict path
-        # which makes it easier to depend on each atom in a list of DictAtoms
-        # by calling [dict(atom) for dict_atom in list_atom]
-        return dict.__iter__(self)
+        return iter(self.keys())
 
     def keys(self):
         register(self, KEYS)
