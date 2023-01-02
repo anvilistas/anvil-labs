@@ -1,13 +1,9 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 # import anvil.server
-import re
-
 import anvil.server
 
 __version__ = "0.0.1"
-
-CAMEL_PATTERN = re.compile(r"(?<!^)(?=[A-Z])")
 
 
 class LinkedAttribute:
@@ -90,7 +86,9 @@ def _set_value(self, key, value):
 
 
 def _class_name(instance):
-    return CAMEL_PATTERN.sub("_", instance.__class__.__name__).lower()
+    return "".join(
+        ["_" + c.lower() if c.isupper() else c for c in instance.__class__.__name__]
+    ).lstrip("_")
 
 
 def _get(self, *args, **kwargs):
