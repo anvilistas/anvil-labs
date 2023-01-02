@@ -87,7 +87,7 @@ def _set_value(self, key, value):
 
 def _class_name(instance):
     return "".join(
-        ["_" + c.lower() if c.isupper() else c for c in instance.__class__.__name__]
+        "_" + c.lower() if c.isupper() else c for c in instance.__class__.__name__
     ).lstrip("_")
 
 
