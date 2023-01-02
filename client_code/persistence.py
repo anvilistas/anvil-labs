@@ -86,7 +86,9 @@ def _set_value(self, key, value):
 
 
 def _class_name(instance):
-    return instance.__class__.__name__.lower()
+    return "".join(
+        "_" + c.lower() if c.isupper() else c for c in instance.__class__.__name__
+    ).lstrip("_")
 
 
 def _get(self, *args, **kwargs):
