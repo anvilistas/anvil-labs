@@ -49,6 +49,31 @@ class LinkedAttribute:
         instance._delta[self._name] = value
 
 
+class LinkedClass:
+    "A descriptor class for adding objects based on linked tables as attributes"
+
+    def __init__(self, linked_column, constructor, *args, **kwargs):
+        self._linked_column = linked_column
+        self._constructor = constructor
+        self._obj = None
+        self._args = args or []
+        self._kwargs = kwargs or {}
+
+    def __get__(self, instance, objtype=None):
+        if instance is None:
+            return self
+
+        if self._obj is None:
+            self._obj = self._constructor(
+                instance._store[self._linked_column], *self._args, **self._kwargs
+            )
+
+        return self._obj
+
+    def __set__(self, instance, value):
+        raise ValueError("Linked Class instance is already set and cannot be changed")
+
+
 @classmethod
 def _search(cls, *args, **kwargs):
     rows = anvil.server.call(f"search_{cls.__name__.lower()}", *args, **kwargs)

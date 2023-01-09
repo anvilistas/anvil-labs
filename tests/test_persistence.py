@@ -49,6 +49,23 @@ def customised_book():
     return Book.create()
 
 
+@pytest.fixture
+def linked_persisted_book(book_store):
+    """A persisted class with a linked class attribute"""
+
+    @ps.persisted_class
+    class Author:
+        pass
+
+    @ps.persisted_class
+    class Book:
+        author = ps.LinkedClass(
+            linked_column="author", constructor=Author.create
+        )
+
+    return Book.create(book_store)
+
+
 def test_linked_attribute(book, book_store):
     """Test that the LinkedAttribute class works independently of persisted_class"""
     assert book.author_name == "Luciano Ramalho"
@@ -113,3 +130,19 @@ def test_customised_book(customised_book):
         assert hasattr(customised_book, key)
 
     assert customised_book.save() == "customised save"
+
+
+def test_linked_class(linked_persisted_book):
+    """Test that linked classes behave as expected"""
+    assert linked_persisted_book.title == "Fluent Python"
+    assert linked_persisted_book.author.name == "Luciano Ramalho"
+
+
+def test_linked_class_set(linked_persisted_book):
+    """Test that attempting to change a linked class instance raises an error"""
+    with pytest.raises(ValueError) as excinfo:
+        linked_persisted_book.author = "test"
+
+    assert "Linked Class instance is already set" in str(excinfo.value)
+
+        
