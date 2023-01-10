@@ -88,7 +88,7 @@ instance of that class as an attribute of a Book:
 
 .. code-block:: python
 
-   from anvil_labs.persistence import persisted_class, LinkedClass
+   from anvil_labs.persistence import persisted_class
 
    @persisted_class
    class Author:
