@@ -131,7 +131,43 @@ display the title and author of the book as a single string:
    assert book.display_text == "Fluent Python by Luciano Ramalho"
 
 
-Server Functions
-----------------
+Methods and Server Functions
+----------------------------
+Each persisted class will have methods `get`, `add`, `update` and `delete` as well as
+a classmethod `search`. Each of these will expect a matching server function to exist.
 
-**TODO**
+The server functions should be named with the relevant method followed by the persisted
+class name in snake case.
+
+For example, the `Book` class in the example above would require the following server
+functions in order to operate fully:
+
+.. code-block:: python
+
+   import anvil.server
+
+   @anvil.server.callable
+   def search_book():
+       ...
+
+    @anvil.server.callable
+    def get_book():
+        ...
+
+    @anvil.server.callable
+    def add_book(delta):
+        ...
+
+    @anvil.server.callable
+    def update_book(row, delta):
+        ...
+
+    @anvil.server.callable
+    def delete_book(row):
+        ...
+
+Where `row` will be the relevant data table row and `delta` will be a dict of attribute
+names and values that have changed.
+
+Any other args and kwargs passed to the persisted class methods will be passed to the 
+relevant server function.
