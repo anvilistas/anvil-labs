@@ -103,7 +103,7 @@ instance of that class as an attribute of a Book:
    book = Book()
    book.get(title="Fluent Python")
 
-   assert book.author.name == "Lucian Ramalho"
+   assert book.author.name == "Luciano Ramalho"
 
 
 Customisation
