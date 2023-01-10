@@ -144,6 +144,7 @@ def persisted_class(cls):
             is_persisted_class = issubclass(value, (PersistedClass,))
         except TypeError:
             is_persisted_class = False
+
         if is_persisted_class:
             user_members[attr] = LinkedClass(cls=value)
 
