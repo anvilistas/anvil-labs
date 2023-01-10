@@ -32,7 +32,7 @@ def persisted_book():
     class Book:
         author_name = ps.LinkedAttribute(linked_column="author", linked_attr="name")
 
-    return Book.create()
+    return Book()
 
 
 @pytest.fixture
@@ -46,7 +46,7 @@ def customised_book():
         def save(self):
             return "customised save"
 
-    return Book.create()
+    return Book()
 
 
 @pytest.fixture
@@ -61,7 +61,7 @@ def linked_persisted_book(book_store):
     class Book:
         author = Author
 
-    return Book.create(book_store)
+    return Book(book_store)
 
 
 def test_linked_attribute(book, book_store):
