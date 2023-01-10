@@ -116,23 +116,23 @@ class PersistedClass:
         ).lstrip("_")
 
     def get(self, *args, **kwargs):
-        self._store = anvil.server.call(f"get_{_class_name(self)}", *args, **kwargs)
+        self._store = anvil.server.call(f"get_{self._class_name()}", *args, **kwargs)
         self._delta.clear()
 
     def add(self, *args, **kwargs):
         self._store = anvil.server.call(
-            f"add_{_class_name(self)}", self._delta, *args, **kwargs
+            f"add_{self._class_name()}", self._delta, *args, **kwargs
         )
         self._delta.clear()
 
     def update(self, *args, **kwargs):
         anvil.server.call(
-            f"update_{_class_name(self)}", self._store, self._delta, *args, **kwargs
+            f"update_{self._class_name()}", self._store, self._delta, *args, **kwargs
         )
         self._delta.clear()
 
     def delete(self, *args, **kwargs):
-        anvil.server.call(f"delete_{_class_name(self)}", self._store, *args, **kwargs)
+        anvil.server.call(f"delete_{self._class_name()}", self._store, *args, **kwargs)
         self._delta.clear()
 
 
