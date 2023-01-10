@@ -52,12 +52,16 @@ class LinkedAttribute:
 class LinkedClass:
     "A descriptor class for adding objects based on linked tables as attributes"
 
-    def __init__(self, linked_column, constructor, *args, **kwargs):
+    def __init__(self, cls, linked_column=None, *args, **kwargs):
         self._linked_column = linked_column
-        self._constructor = constructor
+        self._constructor = cls.create
         self._obj = None
         self._args = args or []
         self._kwargs = kwargs or {}
+
+    def __set_name__(self, owner, name):
+        if self._linked_column is None:
+            self._linked_column = name
 
     def __get__(self, instance, objtype=None):
         if instance is None:
@@ -154,6 +158,19 @@ MEMBERS = {
 }
 
 
+class PersistedClass:
+    pass
+
+
 def persisted_class(cls):
     """A decorator for a class with a persistence mechanism"""
-    return type(cls.__name__, (object,), dict(MEMBERS, **cls.__dict__))
+    user_members = cls.__dict__.copy()
+    for attr, value in user_members.items():
+        try:
+            is_persisted_class = issubclass(value, (PersistedClass, ))
+        except TypeError:
+            is_persisted_class = False
+        if is_persisted_class:
+            user_members[attr] = LinkedClass(cls=value)
+
+    return type(cls.__name__, (PersistedClass,), dict(MEMBERS, **user_members))

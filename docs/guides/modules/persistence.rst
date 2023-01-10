@@ -96,7 +96,7 @@ class as an attribute of a Book:
 
    @persisted_class
    class Book:
-       author = LinkedClass(linked_colum="author", constructor=Author.create)
+       author = Author
 
 
    book = Book()

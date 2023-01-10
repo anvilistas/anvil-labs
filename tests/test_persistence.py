@@ -59,7 +59,7 @@ def linked_persisted_book(book_store):
 
     @ps.persisted_class
     class Book:
-        author = ps.LinkedClass(linked_column="author", constructor=Author.create)
+        author = Author
 
     return Book.create(book_store)
 
