@@ -83,8 +83,8 @@ attribute on our object. Let's include the author's name as an attribute of a bo
 
 LinkedClass
 +++++++++++
-Alternatively, we can define another class for author objects and use an instance of that
-class as an attribute of a Book:
+Alternatively, we can define another persisted class for author objects and use an
+instance of that class as an attribute of a Book:
 
 .. code-block:: python
 
@@ -93,6 +93,7 @@ class as an attribute of a Book:
    @persisted_class
    class Author:
        pass
+
 
    @persisted_class
    class Book:
