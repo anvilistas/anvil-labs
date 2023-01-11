@@ -141,7 +141,7 @@ def persisted_class(cls):
     user_members = cls.__dict__.copy()
     for attr, value in user_members.items():
         try:
-            is_persisted_class = issubclass(value, (PersistedClass,))
+            is_persisted_class = issubclass(value, PersistedClass)
         except TypeError:
             is_persisted_class = False
 
