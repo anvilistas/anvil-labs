@@ -6,6 +6,10 @@ import anvil.server
 __version__ = "0.0.1"
 
 
+def _snakify(text):
+    return "".join("_" + c.lower() if c.isupper() else c for c in text).lstrip("_")
+
+
 class LinkedAttribute:
     """A descriptor class for adding linked table items as attributes
 
@@ -74,10 +78,6 @@ class LinkedClass:
         raise AttributeError(
             "Linked Class instance is already set and cannot be changed"
         )
-
-
-def _snakify(text):
-    return "".join("_" + c.lower() if c.isupper() else c for c in text).lstrip("_")
 
 
 class PersistedClass:
