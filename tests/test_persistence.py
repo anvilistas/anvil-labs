@@ -138,7 +138,7 @@ def test_linked_class(linked_persisted_book):
 
 def test_linked_class_set(linked_persisted_book):
     """Test that attempting to change a linked class instance raises an error"""
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(AttributeError) as excinfo:
         linked_persisted_book.author = "test"
 
     assert "Linked Class instance is already set" in str(excinfo.value)
