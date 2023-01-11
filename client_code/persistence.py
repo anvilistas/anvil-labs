@@ -80,13 +80,15 @@ class LinkedClass:
         )
 
 
+def _snakify(text):
+    return "".join("_" + c.lower() if c.isupper() else c for c in text).lstrip("_")
+
+
 class PersistedClass:
     @classmethod
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        cls._snake_name = "".join(
-            "_" + c.lower() if c.isupper() else c for c in cls.__name__
-        ).lstrip("_")
+        cls._snake_name = _snakify(cls.__name__)
 
     @classmethod
     def search(cls, *args, **kwargs):
@@ -118,7 +120,6 @@ class PersistedClass:
 
     def __setitem__(self, key, value):
         setattr(self, key, value)
-
 
     def get(self, *args, **kwargs):
         self._store = anvil.server.call(f"get_{self._snake_name}", *args, **kwargs)
