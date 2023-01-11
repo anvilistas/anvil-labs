@@ -59,10 +59,6 @@ class LinkedClass:
         self._args = args or []
         self._kwargs = kwargs or {}
 
-    def __set_name__(self, owner, name):
-        if self._linked_column is None:
-            self._linked_column = name
-
     def __get__(self, instance, objtype=None):
         if instance is None:
             return self
@@ -89,15 +85,23 @@ class PersistedClass:
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         cls._snake_name = _snakify(cls.__name__)
+        for attr, value in cls.__dict__.items():
+            try:
+                is_persisted_class = issubclass(value, PersistedClass)
+            except TypeError:
+                is_persisted_class = False
+
+            if is_persisted_class:
+                setattr(cls, attr, LinkedClass(cls=value, linked_column=attr))
 
     @classmethod
     def search(cls, *args, **kwargs):
         rows = anvil.server.call(f"search_{cls.__name__.lower()}", *args, **kwargs)
         return (cls.create(store=row) for row in rows)
 
-    def __init__(self, store=None, delta=None, *args, **kwargs):
+    def __init__(self, store=None, *args, **kwargs):
         self._store = store or {}
-        self._delta = delta or {}
+        self._delta = {}
 
     def __getattr__(self, key):
         if self._delta and key in self._delta:
@@ -144,14 +148,4 @@ class PersistedClass:
 
 def persisted_class(cls):
     """A decorator for a class with a persistence mechanism"""
-    user_members = cls.__dict__.copy()
-    for attr, value in user_members.items():
-        try:
-            is_persisted_class = issubclass(value, PersistedClass)
-        except TypeError:
-            is_persisted_class = False
-
-        if is_persisted_class:
-            user_members[attr] = LinkedClass(cls=value)
-
-    return type(cls.__name__, (PersistedClass,), user_members)
+    return type(cls.__name__, (PersistedClass,), cls.__dict__.copy())
