@@ -82,6 +82,13 @@ class LinkedClass:
 
 class PersistedClass:
     @classmethod
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls._snake_name = "".join(
+            "_" + c.lower() if c.isupper() else c for c in cls.__name__
+        ).lstrip("_")
+
+    @classmethod
     def search(cls, *args, **kwargs):
         rows = anvil.server.call(f"search_{cls.__name__.lower()}", *args, **kwargs)
         return (cls.create(store=row) for row in rows)
@@ -112,29 +119,25 @@ class PersistedClass:
     def __setitem__(self, key, value):
         setattr(self, key, value)
 
-    def _class_name(self):
-        return "".join(
-            "_" + c.lower() if c.isupper() else c for c in self.__class__.__name__
-        ).lstrip("_")
 
     def get(self, *args, **kwargs):
-        self._store = anvil.server.call(f"get_{self._class_name()}", *args, **kwargs)
+        self._store = anvil.server.call(f"get_{self._snake_name}", *args, **kwargs)
         self._delta.clear()
 
     def add(self, *args, **kwargs):
         self._store = anvil.server.call(
-            f"add_{self._class_name()}", self._delta, *args, **kwargs
+            f"add_{self._snake_name}", self._delta, *args, **kwargs
         )
         self._delta.clear()
 
     def update(self, *args, **kwargs):
         anvil.server.call(
-            f"update_{self._class_name()}", self._store, self._delta, *args, **kwargs
+            f"update_{self._snake_name}", self._store, self._delta, *args, **kwargs
         )
         self._delta.clear()
 
     def delete(self, *args, **kwargs):
-        anvil.server.call(f"delete_{self._class_name()}", self._store, *args, **kwargs)
+        anvil.server.call(f"delete_{self._snake_name}", self._store, *args, **kwargs)
         self._delta.clear()
 
 
