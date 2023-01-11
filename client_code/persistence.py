@@ -52,7 +52,7 @@ class LinkedAttribute:
 class LinkedClass:
     "A descriptor class for adding objects based on linked tables as attributes"
 
-    def __init__(self, cls, linked_column=None, *args, **kwargs):
+    def __init__(self, cls, *args, linked_column=None, **kwargs):
         self._linked_column = linked_column
         self._cls = cls
         self._obj = None
