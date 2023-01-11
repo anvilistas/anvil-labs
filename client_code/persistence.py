@@ -75,7 +75,9 @@ class LinkedClass:
         return self._obj
 
     def __set__(self, instance, value):
-        raise AttributeError("Linked Class instance is already set and cannot be changed")
+        raise AttributeError(
+            "Linked Class instance is already set and cannot be changed"
+        )
 
 
 class PersistedClass:
