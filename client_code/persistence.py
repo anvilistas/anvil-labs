@@ -6,6 +6,10 @@ import anvil.server
 __version__ = "0.0.1"
 
 
+def _snakify(text):
+    return "".join("_" + c.lower() if c.isupper() else c for c in text).lstrip("_")
+
+
 class LinkedAttribute:
     """A descriptor class for adding linked table items as attributes
 
@@ -49,86 +53,99 @@ class LinkedAttribute:
         instance._delta[self._name] = value
 
 
-@classmethod
-def _search(cls, *args, **kwargs):
-    rows = anvil.server.call(f"search_{cls.__name__.lower()}", *args, **kwargs)
-    return (cls.create(store=row) for row in rows)
+class LinkedClass:
+    "A descriptor class for adding objects based on linked tables as attributes"
+
+    def __init__(self, cls, *args, linked_column=None, **kwargs):
+        self._linked_column = linked_column
+        self._cls = cls
+        self._obj = None
+        self._args = args or []
+        self._kwargs = kwargs or {}
+
+    def __get__(self, instance, objtype=None):
+        if instance is None:
+            return self
+
+        if self._obj is None:
+            self._obj = self._cls(
+                instance._store[self._linked_column], *self._args, **self._kwargs
+            )
+
+        return self._obj
+
+    def __set__(self, instance, value):
+        raise AttributeError(
+            "Linked Class instance is already set and cannot be changed"
+        )
 
 
-@classmethod
-def _create(cls, store=None, delta=None, *args, **kwargs):
-    instance = cls(*args, **kwargs)
-    instance._store = store or {}
-    instance._delta = delta or {}
-    return instance
+class PersistedClass:
+    @classmethod
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls._snake_name = _snakify(cls.__name__)
+        for attr, value in cls.__dict__.items():
+            try:
+                is_persisted_class = issubclass(value, PersistedClass)
+            except TypeError:
+                is_persisted_class = False
 
+            if is_persisted_class:
+                setattr(cls, attr, LinkedClass(cls=value, linked_column=attr))
 
-def _getattr(self, key):
-    if self._delta and key in self._delta:
-        return self._delta[key]
+    @classmethod
+    def search(cls, *args, **kwargs):
+        rows = anvil.server.call(f"search_{cls.__name__.lower()}", *args, **kwargs)
+        return (cls.create(store=row) for row in rows)
 
-    return dict(self._store).get(key, None)
+    def __init__(self, store=None, *args, **kwargs):
+        self._store = store or {}
+        self._delta = {}
 
+    def __getattr__(self, key):
+        if self._delta and key in self._delta:
+            return self._delta[key]
 
-def _getitem(self, key):
-    return getattr(self, key)
+        return dict(self._store).get(key, None)
 
+    def __getitem__(self, key):
+        return getattr(self, key)
 
-def _set_value(self, key, value):
-    is_private = key.startswith("_")
-    is_descriptor = hasattr(self.__class__, key) and hasattr(
-        getattr(self.__class__, key), "__set__"
-    )
-    if is_private or is_descriptor:
-        object.__setattr__(self, key, value)
-    else:
-        self._delta[key] = value
+    def __setattr__(self, key, value):
+        is_private = key.startswith("_")
+        is_descriptor = hasattr(self.__class__, key) and hasattr(
+            getattr(self.__class__, key), "__set__"
+        )
+        if is_private or is_descriptor:
+            object.__setattr__(self, key, value)
+        else:
+            self._delta[key] = value
 
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
 
-def _class_name(instance):
-    return "".join(
-        "_" + c.lower() if c.isupper() else c for c in instance.__class__.__name__
-    ).lstrip("_")
+    def get(self, *args, **kwargs):
+        self._store = anvil.server.call(f"get_{self._snake_name}", *args, **kwargs)
+        self._delta.clear()
 
+    def add(self, *args, **kwargs):
+        self._store = anvil.server.call(
+            f"add_{self._snake_name}", self._delta, *args, **kwargs
+        )
+        self._delta.clear()
 
-def _get(self, *args, **kwargs):
-    self._store = anvil.server.call(f"get_{_class_name(self)}", *args, **kwargs)
-    self._delta.clear()
+    def update(self, *args, **kwargs):
+        anvil.server.call(
+            f"update_{self._snake_name}", self._store, self._delta, *args, **kwargs
+        )
+        self._delta.clear()
 
-
-def _add(self, *args, **kwargs):
-    self._store = anvil.server.call(
-        f"add_{_class_name(self)}", self._delta, *args, **kwargs
-    )
-    self._delta.clear()
-
-
-def _update(self, *args, **kwargs):
-    anvil.server.call(
-        f"update_{_class_name(self)}", self._store, self._delta, *args, **kwargs
-    )
-    self._delta.clear()
-
-
-def _delete(self, *args, **kwargs):
-    anvil.server.call(f"delete_{_class_name(self)}", self._store, *args, **kwargs)
-    self._delta.clear()
-
-
-MEMBERS = {
-    "search": _search,
-    "create": _create,
-    "__getattr__": _getattr,
-    "__getitem__": _getitem,
-    "__setattr__": _set_value,
-    "__setitem__": _set_value,
-    "get": _get,
-    "add": _add,
-    "update": _update,
-    "delete": _delete,
-}
+    def delete(self, *args, **kwargs):
+        anvil.server.call(f"delete_{self._snake_name}", self._store, *args, **kwargs)
+        self._delta.clear()
 
 
 def persisted_class(cls):
     """A decorator for a class with a persistence mechanism"""
-    return type(cls.__name__, (object,), dict(MEMBERS, **cls.__dict__))
+    return type(cls.__name__, (PersistedClass,), cls.__dict__.copy())

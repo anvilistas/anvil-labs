@@ -21,15 +21,18 @@ columns:
        author: linked_column (to author table)
 
 
+The author table contains a row whose name is "Luciano Ramalho" and the book table a row
+with the title "Fluent Python" and author linked to the row in the author table.
+
 Using the persistence module, we can now define a class for book objects:
 
 
 .. code-block:: python
 
-   from anvil_labs.persistence import row_backed_class
+   from anvil_labs.persistence import persisted_class
 
 
-   @row_backed_class
+   @persisted_class
    class Book:
        pass
 
@@ -53,16 +56,21 @@ our `book` object will automatically have each of the row's columns as an attrib
 
 
 But what if we wanted our `book` object to include some information from the author table?
+
+There are two ways to go about that: using a LinkedAttribute or a LinkedClass.
+
+LinkedAttribute
++++++++++++++++
 We can use a `LinkedAttribute` to fetch data from the linked row and include it as an
 attribute on our object. Let's include the author's name as an attribute of a book:
 
 
 .. code-block:: python
 
-   from anvil_labs.persistence import row_backed_class, LinkedAttribute
+   from anvil_labs.persistence import persisted_class, LinkedAttribute
 
 
-   @row_backed_class
+   @persisted_class
    class Book:
        author_name = LinkedAttribute(linked_column="author", linked_attr="name")
 
@@ -73,17 +81,43 @@ attribute on our object. Let's include the author's name as an attribute of a bo
     assert book.author_name == "Luciano Ramalho" 
 
 
+LinkedClass
++++++++++++
+Alternatively, we can define another persisted class for author objects and use an
+instance of that class as an attribute of a Book:
 
+.. code-block:: python
+
+   from anvil_labs.persistence import persisted_class
+
+   @persisted_class
+   class Author:
+       pass
+
+
+   @persisted_class
+   class Book:
+       author = Author
+
+
+   book = Book()
+   book.get(title="Fluent Python")
+
+   assert book.author.name == "Luciano Ramalho"
+
+
+Customisation
++++++++++++++
 We can, of course, add whatever methods we want to our class. Let's add a property to
 display the title and author of the book as a single string:
 
 
 .. code-block:: python
 
-   from anvil_labs.persistence import row_backed_class, LinkedAttribute
+   from anvil_labs.persistence import persisted_class, LinkedAttribute
 
 
-   @row_backed_class
+   @persisted_class
    class Book:
        author_name = LinkedAttribute(linked_column="author", linked_attr="name")
 
@@ -97,7 +131,43 @@ display the title and author of the book as a single string:
    assert book.display_text == "Fluent Python by Luciano Ramalho"
 
 
-Server Functions
-----------------
+Methods and Server Functions
+----------------------------
+Each persisted class will have methods `get`, `add`, `update` and `delete` as well as
+a classmethod `search`. Each of these will expect a matching server function to exist.
 
-**TODO**
+The server functions should be named with the relevant method followed by the persisted
+class name in snake case.
+
+For example, the `Book` class in the example above would require the following server
+functions in order to operate fully:
+
+.. code-block:: python
+
+   import anvil.server
+
+   @anvil.server.callable
+   def search_book():
+       ...
+
+    @anvil.server.callable
+    def get_book():
+        ...
+
+    @anvil.server.callable
+    def add_book(delta):
+        ...
+
+    @anvil.server.callable
+    def update_book(row, delta):
+        ...
+
+    @anvil.server.callable
+    def delete_book(row):
+        ...
+
+Where `row` will be the relevant data table row and `delta` will be a dict of attribute
+names and values that have changed.
+
+Any other args and kwargs passed to the persisted class methods will be passed to the 
+relevant server function.
