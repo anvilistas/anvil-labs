@@ -59,7 +59,6 @@ class LinkedClass:
     def __init__(self, cls, *args, linked_column=None, **kwargs):
         self._linked_column = linked_column
         self._cls = cls
-        self._obj = None
         self._args = args or []
         self._kwargs = kwargs or {}
 
@@ -67,12 +66,9 @@ class LinkedClass:
         if instance is None:
             return self
 
-        if self._obj is None:
-            self._obj = self._cls(
-                instance._store[self._linked_column], *self._args, **self._kwargs
-            )
-
-        return self._obj
+        return self._cls(
+            instance._store[self._linked_column], *self._args, **self._kwargs
+        )
 
     def __set__(self, instance, value):
         raise AttributeError(
