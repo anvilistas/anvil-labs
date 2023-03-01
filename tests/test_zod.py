@@ -107,7 +107,6 @@ def test_array():
 
 
 def test_catch():
-
     string_with_default = z.string().catch("default")
     for x in (None, True, 42, [], {}, object()):
         assert string_with_default.parse(x) == "default"
@@ -195,7 +194,6 @@ def test_crazy_schema():
 
 
 def test_date():
-
     before = date(2022, 10, 4)
     dt = date(2022, 10, 5)
     after = date(2022, 10, 6)
@@ -213,7 +211,6 @@ def test_date():
 
 
 def test_default():
-
     string_with_default = z.string().default("default")
     assert string_with_default.parse(MISSING) == "default"
 
@@ -1006,7 +1003,6 @@ def test_string():
 
 
 def test_transformer():
-
     r1 = z.string().transform(len).parse("asdf")
     assert r1 == 4
 
