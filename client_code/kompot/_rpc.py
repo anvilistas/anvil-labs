@@ -81,7 +81,6 @@ def call_s(fn_name, *args, **kws):
 
 
 def callable(fn_or_name=None, require_user=None):
-
     if fn_or_name is None or isinstance(fn_or_name, str):
         _callable_decorator = _server.callable(fn_or_name, require_user=require_user)
         return lambda fn: _callable_decorator(

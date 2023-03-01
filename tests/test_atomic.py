@@ -232,7 +232,6 @@ def test_todos():
 
 
 def test_bad_contexts():
-
     count_atom = CountAtom()
 
     @render

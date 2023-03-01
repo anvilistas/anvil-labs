@@ -51,6 +51,7 @@ def _message(event):
 
 _W.navigator.serviceWorker.addEventListener("message", _message)
 
+
 # custom api
 def subscribe(event, listener):
     EVENT_LISTENERS.setdefault(event, []).append(listener)

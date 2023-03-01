@@ -433,7 +433,6 @@ class ZodAbstractNumber(ZodType):
     _type_name = _type
 
     def _parse(self, input):
-
         if self._def["coerce"]:
             try:
                 if self._type == ZodParsedType.integer:
