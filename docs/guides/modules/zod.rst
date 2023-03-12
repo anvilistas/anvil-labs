@@ -1009,3 +1009,4 @@ Not Yet Documented:
 - catch
 - optional
 - error handling and formatting
+- pipe

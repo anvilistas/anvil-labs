@@ -231,6 +231,9 @@ class ZodType:
 
         return self.super_transform(_transform)
 
+    def pipe(self, target):
+        return ZodPipeline._create(self, target)
+
 
 class ZodString(ZodType):
     _type = ZodParsedType.string
@@ -1402,6 +1405,29 @@ class ZodUnion(ZodType):
     @classmethod
     def _create(cls, types, **params):
         return cls(dict(options=types, **process_params(**params)))
+
+
+class ZodPipeline(ZodType):
+    def _parse(self, input):
+        status, ctx = self._process_input_params(input)
+        in_result = self._def["in"]._parse(
+            ParseInput(data=ctx.data, path=ctx.path, parent=ctx)
+        )
+        if in_result.status is ABORTED:
+            return INVALID
+        if in_result.status is DIRTY:
+            status.dirty()
+            return ParseReturn(status=status.value, value=input.data)
+        print("DEF")
+        print(self._def)
+        return self._def["out"]._parse(
+            ParseInput(data=in_result.value, path=ctx.path, parent=ctx)
+        )
+
+    @classmethod
+    def _create(cls, a: ZodType, b: ZodType, **params):
+        assert isinstance_(b, ZodType), "expected b to be a zod schema"
+        return cls(dict({"in": a, "out": b}, **process_params(**params)))
 
 
 def custom(check=None, fatal=False, **params):

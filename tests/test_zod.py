@@ -1138,3 +1138,21 @@ def test_coercion():
     assert schema.parse(0) is False
     assert schema.parse(12) is True
     assert schema.parse(True) is True
+
+
+def test_pipeline():
+    schema = z.string().transform(int).pipe(z.integer())
+    assert schema.parse("42") == 42
+
+    schema = (
+        z.string()
+        .refine(lambda c: c == "42")
+        .transform(int)
+        .pipe(z.number().refine(lambda v: v < 10))
+    )
+
+    r1 = schema.safe_parse("41")
+    assert len(r1.error.issues) == 1
+
+    r2 = schema.safe_parse("3")
+    assert len(r2.error.issues) == 1
