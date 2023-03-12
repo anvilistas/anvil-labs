@@ -114,6 +114,8 @@ Zod includes a handful of string-specific validations.
     z.string().startswith(string)
     z.string().endswith(string)
     z.string().strip() # strips whitespace
+    z.string().lower() # convert to lower case
+    z.string().upper() # convert to upper case
     z.string().datetime() # defaults to iso format string
     z.string().date() # defaults to iso format string
 

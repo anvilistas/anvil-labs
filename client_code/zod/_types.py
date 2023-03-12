@@ -331,6 +331,10 @@ class ZodString(ZodType):
 
             elif kind == "strip":
                 input.data = input.data.strip()
+            elif kind == "lower":
+                input.data = input.data.lower()
+            elif kind == "upper":
+                input.data = input.data.upper()
 
             elif kind == "startswith":
                 if not input.data.startswith(check["value"]):
@@ -422,6 +426,14 @@ class ZodString(ZodType):
     def strip(self):
         "similar to z.string().transform(str.strip)"
         return self._add_check(kind="strip")
+
+    def lower(self):
+        "similar to z.string().transform(str.lower)"
+        return self._add_check(kind="lower")
+
+    def upper(self):
+        "similar to z.string().transform(str.upper)"
+        return self._add_check(kind="upper")
 
     @classmethod
     def _create(cls, *, coerce=False, **params):
