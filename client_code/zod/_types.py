@@ -1420,8 +1420,6 @@ class ZodPipeline(ZodType):
         if in_result.status is DIRTY:
             status.dirty()
             return ParseReturn(status=status.value, value=input.data)
-        print("DEF")
-        print(self._def)
         return self._def["out"]._parse(
             ParseInput(data=in_result.value, path=ctx.path, parent=ctx)
         )
