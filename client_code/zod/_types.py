@@ -232,6 +232,8 @@ class ZodType:
         return self.super_transform(_transform)
 
     def pipe(self, target):
+        if not isinstance_(target, ZodType):
+            raise TypeError("expected a zod schema")
         return ZodPipeline._create(self, target)
 
 
@@ -1426,7 +1428,6 @@ class ZodPipeline(ZodType):
 
     @classmethod
     def _create(cls, a: ZodType, b: ZodType, **params):
-        assert isinstance_(b, ZodType), "expected b to be a zod schema"
         return cls(dict({"in": a, "out": b}, **process_params(**params)))
 
 
