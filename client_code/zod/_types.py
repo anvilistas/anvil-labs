@@ -231,6 +231,11 @@ class ZodType:
 
         return self.super_transform(_transform)
 
+    def pipe(self, target):
+        if not isinstance_(target, ZodType):
+            raise TypeError("expected a zod schema")
+        return ZodPipeline._create(self, target)
+
 
 class ZodString(ZodType):
     _type = ZodParsedType.string
@@ -331,6 +336,10 @@ class ZodString(ZodType):
 
             elif kind == "strip":
                 input.data = input.data.strip()
+            elif kind == "lower":
+                input.data = input.data.lower()
+            elif kind == "upper":
+                input.data = input.data.upper()
 
             elif kind == "startswith":
                 if not input.data.startswith(check["value"]):
@@ -422,6 +431,14 @@ class ZodString(ZodType):
     def strip(self):
         "similar to z.string().transform(str.strip)"
         return self._add_check(kind="strip")
+
+    def lower(self):
+        "similar to z.string().transform(str.lower)"
+        return self._add_check(kind="lower")
+
+    def upper(self):
+        "similar to z.string().transform(str.upper)"
+        return self._add_check(kind="upper")
 
     @classmethod
     def _create(cls, *, coerce=False, **params):
@@ -1390,6 +1407,26 @@ class ZodUnion(ZodType):
     @classmethod
     def _create(cls, types, **params):
         return cls(dict(options=types, **process_params(**params)))
+
+
+class ZodPipeline(ZodType):
+    def _parse(self, input):
+        status, ctx = self._process_input_params(input)
+        in_result = self._def["in"]._parse(
+            ParseInput(data=ctx.data, path=ctx.path, parent=ctx)
+        )
+        if in_result.status is ABORTED:
+            return INVALID
+        if in_result.status is DIRTY:
+            status.dirty()
+            return ParseReturn(status=status.value, value=input.data)
+        return self._def["out"]._parse(
+            ParseInput(data=in_result.value, path=ctx.path, parent=ctx)
+        )
+
+    @classmethod
+    def _create(cls, a: ZodType, b: ZodType, **params):
+        return cls(dict({"in": a, "out": b}, **process_params(**params)))
 
 
 def custom(check=None, fatal=False, **params):
