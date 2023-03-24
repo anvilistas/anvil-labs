@@ -20,4 +20,3 @@ The maintainers of the project are:
 - [Stu Cork](https://github.com/s-cork)
 
 Both [Owen](https://anvil.works/forum/u/owen.campbell) and [Stu](https://anvil.works/forum/u/stucork) can also be found via the [Anvil Users Forum](https://anvil.works/forum).
-
