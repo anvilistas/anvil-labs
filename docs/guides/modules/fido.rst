@@ -12,6 +12,13 @@ Demo App
 | `Live Demo <https://fido-example.anvil.app>`_
 
 
+Requirements
+------------
+
+`webauthn <https://pypi.org/project/webauthn/>` must be installed on the server.
+
+
+
 Functions
 ---------
 
