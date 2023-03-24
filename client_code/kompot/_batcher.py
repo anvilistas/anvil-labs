@@ -34,27 +34,41 @@ if is_server_side():
 
 class batch_call:
     def __init__(self, *, silent=False):
-        self.result = None
+        self._result = None
         self._silent = silent
-        self._call_sigs = []
-        self._done = False
+        self._sigs = []
+        self._enter = False
+        self._exit = False
 
     def call(self, fn_name, *args, **kws):
-        self._call_sigs.append([fn_name, args, kws])
+        self._sigs.append([fn_name, args, kws])
+
+    @property
+    def result(self):
+        if not self._exit:
+            raise RuntimeError(
+                "accessing result inside batch_call context is not allowed"
+            )
+        return self._result
 
     def __enter__(self):
-        if self._done:
-            raise RuntimeError("cannot re-excute a batched call")
+        if self._enter:
+            raise RuntimeError("cannot re-execute a batched call")
+        self._enter = True
         return self
 
     def __exit__(self, exc_type, *exc_args):
-        self._done = True
-        call_sigs, self._call_sigs = self._call_sigs, []
+        self._exit = True
+        sigs, self._sigs = self._sigs, []
 
         if exc_type:
             # an exception was raised inside the context
             return
 
         call_method = call_s if self._silent else call
-        if call_sigs:
-            self.result = call_method(PRIVATE_NAME, call_sigs)
+        if sigs:
+            self._result = call_method(PRIVATE_NAME, sigs)
+
+
+def batch_call_s():
+    return batch_call(silent=True)
