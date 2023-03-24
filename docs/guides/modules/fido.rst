@@ -5,6 +5,12 @@ This module provides an interface for FIDO WebAuthn integration in Anvil applica
 It enables device registration and authentication using FIDO devices, such as security keys or biometric authenticators.
 
 
+Demo App
+--------
+
+| `Clone Link <https://anvil.works/build#clone:KGKU6EOKG42TRABV=SY6TYYLCYD4VDECDMMWX54G4>`_
+| `Live Demo <https://fido-example.anvil.app>`_
+
 
 Functions
 ---------
