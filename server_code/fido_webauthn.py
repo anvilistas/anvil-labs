@@ -45,7 +45,6 @@ def get_rp():
 
 
 def get_challenge(type):
-
     challenge = anvil.server.session.get(f"{type}-challenge")
     if challenge is None:
         return None
