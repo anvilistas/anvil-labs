@@ -8,6 +8,7 @@ const mod = path.resolve(__dirname, "./mod.ts");
 
 let result = await esbuild.build({
     entryPoints: [mod],
+    target: ["es2019"],
     bundle: true,
     format: "iife",
     outfile: path.resolve(__dirname, "./worker.min.cjs"),
