@@ -20,6 +20,7 @@ console.log("result:", result);
 
 result = await esbuild.build({
     entryPoints: [client],
+    target: ["es2019"],
     bundle: true,
     format: "esm",
     outfile: path.resolve(__dirname, "../../theme/assets/anvil_labs/client_sw.js"),
