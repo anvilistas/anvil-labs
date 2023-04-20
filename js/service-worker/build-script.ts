@@ -1,4 +1,4 @@
-import * as esbuild from "https://deno.land/x/esbuild@v0.14.38/mod.js";
+import * as esbuild from "https://deno.land/x/esbuild@v0.17.17/mod.js";
 import * as path from "https://deno.land/std/path/mod.ts";
 
 const __dirname = path.dirname(path.fromFileUrl(import.meta.url));

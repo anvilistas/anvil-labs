@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { getModule } from "../../worker/utils/client.ts";
+import { getModule, reloadModules } from "../../worker/utils/client.ts";
 
 let reg: ServiceWorkerRegistration;
 declare const Sk: any;
@@ -61,7 +61,9 @@ export async function init() {
     reg = await navigator.serviceWorker.register("_/theme/anvil_labs/sw.js");
     try {
         await reg.update();
-    } catch {
+        await reloadModules();
+    } catch (e) {
+        console.error(e);
         // we might be offline
     }
 
