@@ -93,9 +93,6 @@ export function configureSkulpt() {
                     })
             );
         },
-        uncaughtException: (err: any) => {
-            errHandler(err);
-        },
     });
 
     // make self available in __builtins__
@@ -114,6 +111,10 @@ export function onModuleReceived(e: MessageEvent<any>) {
         UNRESOLVED_MODULES.delete(id);
         resolve(content);
     }
+}
+
+self.onunhandledrejection = (ev) => {
+    errHandler(ev.reason);
 }
 
 self.addEventListener("message", onModuleReceived);
