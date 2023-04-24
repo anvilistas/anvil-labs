@@ -2,7 +2,8 @@
 // we'll need to request imports that we don't have
 // the main app will need to register a handler for bg syncing
 
-import { configureSkulpt, errHandler, defer, modStore } from "../../worker/utils/worker.ts";
+import type { Deferred } from "../../worker/types.ts";
+import { configureSkulpt, errHandler, defer } from "../../worker/utils/worker.ts";
 
 declare global {
     interface ServiceWorkerGlobalScope {
@@ -23,16 +24,19 @@ declare const localforage: any;
 // Skulpt expectes window to exist
 self.window = self;
 self.anvilAppOrigin = "";
-let MODULE_LOADED = false;
+let MODULE_LOADING: null | Deferred<boolean> = null;
 
 async function loadInitModule(name: string) {
-    MODULE_LOADED = true;
+    MODULE_LOADING = defer();
+    MODULE_LOADING.promise.then(() => postMessage({ type: "READY" }));
     await localVarStore.setItem("__main__", name);
     try {
         await asyncToPromise(() => importMain(name, false, true));
+        MODULE_LOADING.resolve(true);
     } catch (e) {
         console.error(e);
         errHandler(e);
+        MODULE_LOADING.reject(e);
     }
 }
 
@@ -62,7 +66,13 @@ function addAPI() {
     raise_event.co_fastcall = true;
 
     self.raise_event = new pyFunc(raise_event);
-    self.sync_event_handler = (cb) => (e) => e.waitUntil(cb(e));
+    self.sync_event_handler = (cb) => (e) => {
+        const wrapped = async () => {
+            await MODULE_LOADING?.promise;
+            return cb(e);
+        };
+        e.waitUntil(wrapped());
+    };
 }
 
 const localVarStore = localforage.createInstance({
@@ -75,8 +85,6 @@ async function onInitModule(e: any) {
     const { type } = data;
     if (type !== "INIT") return;
     const { name } = data;
-    // we're being loaded from the client so clear our module cache
-    await modStore.clear();
     await loadInitModule(name);
 }
 
@@ -151,7 +159,6 @@ function initSyncCall(eventName: "sync" | "periodicsync") {
     let initEvent: any;
 
     self[onEvent] = (e: any) => {
-        if (MODULE_LOADED) return;
         initEvent = e;
         initModule();
         setTimeout(() => {
@@ -165,6 +172,7 @@ function initSyncCall(eventName: "sync" | "periodicsync") {
         self[onEvent] = fn;
         if (!initEvent) return;
         try {
+            await MODULE_LOADING?.promise;
             await fn(initEvent);
             deferred.resolve(null);
         } catch (e) {
@@ -184,7 +192,7 @@ initSyncCall("periodicsync");
 async function initModule() {
     const appOrigin = await localVarStore.getItem("apporigin");
     self.anvilAppOrigin = appOrigin ?? "";
-    if (MODULE_LOADED) return;
+    if (MODULE_LOADING) return MODULE_LOADING.promise;
     const name = await localVarStore.getItem("__main__");
     if (name) await loadInitModule(name);
 }

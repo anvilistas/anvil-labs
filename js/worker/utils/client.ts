@@ -25,3 +25,27 @@ export async function getModule(filename: string) {
     }
     return content;
 }
+
+export async function reloadModules() {
+    let localforage = window.localforage;
+    if (localforage === undefined) {
+        localforage = (
+            await import(
+                "https://cdn.skypack.dev/pin/localforage@v1.10.0-vSTz1U7CF0tUryZh6xTs/mode=imports,min/optimized/localforage.js"
+            )
+        ).default;
+    }
+    const store = localforage.createInstance({
+        name: "anvil-labs-sw",
+        storeName: "lib",
+    });
+    await store.ready();
+    const keys = await store.keys();
+    for (const key of keys) {
+        const value = store.getItem(key);
+        const content = await getModule(key) ?? 0;
+        if (content !== value) {
+            store.setItem(key, content);
+        }
+    }
+}

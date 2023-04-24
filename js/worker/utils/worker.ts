@@ -80,7 +80,7 @@ export function configureSkulpt() {
 
                         return fetchModule(filename).then((content) => {
                             // use zero as a place holder for null
-                            // since getItem retuns null if it doesn't exist
+                            // since getItem returns null if it doesn't exist
                             modStore.setItem(filename, content ?? 0);
                             return content;
                         });

@@ -31,6 +31,21 @@ def set_default_error_handler(fn):
 _ProxyType = type(_W)
 
 
+class _Ready:
+    def __init__(self):
+        self.promise = _W.Promise(self._cb)
+
+    def _cb(self, resolve, reject):
+        self.resolve = resolve
+        self.reject = reject
+
+    def wait(self):
+        return self.promise
+
+
+READY = _Ready()
+
+
 def _message(event):
     data = event.data
     if not isinstance(data, _ProxyType):
@@ -47,6 +62,10 @@ def _message(event):
         name = data.name
         for listener in EVENT_LISTENERS.get(name, []):
             listener(**kws)
+
+    if type == "READY":
+        print("<SERVICE WORKER READY>")
+        READY.resolve(None)
 
 
 _W.navigator.serviceWorker.addEventListener("message", _message)
@@ -88,6 +107,7 @@ def _camel(s):
 
 def register_sync(tag, **options):
     """Registers a background sync when the app comes back online - may fail in some browsers"""
+    READY.wait()
     if sync_manager.getTags(tag):
         return
     options = {_camel(k): v for k, v in options.items()}
@@ -96,6 +116,7 @@ def register_sync(tag, **options):
 
 def register_periodic_sync(tag, *, min_interval=None, **options):
     """Registers a periodic sync request with the browser with the specified tag and options"""
+    READY.wait()
     if periodic_sync_manager.getTags(tag):
         return
     options["min_interval"] = min_interval
