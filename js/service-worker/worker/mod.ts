@@ -10,7 +10,7 @@ declare global {
         postMessage(data: any): void;
         raise_event(eventName: string): void;
         window: ServiceWorkerGlobalScope;
-        sync_event_handler(cb: (e: any) => void): (e: any) => void;
+        sync_event_handler(cb: (e: any) => void | Promise<void>): (e: any) => void;
         anvilAppOrigin: string;
         onsync: any;
         onperiodicsync: any;
@@ -49,6 +49,12 @@ const {
 configureSkulpt();
 addAPI();
 
+function wait(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+let numTries = 0;
+
 function addAPI() {
     // can only do this one skulpt has loaded
     function raise_event(args: any[], kws: any[] = []) {
@@ -66,10 +72,26 @@ function addAPI() {
     raise_event.co_fastcall = true;
 
     self.raise_event = new pyFunc(raise_event);
+
     self.sync_event_handler = (cb) => (e) => {
         const wrapped = async () => {
             await MODULE_LOADING?.promise;
-            return cb(e);
+            try {
+                const rv = await cb(e);
+                numTries = 0;
+                return rv;
+            } catch (err) {
+                // this can happen if trying to sync close to going offline
+                if (numTries < 5 && String(err).toLowerCase().includes("failed to fetch")) {
+                    numTries++;
+                    postMessage({ type: "OUT", message: `It looks like we're offline re-registering sync: '${e.tag}'\n` });
+                    await wait(500);
+                    return self.registration.sync.register(e.tag);
+                } else {
+                    numTries = 0;
+                    errHandler(err);
+                }
+            }
         };
         e.waitUntil(wrapped());
     };
