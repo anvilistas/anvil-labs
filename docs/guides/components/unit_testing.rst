@@ -5,6 +5,8 @@ When you run a test module or test class, you see the pass or fail results as ic
 you get the full traceback if it fails.
 
 Define your unit tests on the client side using the ``unittest`` module which is supported in Skulpt.
+Note that only the ``assert`` unittest method works. ``assertEqual``, ``assertNotEqual``, etc. do not fail in Skulpt
+if the test fails.
 
 Here's an example of a client side test module called ``test_unittest``:
 
@@ -19,14 +21,14 @@ Here's an example of a client side test module called ``test_unittest``:
 
         def test_method_1(self):
             """Test Method 1."""
-            assert (True)
+            self.assert (True)
 
 It is recommended to use this component in code like so in your 'home' form:
 
 .. code-block:: python
 
     import anvil
-    from anvil_extras.UnitTestComponent import UnitTestComponent
+    from anvil_labs.ClientTestComponent import ClientTestComponent
 
     class HomeForm(HomeFormTemplate):
         def __init__(self, **properties):
@@ -44,12 +46,11 @@ It is recommended to use this component in code like so in your 'home' form:
         def open_tests(self, **event_args):
             from .. import test_unittest
             self.add_component(
-                UnitTestComponent(
+                ClientTestComponent(
                     test_modules=[test_unittest],
-                    card_roles=[None, None, None],
+                    card_roles=['tonal-card', 'elevated-card', 'elevated-card'],
                     icon_size=30,
-                    btn_role=None,
-                    title_role=None
+                    btn_role='filled-button'
                 )
             )
 
@@ -71,7 +72,3 @@ Properties
 :btn_role: String
 
     Role for 'run tests' buttons.
-
-:title_role: String
-
-    Role for title of this component.
