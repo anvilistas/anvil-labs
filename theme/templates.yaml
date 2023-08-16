@@ -12,6 +12,5 @@
       properties: {}
       name: content_panel
       layout_properties: {slot: default}
-    code: "from ._anvil_designer import $NAME$Template\n\nclass\
-      \ $NAME$($NAME$Template):\n\n  def __init__(self, **properties):\
-      \n    self.init_components(**properties)\n"
+    code: "from ._anvil_designer import $NAME$Template\n\nclass $NAME$($NAME$Template):\n\
+      \n  def __init__(self, **properties):\n    self.init_components(**properties)\n"
