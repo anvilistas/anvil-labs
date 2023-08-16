@@ -1,10 +1,11 @@
 unique_ids:
   forms:
+    ClientTestComponent: FYFOVRKKG2KTASYPJ4GIAF2CMW6UITOT
+    ClientTestComponent.ModuleTemplate: FKY5FNRSNA34SFPDPG77EKOZN6OSABLU
+    ClientTestComponent.ModuleTemplate.ClassTemplate: GNNTIIDYMT5FWE3ZTN4UVAQPZL3CBGDI
+    ClientTestComponent.ModuleTemplate.ClassTemplate.MethodTemplate: 4AW6PCB47JKSVGMMWNMMQTFYEHZZK2AB
+    UnitTestTemplate: '1692215698898603425854417.3401'
     Form1: EUQNMYVIAPU3IQQNXIQOPUF7YXOXGWFS
-    UnitTestComponent: FYFOVRKKG2KTASYPJ4GIAF2CMW6UITOT
-    UnitTestComponent.ModuleTemplate: FKY5FNRSNA34SFPDPG77EKOZN6OSABLU
-    UnitTestComponent.ModuleTemplate.ClassTemplate: GNNTIIDYMT5FWE3ZTN4UVAQPZL3CBGDI
-    UnitTestComponent.ModuleTemplate.ClassTemplate.TestTemplate: 4AW6PCB47JKSVGMMWNMMQTFYEHZZK2AB
   modules:
     kompot._builtins: OMVA45D2AFWO74HYJNH5VGQQB6FGA4A2
     service_worker: BFDAX7334EVD2UITLENI63GMFYLVI4OT

@@ -1,0 +1,14 @@
+container:
+  type: ColumnPanel
+  properties: {col_widths: '{}'}
+components: []
+is_package: true
+custom_component: true
+properties:
+- {name: test_modules, type: object, default_binding_prop: true, description: List of imported test modules. Pass in code.}
+- name: card_roles
+  type: text[]
+  default_value: []
+  description: Roles for Module, TestClass, and TestMethod cards.
+- {name: icon_size, type: number, default_value: 30, description: Icon size for checkmarks or fail icons.}
+- {name: btn_role, type: string, default_value: '', description: Role for 'run tests' buttons.}

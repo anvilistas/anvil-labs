@@ -5,12 +5,14 @@ import unittest
 
 import anvil
 
-from ._anvil_designer import UnitTestComponentTemplate
+from ._anvil_designer import ClientTestComponentTemplate
+from .ModuleTemplate import ModuleTemplate
+from ..UnitTestTemplate import UnitTestTemplate
 
 __version__ = "0.0.1"
 
 
-class UnitTestComponent(UnitTestComponentTemplate):
+class ClientTestComponent(ClientTestComponentTemplate):
     def __init__(self, **properties):
         # Set Form properties and Data Bindings.
         self.init_components(**properties)
@@ -19,9 +21,6 @@ class UnitTestComponent(UnitTestComponentTemplate):
 
         if not self.test_modules:
             self.test_modules = []
-
-        self.lbl_test_title.role = self.title_role
-        self.btn_all_tests.role = self.btn_role
 
         self.test_config = []
         mod_cnt = 0
@@ -45,6 +44,8 @@ class UnitTestComponent(UnitTestComponentTemplate):
                     {
                         "name": "Method: " + am,
                         "ref": getattr(testclass_ref(), am),
+                        "setUp": getattr(testclass_ref(), 'setUp'),
+                        "tearDown": getattr(testclass_ref(), 'tearDown'),
                         "card_role": self.card_roles[2],
                         "btn_role": self.btn_role,
                         "icon_size": self.icon_size,
@@ -65,7 +66,17 @@ class UnitTestComponent(UnitTestComponentTemplate):
 
             mod_cnt += 1
 
+        self.overall_tests = UnitTestTemplate(
+            btn_role=self.btn_role,
+            btn_text='Run All',
+            test_desc='Run all tests',
+            icon_size=self.icon_size,
+            btn_run_function=self.btn_all_tests_click
+        )
+        self.rp_modules = anvil.RepeatingPanel(item_template=ModuleTemplate)
         self.rp_modules.items = self.test_config
+        self.add_component(self.overall_tests)
+        self.add_component(self.rp_modules)
 
     def get_test_classes(self, module):
         test_classes = []
@@ -79,12 +90,11 @@ class UnitTestComponent(UnitTestComponentTemplate):
         """This method is called when the button is clicked"""
         testmodules = self.rp_modules.get_components()
         for mod in testmodules:
-            test_cp = mod.get_components()[0]
-            test_fp = test_cp.get_components()[0]
+            test_fp = mod.get_components()[0].get_components()[0].get_components()[0]
             test_btn = test_fp.get_components()[0]
             test_btn.raise_event("click")
             fail_icon = test_fp.get_components()[3]
             if fail_icon.visible:
-                self.lbl_fail.visible = True
-        if not self.lbl_fail.visible:
-            self.lbl_success.visible = True
+                self.overall_tests.lbl_fail.visible = True
+        if not self.overall_tests.lbl_fail.visible:
+            self.overall_tests.lbl_success.visible = True
