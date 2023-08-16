@@ -76,7 +76,7 @@ class ClientTestComponent(ClientTestComponentTemplate):
         self.rp_modules = anvil.RepeatingPanel(item_template=ModuleTemplate)
         self.rp_modules.items = self.test_config
         self.add_component(self.overall_tests)
-        self.add_component(self.rp_modules)
+        self.overall_tests.add_component(self.rp_modules)
 
     def get_test_classes(self, module):
         test_classes = []
