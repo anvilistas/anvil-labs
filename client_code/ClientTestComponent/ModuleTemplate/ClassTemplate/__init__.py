@@ -14,19 +14,20 @@ class ClassTemplate(ClassTemplateTemplate):
     def __init__(self, **properties):
         # Set Form properties and Data Bindings.
         self.init_components(**properties)
+        self.rp_children = anvil.RepeatingPanel(item_template=MethodTemplate)
+        self.rp_children.items = self.item["children"]
+        
         self.class_tests = UnitTestTemplate(
             cp_role=self.item["card_role"],
             btn_role=self.item['btn_role'],
             btn_text=self.item["name"],
             test_desc=self.item["ref"].__doc__,
             icon_size=self.item["icon_size"],
-            btn_run_function=self.btn_run_test_click
+            btn_run_function=self.btn_run_test_click,
+            rp_panels=self.rp_children
         )
 
-        self.rp_children = anvil.RepeatingPanel(item_template=MethodTemplate)
-        self.rp_children.items = self.item["children"]
         self.add_component(self.class_tests)
-        self.add_component(self.rp_children)
 
     def btn_run_test_click(self, **event_args):
         """This method is called when the button is clicked"""

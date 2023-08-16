@@ -19,6 +19,8 @@ class UnitTestTemplate(UnitTestTemplateTemplate):
         self.btn_run.role = self.btn_role
         self.lbl_success.font_size = self.icon_size
         self.lbl_fail.font_size = self.icon_size
+        if self.rp_panels:
+            self.cp_1.add_component(self.rp_panels)
 
     def btn_run_click(self, **event_args):
         """This method is called when the button is clicked"""

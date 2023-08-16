@@ -5,6 +5,7 @@ properties:
 - {name: btn_text, type: string, default_value: '', description: Text to go on button}
 - {name: cp_role, type: string, default_value: '', description: Column panel role.}
 - {name: icon_size, type: number, description: Pass/Fail icon size.}
+- {name: rp_panels, type: object, description: RepeatingPanel object}
 is_package: true
 events: []
 custom_component: true

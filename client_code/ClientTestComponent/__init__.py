@@ -65,18 +65,20 @@ class ClientTestComponent(ClientTestComponentTemplate):
                 )
 
             mod_cnt += 1
-
+            
+        self.rp_modules = anvil.RepeatingPanel(item_template=ModuleTemplate)
+        self.rp_modules.items = self.test_config
+        
         self.overall_tests = UnitTestTemplate(
             btn_role=self.btn_role,
             btn_text='Run All',
             test_desc='Run all tests',
             icon_size=self.icon_size,
-            btn_run_function=self.btn_all_tests_click
+            btn_run_function=self.btn_all_tests_click,
+            rp_panels=self.rp_modules
         )
-        self.rp_modules = anvil.RepeatingPanel(item_template=ModuleTemplate)
-        self.rp_modules.items = self.test_config
+
         self.add_component(self.overall_tests)
-        self.overall_tests.add_component(self.rp_modules)
 
     def get_test_classes(self, module):
         test_classes = []
