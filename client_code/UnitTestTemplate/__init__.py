@@ -16,6 +16,7 @@ class UnitTestTemplate(UnitTestTemplateTemplate):
         self.cp_1.role = self.cp_role
         self.lbl_doc.text = self.test_desc
         self.btn_run.text = self.btn_text
+        self.btn_run.role = self.btn_role
         self.lbl_success.font_size = self.icon_size
         self.lbl_fail.font_size = self.icon_size
 
