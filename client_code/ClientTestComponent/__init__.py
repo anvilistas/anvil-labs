@@ -74,11 +74,11 @@ class ClientTestComponent(ClientTestComponentTemplate):
             btn_text='Run All',
             test_desc='Run all tests',
             icon_size=self.icon_size,
-            btn_run_function=self.btn_all_tests_click,
             rp_panels=self.rp_modules
         )
 
         self.add_component(self.overall_tests)
+        self.success = True
 
     def get_test_classes(self, module):
         test_classes = []
@@ -88,15 +88,11 @@ class ClientTestComponent(ClientTestComponentTemplate):
                 test_classes.append(attribute_name)
         return test_classes
 
-    def btn_all_tests_click(self, **event_args):
-        """This method is called when the button is clicked"""
-        testmodules = self.rp_modules.get_components()
-        for mod in testmodules:
-            test_fp = mod.get_components()[0].get_components()[0].get_components()[0]
-            test_btn = test_fp.get_components()[0]
-            test_btn.raise_event("click")
-            fail_icon = test_fp.get_components()[3]
-            if fail_icon.visible:
-                self.overall_tests.lbl_fail.visible = True
-        if not self.overall_tests.lbl_fail.visible:
-            self.overall_tests.lbl_success.visible = True
+    # def btn_run_click(self, **event_args):
+    #     children = self.rp_panels.get_components()
+    #     for child in children:
+    #         child.raise_event('x-run')
+    #         if not child.success:
+    #             self.success = False
+
+    #     self.pass_fail_icon_change(self.success)

@@ -13,6 +13,7 @@ class MethodTemplate(MethodTemplateTemplate):
     def __init__(self, **properties):
         # Set Form properties and Data Bindings.
         self.init_components(**properties)
+        self.success = True
         
         self.test_method = UnitTestTemplate(
             cp_role=self.item["card_role"],
@@ -20,17 +21,26 @@ class MethodTemplate(MethodTemplateTemplate):
             btn_text=self.item["name"],
             test_desc=self.item["ref"].__doc__,
             icon_size=self.item["icon_size"],
-            btn_run_function=self.btn_run_test_click
+            item = self.item,
+            # btn_run_function=self.btn_run_test_click
         )
         self.add_component(self.test_method)
+        self.add_event_handler('x-run', self.run_try_except)
 
     def btn_run_test_click(self, **event_args):
         """This method is called when the button is clicked"""
-        self.test_method.lbl_fail.visible = False
-        self.test_method.lbl_success.visible = False
         with anvil.Notification("Test " + self.item["name"] + " running..."):
             self.item["setUp"]()
             self.item["ref"]()
             self.item["tearDown"]()
-            print("Test " + self.item["name"] + " was a success!")
-            self.test_method.lbl_success.visible = True
+            # print("Test " + self.item["name"] + " was a success!")
+            self.test_method.pass_fail_icon_change(self.success)
+
+    def run_try_except(self, **event_args):
+        """Run the tests but without traceback."""
+        try:
+            self.btn_run_test_click()
+            self.test_method.pass_fail_icon_change(self.success)
+        except Exception:
+            self.success = False
+            self.test_method.pass_fail_icon_change(self.success)

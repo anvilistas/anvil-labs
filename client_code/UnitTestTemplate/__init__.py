@@ -13,6 +13,7 @@ class UnitTestTemplate(UnitTestTemplateTemplate):
     def __init__(self, **properties):
         # Set Form properties and Data Bindings.
         self.init_components(**properties)
+        self.success = True
         self.cp_1.role = self.cp_role
         self.lbl_doc.text = self.test_desc
         self.btn_run.text = self.btn_text
@@ -21,8 +22,27 @@ class UnitTestTemplate(UnitTestTemplateTemplate):
         self.lbl_fail.font_size = self.icon_size
         if self.rp_panels:
             self.cp_1.add_component(self.rp_panels)
+        # self.add_event_handler('x-run', self.btn_run_click)
 
     def btn_run_click(self, **event_args):
-        """This method is called when the button is clicked"""
-        self.btn_run_function()
+        """This method is called when the test button is clicked"""
+        children = self.rp_panels.get_components()
+        print(children)
+        for child in children:
+            print(child)
+            child.raise_event('x-run')
+            print(child.success)
+            if not child.success:
+                self.success = False
+        print('main success ', self.success)
+        self.pass_fail_icon_change(self.success)
 
+    def pass_fail_icon_change(self, success, **event_args):
+        """Show the pass or fail icon."""
+        self.lbl_fail.visible = False
+        self.lbl_success.visible = False
+        
+        if success:
+            self.lbl_success.visible = True
+        else:
+            self.lbl_fail.visible = True
