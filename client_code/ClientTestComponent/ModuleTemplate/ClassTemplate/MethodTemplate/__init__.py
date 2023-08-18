@@ -22,7 +22,7 @@ class MethodTemplate(MethodTemplateTemplate):
             test_desc=self.item["ref"].__doc__,
             icon_size=self.item["icon_size"],
             item = self.item,
-            # btn_run_function=self.btn_run_test_click
+            btn_run_function=self.btn_run_test_click
         )
         self.add_component(self.test_method)
         self.add_event_handler('x-run', self.run_try_except)

@@ -15,17 +15,27 @@ class ClassTemplate(ClassTemplateTemplate):
         # Set Form properties and Data Bindings.
         self.init_components(**properties)
         self.success = True
-        self.rp_children = anvil.RepeatingPanel(item_template=MethodTemplate)
-        self.rp_children.items = self.item["children"]
+        self.rp_panels = anvil.RepeatingPanel(item_template=MethodTemplate)
+        self.rp_panels.items = self.item["children"]
         
-        self.class_tests = UnitTestTemplate(
+        self.test_obj = UnitTestTemplate(
             cp_role=self.item["card_role"],
             btn_role=self.item['btn_role'],
             btn_text=self.item["name"],
             test_desc=self.item["ref"].__doc__,
             icon_size=self.item["icon_size"],
-            rp_panels=self.rp_children
+            btn_run_function=self.btn_run_click,
+            rp_panels=self.rp_panels
         )
 
-        self.add_component(self.class_tests)
-        self.add_event_handler('x-run', self.class_tests.btn_run_click)
+        self.add_component(self.test_obj)
+        self.add_event_handler('x-run', self.btn_run_click)
+
+    def btn_run_click(self, **event_args):
+        children = self.rp_panels.get_components()
+        for child in children:
+            child.raise_event('x-run')
+            if not child.success:
+                self.success = False
+        print('main success ', self.success)
+        self.test_obj.pass_fail_icon_change(self.success)

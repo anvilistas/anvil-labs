@@ -26,16 +26,7 @@ class UnitTestTemplate(UnitTestTemplateTemplate):
 
     def btn_run_click(self, **event_args):
         """This method is called when the test button is clicked"""
-        children = self.rp_panels.get_components()
-        print(children)
-        for child in children:
-            print(child)
-            child.raise_event('x-run')
-            print(child.success)
-            if not child.success:
-                self.success = False
-        print('main success ', self.success)
-        self.pass_fail_icon_change(self.success)
+        self.btn_run_function()
 
     def pass_fail_icon_change(self, success, **event_args):
         """Show the pass or fail icon."""

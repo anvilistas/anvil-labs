@@ -66,18 +66,19 @@ class ClientTestComponent(ClientTestComponentTemplate):
 
             mod_cnt += 1
             
-        self.rp_modules = anvil.RepeatingPanel(item_template=ModuleTemplate)
-        self.rp_modules.items = self.test_config
+        self.rp_panels = anvil.RepeatingPanel(item_template=ModuleTemplate)
+        self.rp_panels.items = self.test_config
         
-        self.overall_tests = UnitTestTemplate(
+        self.test_obj = UnitTestTemplate(
             btn_role=self.btn_role,
             btn_text='Run All',
             test_desc='Run all tests',
             icon_size=self.icon_size,
-            rp_panels=self.rp_modules
+            btn_run_function=self.btn_run_click,
+            rp_panels=self.rp_panels
         )
 
-        self.add_component(self.overall_tests)
+        self.add_component(self.test_obj)
         self.success = True
 
     def get_test_classes(self, module):
@@ -88,11 +89,11 @@ class ClientTestComponent(ClientTestComponentTemplate):
                 test_classes.append(attribute_name)
         return test_classes
 
-    # def btn_run_click(self, **event_args):
-    #     children = self.rp_panels.get_components()
-    #     for child in children:
-    #         child.raise_event('x-run')
-    #         if not child.success:
-    #             self.success = False
-
-    #     self.pass_fail_icon_change(self.success)
+    def btn_run_click(self, **event_args):
+        children = self.rp_panels.get_components()
+        for child in children:
+            child.raise_event('x-run')
+            if not child.success:
+                self.success = False
+        print('main success ', self.success)
+        self.test_obj.pass_fail_icon_change(self.success)
