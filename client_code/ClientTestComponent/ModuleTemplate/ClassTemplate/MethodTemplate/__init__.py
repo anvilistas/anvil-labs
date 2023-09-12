@@ -2,7 +2,6 @@
 # Copyright (c) 2021 anvilistas
 
 import anvil
-import unittest
 
 from ._anvil_designer import MethodTemplateTemplate
 from .....UnitTestTemplate import UnitTestTemplate
