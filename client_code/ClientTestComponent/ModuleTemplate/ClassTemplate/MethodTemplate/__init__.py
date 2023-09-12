@@ -2,6 +2,7 @@
 # Copyright (c) 2021 anvilistas
 
 import anvil
+import unittest
 
 from ._anvil_designer import MethodTemplateTemplate
 from .....UnitTestTemplate import UnitTestTemplate
@@ -30,10 +31,10 @@ class MethodTemplate(MethodTemplateTemplate):
     def btn_run_test_click(self, **event_args):
         """This method is called when the button is clicked"""
         with anvil.Notification("Test " + self.item["name"] + " running..."):
-            self.item["setUp"]()
-            self.item["ref"]()
-            self.item["tearDown"]()
-            # print("Test " + self.item["name"] + " was a success!")
+            unitclass = self.item['classref']()
+            unitclass.setUp()
+            getattr(unitclass, self.item['name'].replace('Method:', '').strip())()
+            unitclass.tearDown()
             self.test_method.pass_fail_icon_change(self.success)
 
     def run_try_except(self, **event_args):

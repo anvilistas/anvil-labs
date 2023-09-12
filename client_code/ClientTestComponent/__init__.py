@@ -43,9 +43,10 @@ class ClientTestComponent(ClientTestComponentTemplate):
                 methods_list = [
                     {
                         "name": "Method: " + am,
+                        "classref": testclass_ref,
                         "ref": getattr(testclass_ref(), am),
-                        "setUp": getattr(testclass_ref(), 'setUp'),
-                        "tearDown": getattr(testclass_ref(), 'tearDown'),
+                        # "setUp": getattr(testclass_ref(), 'setUp'),
+                        # "tearDown": getattr(testclass_ref(), 'tearDown'),
                         "card_role": self.card_roles[2],
                         "btn_role": self.btn_role,
                         "icon_size": self.icon_size,
