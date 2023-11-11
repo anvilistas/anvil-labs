@@ -57,9 +57,9 @@ In your code use the ``web_worker`` module call the ``fib`` function as a backgr
         def button_1_click(self, **event_args):
             self.task = my_worker.launch_task("fib", 2**20)
             self.timer.interval = 1
-            my_worker.on_result(self.fib_result)
-            my_worker.on_error(self.fib_error)
-            # my_worker.on_state_change(self.fib_state_change)
+            self.task.on_result(self.fib_result)
+            self.task.on_error(self.fib_error)
+            # self.task.on_state_change(self.fib_state_change)
 
 Notes
 -----
