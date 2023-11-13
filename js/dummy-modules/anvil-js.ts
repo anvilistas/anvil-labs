@@ -5,9 +5,11 @@ export default function () {
         ffi: { proxy, toPy },
         abstr: { setUpModuleMethods, objectSetItem },
         misceval: { promiseToSuspension, chain: chainOrSuspend },
+        builtin: { func: pyFunc, ExternalError, property: pyProperty }
+
     } = Sk;
 
-    const jsMod = { __name__: toPy("js"), window: proxy(self) };
+    const jsMod = { __name__: toPy("js"), window: proxy(self), ExternalError };
 
     async function getModule(url: any) {
         const mod = await new Function("return import(" + JSON.stringify(url.toString()) + ")").call(null);
@@ -40,6 +42,12 @@ export default function () {
     });
 
     objectSetItem(Sk.sysmodules, toPy("anvil.js.window"), jsMod.window);
+
+    jsMod.ExternalError.prototype.original_error = new pyProperty(
+        new pyFunc((self) => {
+            return toPy(self.nativeError, { dictHook: (obj) => proxy(obj) });
+        })
+    );
 
     return jsMod;
 }
