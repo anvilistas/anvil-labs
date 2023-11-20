@@ -2,8 +2,9 @@
 // we'll need to request imports that we don't have
 // the main app will need to register a handler for bg syncing
 
-import type { Deferred } from "../../worker/types.ts";
 import { configureSkulpt, errHandler, defer } from "../../worker/utils/worker.ts";
+import { BackgroundSync, DeferredSync } from "./bg-sync.ts";
+import { MODULE_LOADING, setModuleLoading } from "./constants.ts";
 
 declare global {
     interface ServiceWorkerGlobalScope {
@@ -14,6 +15,7 @@ declare global {
         anvilAppOrigin: string;
         onsync: any;
         onperiodicsync: any;
+        BackgroundSync: typeof BackgroundSync;
     }
 }
 
@@ -24,10 +26,9 @@ declare const localforage: any;
 // Skulpt expectes window to exist
 self.window = self;
 self.anvilAppOrigin = "";
-let MODULE_LOADING: null | Deferred<boolean> = null;
 
 async function loadInitModule(name: string) {
-    MODULE_LOADING = defer();
+    setModuleLoading();
     MODULE_LOADING.promise.then(() => postMessage({ type: "READY" }));
     await localVarStore.setItem("__main__", name);
     try {
@@ -59,7 +60,7 @@ function addAPI() {
     // can only do this one skulpt has loaded
     function raise_event(args: any[], kws: any[] = []) {
         if (args.length !== 1) {
-            throw new Sk.builtin.TypeError("Expeceted one arg to raise_event");
+            throw new Sk.builtin.TypeError("Expected one arg to raise_event");
         }
         const objectKws: any = {};
         for (let i = 0; i < kws.length; i += 2) {
@@ -73,6 +74,8 @@ function addAPI() {
 
     self.raise_event = new pyFunc(raise_event);
 
+    self.BackgroundSync = BackgroundSync;
+
     self.sync_event_handler = (cb) => (e) => {
         const wrapped = async () => {
             await MODULE_LOADING?.promise;
@@ -84,7 +87,10 @@ function addAPI() {
                 // this can happen if trying to sync close to going offline
                 if (numTries < 5 && String(err).toLowerCase().includes("failed to fetch")) {
                     numTries++;
-                    postMessage({ type: "OUT", message: `It looks like we're offline re-registering sync: '${e.tag}'\n` });
+                    postMessage({
+                        type: "OUT",
+                        message: `It looks like we're offline re-registering sync: '${e.tag}'\n`,
+                    });
                     await wait(500);
                     return self.registration.sync.register(e.tag);
                 } else {
@@ -125,6 +131,16 @@ async function onAppOrigin(e: any) {
     await localVarStore.setItem("apporigin", origin);
 }
 self.addEventListener("message", onAppOrigin);
+
+function onSyncEvent(e: any) {
+    const data = e.data;
+    const { type } = data;
+    if (type !== "SYNC") return;
+    const { tag } = data;
+    BackgroundSync.register(tag);
+}
+
+self.addEventListener("message", onSyncEvent);
 
 async function postMessage(data: { type: string; [key: string]: any }) {
     // flag for the client
@@ -176,15 +192,20 @@ function resetHandler(onwhat: string, setter: any) {
  */
 function initSyncCall(eventName: "sync" | "periodicsync") {
     const onEvent = ("on" + eventName) as "onsync" | "onperiodicsync";
-    const deferred = defer();
     const { set: onSet } = Object.getOwnPropertyDescriptor(self, onEvent) ?? {};
-    let initEvent: any;
+    const initEvents: any[] = [];
+    const initDefers: DeferredSync[] = [];
 
     self[onEvent] = (e: any) => {
-        initEvent = e;
+        initEvents.push(e);
+        const deferred = defer() as DeferredSync;
+        initDefers.push(deferred);
+        BackgroundSync._initSyncs.set(e.tag, [e, deferred]);
         initModule();
         setTimeout(() => {
-            deferred.resolve("timeout");
+            if (!deferred.$handled) {
+                deferred.resolve(null);
+            }
         }, 5000);
         e.waitUntil(deferred.promise);
     };
@@ -192,10 +213,12 @@ function initSyncCall(eventName: "sync" | "periodicsync") {
     resetHandler(onEvent, async (fn: any) => {
         resetHandler(onEvent, onSet);
         self[onEvent] = fn;
-        if (!initEvent) return;
+        const event = initEvents.pop();
+        const deferred = initDefers.pop();
+        if (!event || !deferred) return;
         try {
             await MODULE_LOADING?.promise;
-            await fn(initEvent);
+            await fn(event);
             deferred.resolve(null);
         } catch (e) {
             deferred.reject(e);
