@@ -6,46 +6,10 @@ from functools import wraps as _wraps
 import anvil.server as _server
 from anvil import is_server_side
 
+from ..batched import _register
 from ._serialize import UNHANDLED, reconstruct, serialize
 
 __version__ = "0.0.1"
-
-_registered = {}
-
-
-def _has_permission(require_user):
-    if require_user is None:
-        return True
-
-    import anvil.users
-
-    user = anvil.users.get_user()
-    if user is None:
-        msg = "You must be logged in to call this server function"
-        raise anvil.users.AuthenticationFailed(msg)
-
-    if require_user is True:
-        return True
-
-    return require_user(user)
-
-
-def _wrap_require(fn, name, require_user):
-    @_wraps(fn)
-    def require_wrapper(*args, **kws):
-        if not _has_permission(require_user):
-            msg = f"You do not have permission to call server function '{name}'"
-            raise _server.PermissionDenied(msg)
-        return fn(*args, **kws)
-
-    return require_wrapper
-
-
-def _register(fn, name=None, require_user=None):
-    if name is None:
-        name = fn.__name__
-    _registered[name] = _wrap_require(fn, name, require_user)
-    return fn
 
 
 def _dumps(obj):
