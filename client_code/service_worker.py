@@ -14,8 +14,9 @@ SW.postMessage({"type": "APPORIGIN", "origin": _W.anvilAppOrigin})
 # escape hatches
 registration = REG
 service_worker = SW
-sync_manager = REG.sync
-periodic_sync_manager = REG.periodicSync
+# not supported by all browsers
+# sync_manager = REG.sync
+# periodic_sync_manager = REG.periodicSync
 
 
 def _error_handler(err):
@@ -108,15 +109,14 @@ def _camel(s):
 def register_sync(tag, **options):
     """Registers a background sync when the app comes back online - may fail in some browsers"""
     READY.wait()
-    if sync_manager.getTags(tag):
-        return
-    options = {_camel(k): v for k, v in options.items()}
-    sync_manager.register(tag, options)
+    SW.postMessage({"type": "SYNC", "tag": tag})
 
 
 def register_periodic_sync(tag, *, min_interval=None, **options):
     """Registers a periodic sync request with the browser with the specified tag and options"""
     READY.wait()
+    # TODO have some sort of fallback
+    periodic_sync_manager = REG.periodicSync
     if periodic_sync_manager.getTags(tag):
         return
     options["min_interval"] = min_interval
