@@ -24,7 +24,8 @@ log.is_debug = False
 
 def register(atom, prop):
     """if there is an active selector or render
-    we asks the atom registrar to register a relationship between an atom and the attribute being accessed
+    we asks the atom registrar to register a relationship
+    between an atom and the attribute being accessed
     """
     if active[IGNORE]:
         return
@@ -91,7 +92,8 @@ def queue_subscribers(atom_registrar, prop, mode):
 
 
 def request(atom, prop):
-    """when an attribute of an atom is accessed we update the queues based on the subscribers registered"""
+    """when an attribute of an atom is accessed
+    we update the queues based on the subscribers registered"""
     if active[IGNORE]:
         return
     atom_registrar = get_registrar(atom)

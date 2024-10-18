@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
-from functools import partial
 
 from .constants import ACTION, IGNORE, REACTION, RENDER, SELECTOR
 from .rendering import active, call_queued, log, queued
@@ -78,8 +77,11 @@ class ActionContext(Context):
     mode = ACTION
 
     def adder(self):
-        msg = "Cannot update an Atom or call an action from inside a selector or render method \
-            - use `with ignore_updates:` if you really need to update an Atom attribute"
+        msg = (
+            "Cannot update an Atom or call an action from inside a selector or"
+            "render method - use `with ignore_updates:`"
+            " if you really need to update an Atom attribute"
+        )
         self.add_active((SELECTOR, RENDER, REACTION), msg)
         queued[ACTION] += (self.context,)
 
@@ -112,12 +114,16 @@ class SelectorContext(Context):
 
 class ReactionContext(Context):
     # note the ReactionContext only applies to the depends_on_fn call
-    # There should only be attribute access and selector method calls within this context
+    # There should only be attribute access
+    # and selector method calls within this context
     mode = REACTION
 
     def adder(self):
-        msg = "The reaction depends_on_fn should only access atom attributes.\
-            Calling a depends_on_fn from inside a selector, render or other depends_on_fn is invalid"
+        msg = (
+            "The reaction depends_on_fn should only access atom attributes."
+            "Calling a depends_on_fn from inside a selector,"
+            " render or other depends_on_fn is invalid"
+        )
         self.add_active((SELECTOR, RENDER, REACTION), msg)
 
     popper = Context.pop_active

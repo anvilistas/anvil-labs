@@ -1,12 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 import anvil
-
 import pytest
-
-is_server_side = anvil.is_server_side
-anvil.is_server_side = lambda: False  # so that atomic thinks we're client side
-
 from client_code.atomic import (
     action,
     atom,
@@ -21,6 +16,10 @@ from client_code.atomic import (
     unsubscribe,
     writeback,
 )
+
+is_server_side = anvil.is_server_side
+anvil.is_server_side = lambda: False  # so that atomic thinks we're client side
+
 
 anvil.is_server_side = is_server_side
 
@@ -191,8 +190,8 @@ def test_todos():
 
     assert isinstance(todos_atom.todos, list)
     assert isinstance(todos_atom.todos[0], dict)
-    assert type(todos_atom.todos) is not list
-    assert type(todos_atom.todos[0]) is not dict
+    assert type(todos_atom.todos) is not list  # noqa: E721
+    assert type(todos_atom.todos[0]) is not dict  # noqa: E721
 
     # test dict view forces a render - but the action isn't caught by the subscriber
     todos_atom.todos[0]["completed"] = True

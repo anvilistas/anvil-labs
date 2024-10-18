@@ -4,7 +4,6 @@
 import base64
 import json
 import urllib.parse
-from base64 import b64decode
 from functools import wraps
 
 import anvil.server

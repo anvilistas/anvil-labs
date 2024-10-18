@@ -7,7 +7,8 @@ __version__ = "0.0.1"
 
 
 class AtomRegistrar:
-    """the registrar is responsible for registering and unregistering atom props to renderers/selectors
+    """the registrar is responsible for registering and un-registering
+    atom props to renderers/selectors
     as well as caching selectors associated with an atom"""
 
     def __init__(self, atom):

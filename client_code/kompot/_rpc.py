@@ -4,7 +4,6 @@ import json as _json
 from functools import wraps as _wraps
 
 import anvil.server as _server
-from anvil import is_server_side
 
 from ._serialize import UNHANDLED, reconstruct, serialize
 

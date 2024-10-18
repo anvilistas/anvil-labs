@@ -22,7 +22,8 @@ def _get_selector(fn, atom, prop):
 
 
 def selector(fn):
-    """decorate a method as a selector whenever it needs to do some computation based on atom attributes
+    """decorate a method as a selector whenever it needs to do
+    some computation based on atom attributes
     This decorate can only be used on an atom method
     You should never update an atom within a selector
     A selector can be decorated with @property
@@ -99,7 +100,8 @@ def unsubscribe(f):
 class render:
     """a decorator typically used above a method in a form
     if used on a form render methods will only execute on the show event
-    if used as a top level function it can be used to update a database whenever an atom attribute changes
+    if used as a top level function it can be used to update a database
+    whenever an atom attribute changes
 
     a render should access all selectors and atom attributes that it depends on
     i.e. don't access some attributes within branching logic (if statements)
@@ -148,12 +150,14 @@ def reaction(
     include_previous=False,
 ):
     """a reaction takes two arguments: depends_on_fn and then_react_fn
-    the depends_on_fn is used to determine the dependcies that the then_react_fn depends on
+    the depends_on_fn is used to determine the dependencies that the then_react_fn depends on
     when ever an atom attribute accessed in the depends_on_fn changes the then_react_fn is called.
 
-    If the depends_on_fn returns a value other than None the return value will be passed to the then_react_fn.
+    If the depends_on_fn returns a value other than None
+    the return value will be passed to the then_react_fn.
 
-    depends_on_fn fires immediately, but then_react_fn will only be called the next time a dependency changes.
+    depends_on_fn fires immediately, but then_react_fn will only be called
+    the next time a dependency changes.
     To call the then_react_fn function immediately set fire_immediately to True.
 
     Returns: a dispose function - when called stops any future reactions

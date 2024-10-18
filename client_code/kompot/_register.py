@@ -2,7 +2,6 @@
 # Copyright (c) 2021 anvilistas
 
 from anvil.server import SerializationError
-
 from anvil_extras.utils import import_module
 
 __version__ = "0.0.1"

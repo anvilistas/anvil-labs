@@ -1,0 +1,12 @@
+src = ["client_code", "server_code"]
+
+[lint]
+select = ["E", "F", "I001"]
+
+[lint.isort]
+known-third-party = ["anvil"]
+
+[lint.pycodestyle]
+# E501 reports lines that exceed the length of 100.
+# this only happens when we can't wrap the line with ruff-format
+max-line-length = 100

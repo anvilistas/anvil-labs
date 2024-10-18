@@ -21,7 +21,8 @@ def verify_registration(response):
 
 
 def register_device():
-    """a logged in user is required to register a device. The user table must have a 'fido' simple object column"""
+    """a logged in user is required to register a device.
+    The user table must have a 'fido' simple object column"""
     public_key = generate_registration()
     try:
         resposne = startRegistration(public_key)
@@ -44,7 +45,8 @@ def verify_authentication_options(authentication_options):
 
 
 def login_with_fido(email: str):
-    """provide an email address to login with fido - this email might be stored in indexed db or local storage or similar"""
+    """provide an email address to login with fido
+    this email might be stored in indexed db or local storage or similar"""
     authentication_options = generate_authentication_options(email)
     result = verify_authentication_options(authentication_options)
     if result is None:
