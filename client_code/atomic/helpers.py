@@ -17,12 +17,13 @@ def set_debug(is_debug=True):
 
 def writeback(component, prop, atom_or_selector, attr_or_action=None, events=()):
     """create a writeback between a component property and an atom attribute
-    or bind the property to an atom selector and call an action when the component property is changed
+    or bind the property to an atom selector and call an action when
+    the component property is changed
     events - should be a single event str or a list of events
     If no events are provided this is the equivalent of a data-binding with no writeback
     """
     atom, attr = atom_or_selector, attr_or_action
-    if type(events) is str:
+    if isinstance(events, str):
         events = [events]
     if isinstance(atom, dict):
         assert attr is not None, "if a dict atom is provided the attr must be a str"
@@ -58,9 +59,13 @@ def _noop():
 
 
 def bind(component, prop, atom_or_selector, attr=SENTINEL):
-    """create a data-binding between an component property and an atom and its attribute (or a selector)"""
-    # we could support methods here but it's better to be explicit and call selectors inside render methods
-    # accessing an atom property necessarily creates a depenedency on the current render context
+    """
+    create a data-binding between an component property
+    and an atom and its attribute (or a selector)
+    """
+    # we could support methods here but it's better to be explicit
+    # and call selectors inside render methods
+    # accessing an atom property necessarily creates a dependency on the current render context
     # so better not to encourage accessing a selector outside of the desired render context
     attr = _noop if attr is SENTINEL else attr
     return writeback(component, prop, atom_or_selector, attr)

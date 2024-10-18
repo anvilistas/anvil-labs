@@ -163,8 +163,10 @@ class _AbstractTimer:
         if not _warning:
             _warning = True
             print(
-                "WARNING: Interval and Timeout have been deprecated in favour of repeat() and defer() and will soon be removed."
-                "\nSee latest documentation: https://anvil-labs.readthedocs.io/en/latest/guides/modules/non_blocking.html"
+                "WARNING: Interval and Timeout have been deprecated in favour of"
+                " repeat() and defer() and will soon be removed."
+                "\nSee latest documentation:"
+                " https://anvil-labs.readthedocs.io/en/latest/guides/modules/non_blocking.html"
             )
         assert callable(
             fn
@@ -234,7 +236,10 @@ def cancel(ref):
     if ref is None:
         return
     if not isinstance(ref, TimerRef):
-        msg = "Invalid argumnet to cancel(), expected None or the return value from calling delay/defer"
+        msg = (
+            "Invalid argumnet to cancel(),"
+            " expected None or the return value from calling delay/defer"
+        )
         raise TypeError(msg)
     return ref.cancel()
 
@@ -346,5 +351,5 @@ if __name__ == "__main__":
     else:
         assert False
     _v = call_async(lambda: {}).await_result()
-    assert type(_v) is dict
+    assert isinstance(_v, dict)
     print("PASSED")

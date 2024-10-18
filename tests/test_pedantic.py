@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 import pytest
-
 from client_code.pedantic import InList, validate
 
 __version__ = "0.0.1"

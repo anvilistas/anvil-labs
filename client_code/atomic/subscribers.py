@@ -118,7 +118,8 @@ class Selector(Subscriber):
 
     def __call__(self, *args, **kws):
         # anytime our value is requested make renders/selectors depend on our property
-        # we don't use atom's __getattribute__ for registration since it doesn't register methods accessed
+        # we don't use atom's __getattribute__ for registration
+        # since it doesn't register methods accessed
         # and we only want the registration to occur when we call the selector
         # this allows selectors to be used as the bind/writeback function
         register(self.atom, self.prop)

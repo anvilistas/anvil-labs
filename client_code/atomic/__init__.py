@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
 
+# ruff: noqa: F401
 from .atoms import DictAtom, ListAtom, atom, portable_atom
 from .contexts import ignore_updates
 from .decorators import (

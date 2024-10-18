@@ -19,7 +19,8 @@ __version__ = "0.0.1"
 class BaseAction(
     namedtuple("_BaseAction", ["action", "atom", "prop", "value"], defaults=[None])
 ):
-    """We use this as something we can pass to the action queue and might be consumed by a decorated subscriber"""
+    """We use this as something we can pass to the action queue
+    and might be consumed by a decorated subscriber"""
 
     def __str__(self):
         action, atom, prop, val = self
@@ -28,9 +29,9 @@ class BaseAction(
 
 
 def as_atom(atom, prop, val):
-    if type(val) is dict:
+    if type(val) is dict:  # noqa: E721
         return DictAtom(val)
-    elif type(val) is list:
+    elif type(val) is list:  # noqa: E721
         return ListAtom(atom, prop, val)
     else:
         return val
@@ -106,7 +107,7 @@ def portable_atom(_cls, name=None):
     """decorator to for atoms that you also want to be portable classes"""
     if IS_SERVER_SIDE:
         return portable_class(_cls, name)
-    elif name is None and type(_cls) is str:
+    elif name is None and isinstance(_cls, str):
         name = _cls
         return lambda _cls: portable_atom(_cls, name)
 
@@ -237,7 +238,8 @@ def _method(meth: str, convert_args=None):
 
 class ListAtom(list):
     """
-    Any time the list is mutated we request a render from the parent atom at the property this list belongs to
+    Any time the list is mutated we request a render from the parent atom
+    at the property this list belongs to
     """
 
     __slots__ = ["_as_atom", "_request_render", "_register"]
