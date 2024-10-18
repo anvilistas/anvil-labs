@@ -223,10 +223,10 @@ class DictAtom(dict):
 
 
 def _method(meth: str, convert_args=None):
-    def fn(self, *args):
+    def fn(self, *args, **kws):
         if convert_args is not None:
             args = convert_args(self, *args)
-        ret = getattr(list, meth)(self, *args)
+        ret = getattr(list, meth)(self, *args, **kws)
         self._request_render()
         return ret
 
