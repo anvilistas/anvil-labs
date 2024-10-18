@@ -1,7 +1,13 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2021 anvilistas
+
+# ruff: noqa: E402
 import anvil
 import pytest
+
+is_server_side = anvil.is_server_side
+anvil.is_server_side = lambda: False  # so that atomic thinks we're client side
+
 from client_code.atomic import (
     action,
     atom,
@@ -16,10 +22,6 @@ from client_code.atomic import (
     unsubscribe,
     writeback,
 )
-
-is_server_side = anvil.is_server_side
-anvil.is_server_side = lambda: False  # so that atomic thinks we're client side
-
 
 anvil.is_server_side = is_server_side
 
