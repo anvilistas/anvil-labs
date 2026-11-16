@@ -71,10 +71,12 @@ class Datum(DatumBase):
     def __init__(cls):
         clues = all_clues(cls)
         args = ", ".join(
-            f"{name}={getattr(cls,name)!r}"
-            if hasattr(cls, name)
-            and not isinstance(getattr(cls, name), MemberDescriptorType)
-            else name
+            (
+                f"{name}={getattr(cls,name)!r}"
+                if hasattr(cls, name)
+                and not isinstance(getattr(cls, name), MemberDescriptorType)
+                else name
+            )
             for name in clues
         )
         body = "\n".join(f"   self.{name} = {name}" for name in clues)
